@@ -26,7 +26,7 @@ import EditIcon from '@material-ui/icons/Edit';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import SaveIcon from '@material-ui/icons/Save';
 import debounce from 'lodash/debounce';
-import { createEditor, Editor, Transforms } from 'slate';
+import { createEditor, Editor, Transforms, Text } from 'slate';
 // https://docs.slatejs.org/walkthroughs/01-installing-slate
 // Import the Slate components and React plugin.
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -43,6 +43,8 @@ import plainTextalignToSlateJs from '../util/export-adapters/slate-to-dpe/update
 import updateBloocksTimestamps from '../util/export-adapters/slate-to-dpe/update-timestamps/update-bloocks-timestamps';
 import exportAdapter, { isCaptionType } from '../util/export-adapters';
 import generatePreviousTimingsUpToCurrent from '../util/dpe-to-slate/generate-previous-timings-up-to-current';
+import buildWordMap from '../util/build-word-map';
+import findActiveWord from '../util/find-active-word';
 import SlateHelpers from './slate-helpers';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
@@ -255,6 +257,41 @@ function SlateTranscriptEditor(props) {
     }
   };
 
+  const followPlayback = typeof props.followPlayback === 'boolean' ? props.followPlayback : true;
+
+  // word-level "follow the speech" highlight (karaoke)
+  const wordMap = useMemo(() => buildWordMap(value), [value]);
+  const activeWordIndex = useMemo(() => (followPlayback ? findActiveWord(wordMap, currentTime) : -1), [followPlayback, wordMap, currentTime]);
+
+  const decorate = useCallback(
+    ([node, path]) => {
+      if (!followPlayback || activeWordIndex < 0) return [];
+      const activeWord = wordMap[activeWordIndex];
+      if (!activeWord) return [];
+      if (Text.isText(node) && path[0] === activeWord.pIdx && path[1] === 0) {
+        return [
+          {
+            anchor: { path, offset: activeWord.charStart },
+            focus: { path, offset: activeWord.charEnd },
+            currentWord: true,
+          },
+        ];
+      }
+      return [];
+    },
+    [followPlayback, activeWordIndex, wordMap]
+  );
+
+  // keep the spoken word in view; keyed on word index so it only fires on change
+  useEffect(() => {
+    if (!followPlayback || activeWordIndex < 0) return;
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector('.editor-wrapper-container .current-word');
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [followPlayback, activeWordIndex]);
+
   const renderElement = useCallback((props) => {
     switch (props.element.type) {
       case 'timedText':
@@ -268,7 +305,7 @@ function SlateTranscriptEditor(props) {
     return (
       <span
         onDoubleClick={handleTimedTextClick}
-        className={'timecode text'}
+        className={leaf.currentWord ? 'timecode text current-word' : 'timecode text'}
         data-start={children.props.parent.start}
         data-previous-timings={children.props.parent.previousTimings}
         // title={'double click on a word to jump to the corresponding point in the media'}
@@ -682,6 +719,13 @@ function SlateTranscriptEditor(props) {
                   color:  #9E9E9E;
               }
 
+              /* word currently being spoken ("follow the speech") */
+              .current-word {
+                background-color: #fff59d;
+                border-radius: 2px;
+                box-shadow: 0 0 0 1px #fff59d;
+              }
+
               // NOTE: The CSS is here, coz if you put it as a separate index.css the current webpack does not bundle it with the component
 
               /* TODO: Temporary, need to scope this to the component in a sensible way */
@@ -889,6 +933,7 @@ function SlateTranscriptEditor(props) {
                         readOnly={typeof props.isEditable === 'boolean' ? !props.isEditable : false}
                         renderElement={renderElement}
                         renderLeaf={renderLeaf}
+                        decorate={decorate}
                         onKeyDown={handleOnKeyDown}
                       />
                     </Slate>
@@ -945,6 +990,7 @@ SlateTranscriptEditor.propTypes = {
   title: PropTypes.string,
   showTitle: PropTypes.bool,
   transcriptDataLive: PropTypes.object,
+  followPlayback: PropTypes.bool,
 };
 
 SlateTranscriptEditor.defaultProps = {
@@ -953,4 +999,5 @@ SlateTranscriptEditor.defaultProps = {
   showSpeakers: true,
   autoSaveContentType: 'digitalpaperedit',
   isEditable: true,
+  followPlayback: true,
 };
