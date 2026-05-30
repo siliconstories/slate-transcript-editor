@@ -45,6 +45,8 @@ import exportAdapter, { isCaptionType } from '../util/export-adapters';
 import generatePreviousTimingsUpToCurrent from '../util/dpe-to-slate/generate-previous-timings-up-to-current';
 import buildWordMap from '../util/build-word-map';
 import findActiveWord from '../util/find-active-word';
+import stripMutedWords from '../util/strip-muted-words';
+import WordLevelEditor from './WordLevelEditor';
 import SlateHelpers from './slate-helpers';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
@@ -258,6 +260,27 @@ function SlateTranscriptEditor(props) {
   };
 
   const followPlayback = typeof props.followPlayback === 'boolean' ? props.followPlayback : true;
+  const wordLevelEditing = typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : false;
+
+  // seek + play for the word-level editor (single click on a word)
+  const seekAndPlayWord = (seconds) => {
+    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
+      mediaRef.current.currentTime = seconds;
+      mediaRef.current.play();
+      if (props.handleAnalyticsEvents) {
+        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
+          fn: 'wordLevelSingleClick',
+          clickOrigin: 'word',
+          timeInSeconds: seconds,
+        });
+      }
+    }
+  };
+
+  const handleWordLevelContentChange = () => {
+    setIsContentIsModified(true);
+    setIsContentSaved(false);
+  };
 
   // word-level "follow the speech" highlight (karaoke)
   const wordMap = useMemo(() => buildWordMap(value), [value]);
@@ -956,25 +979,40 @@ function SlateTranscriptEditor(props) {
               <>
                 <Paper elevation={3}>
                   <section className="editor-wrapper-container">
-                    <Slate
-                      editor={editor}
-                      value={value}
-                      onChange={(value) => {
-                        if (props.handleAutoSaveChanges) {
-                          props.handleAutoSaveChanges(value);
-                          setIsContentSaved(true);
-                        }
-                        return setValue(value);
-                      }}
-                    >
-                      <Editable
-                        readOnly={typeof props.isEditable === 'boolean' ? !props.isEditable : false}
-                        renderElement={renderElement}
-                        renderLeaf={renderLeaf}
-                        decorate={decorate}
-                        onKeyDown={handleOnKeyDown}
+                    {wordLevelEditing ? (
+                      <WordLevelEditor
+                        value={value}
+                        setValue={setValue}
+                        isEditable={typeof props.isEditable === 'boolean' ? props.isEditable : true}
+                        showSpeakers={showSpeakers}
+                        showTimecodes={showTimecodes}
+                        currentTime={currentTime}
+                        followPlayback={followPlayback}
+                        onSeekAndPlay={seekAndPlayWord}
+                        onContentChange={handleWordLevelContentChange}
+                        onSetSpeakerName={handleSetSpeakerName}
                       />
-                    </Slate>
+                    ) : (
+                      <Slate
+                        editor={editor}
+                        value={value}
+                        onChange={(value) => {
+                          if (props.handleAutoSaveChanges) {
+                            props.handleAutoSaveChanges(value);
+                            setIsContentSaved(true);
+                          }
+                          return setValue(value);
+                        }}
+                      >
+                        <Editable
+                          readOnly={typeof props.isEditable === 'boolean' ? !props.isEditable : false}
+                          renderElement={renderElement}
+                          renderLeaf={renderLeaf}
+                          decorate={decorate}
+                          onKeyDown={handleOnKeyDown}
+                        />
+                      </Slate>
+                    )}
                   </section>
                 </Paper>
               </>
