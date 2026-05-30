@@ -263,13 +263,28 @@ function SlateTranscriptEditor(props) {
   const wordLevelEditing = typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : false;
 
   // seek + play for the word-level editor (single click on a word)
+  // single-click: move the playhead to the word but do NOT change play state
+  const seekWord = (seconds) => {
+    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
+      mediaRef.current.currentTime = seconds;
+      if (props.handleAnalyticsEvents) {
+        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
+          fn: 'wordLevelSeek',
+          clickOrigin: 'word',
+          timeInSeconds: seconds,
+        });
+      }
+    }
+  };
+
+  // triple-click: jump to the word and start playing
   const seekAndPlayWord = (seconds) => {
     if (mediaRef && mediaRef.current && typeof seconds === 'number') {
       mediaRef.current.currentTime = seconds;
       mediaRef.current.play();
       if (props.handleAnalyticsEvents) {
         props.handleAnalyticsEvents('ste_handle_timed_text_click', {
-          fn: 'wordLevelSingleClick',
+          fn: 'wordLevelPlay',
           clickOrigin: 'word',
           timeInSeconds: seconds,
         });
@@ -988,6 +1003,7 @@ function SlateTranscriptEditor(props) {
                         showTimecodes={showTimecodes}
                         currentTime={currentTime}
                         followPlayback={followPlayback}
+                        onSeek={seekWord}
                         onSeekAndPlay={seekAndPlayWord}
                         onContentChange={handleWordLevelContentChange}
                         onSetSpeakerName={handleSetSpeakerName}

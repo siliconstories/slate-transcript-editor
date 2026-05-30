@@ -4,7 +4,9 @@ import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import findActiveWord from '../../util/find-active-word';
 
-const SINGLE_CLICK_DELAY_MS = 220;
+// window after the last click in which further clicks are collected, so we can
+// tell single- / double- / triple-click apart
+const MULTI_CLICK_DELAY_MS = 260;
 
 /**
  * Read-only, word-granular transcript view.
@@ -28,6 +30,7 @@ function WordLevelEditor({
   showTimecodes,
   currentTime,
   followPlayback,
+  onSeek,
   onSeekAndPlay,
   onContentChange,
   onSetSpeakerName,
@@ -35,6 +38,7 @@ function WordLevelEditor({
   const [editing, setEditing] = useState(null); // { pIdx, wIdx }
   const [draft, setDraft] = useState('');
   const clickTimer = useRef(null);
+  const clickCount = useRef(0);
 
   // active word for the "follow the speech" highlight, computed over a flat,
   // time-sorted list that points back to (pIdx, wIdx).
@@ -87,30 +91,35 @@ function WordLevelEditor({
 
   const cancelEdit = () => setEditing(null);
 
+  // Disambiguate the click count, then act once the click burst ends:
+  //   1 click  -> seek only, do NOT change play state
+  //   2 clicks -> edit this word
+  //   3+ clicks -> seek and play
+  //   Ctrl/Cmd + click -> toggle muted (immediate)
   const handleWordClick = (e, pIdx, wIdx, word) => {
     if (e.ctrlKey || e.metaKey) {
-      // mute toggle is immediate (no single/double disambiguation)
       if (clickTimer.current) {
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
       }
+      clickCount.current = 0;
       if (isEditable !== false) updateWord(pIdx, wIdx, { muted: !word.muted });
       return;
     }
-    // delay single-click so a double-click can cancel it (double click must not seek/play)
+    clickCount.current += 1;
     if (clickTimer.current) clearTimeout(clickTimer.current);
     clickTimer.current = setTimeout(() => {
+      const count = clickCount.current;
+      clickCount.current = 0;
       clickTimer.current = null;
-      if (onSeekAndPlay && typeof word.start === 'number') onSeekAndPlay(word.start);
-    }, SINGLE_CLICK_DELAY_MS);
-  };
-
-  const handleWordDoubleClick = (e, pIdx, wIdx, word) => {
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-    }
-    beginEdit(pIdx, wIdx, word);
+      if (count >= 3) {
+        if (onSeekAndPlay && typeof word.start === 'number') onSeekAndPlay(word.start);
+      } else if (count === 2) {
+        beginEdit(pIdx, wIdx, word);
+      } else {
+        if (onSeek && typeof word.start === 'number') onSeek(word.start);
+      }
+    }, MULTI_CLICK_DELAY_MS);
   };
 
   const renderWord = (paragraph, pIdx, word, wIdx) => {
@@ -150,9 +159,8 @@ function WordLevelEditor({
           className={className}
           role="button"
           tabIndex={0}
-          title={isEditable === false ? undefined : 'Click: jump · Double-click: edit · Ctrl/Cmd-click: mute'}
+          title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Triple-click: play · Ctrl/Cmd-click: mute'}
           onClick={(e) => handleWordClick(e, pIdx, wIdx, word)}
-          onDoubleClick={(e) => handleWordDoubleClick(e, pIdx, wIdx, word)}
         >
           {text}
         </span>{' '}
@@ -210,6 +218,7 @@ WordLevelEditor.propTypes = {
   showTimecodes: PropTypes.bool,
   currentTime: PropTypes.number,
   followPlayback: PropTypes.bool,
+  onSeek: PropTypes.func,
   onSeekAndPlay: PropTypes.func,
   onContentChange: PropTypes.func,
   onSetSpeakerName: PropTypes.func,
