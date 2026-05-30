@@ -74,10 +74,11 @@ function SlateTranscriptEditor(props) {
   const profile = useMemo(() => resolveProfile(props.profile), [props.profile]);
   const editPolicy = profile.editPolicy;
   const [value, setValue] = useState([]);
-  const defaultShowSpeakersPreference = typeof props.showSpeakers === 'boolean' ? props.showSpeakers : true;
-  const defaultShowTimecodesPreference = typeof props.showTimecodes === 'boolean' ? props.showTimecodes : true;
-  const [showSpeakers, setShowSpeakers] = useState(defaultShowSpeakersPreference);
-  const [showTimecodes, setShowTimecodes] = useState(defaultShowTimecodesPreference);
+  // Derived from props every render (not copied into state) so the component is
+  // controlled: toggling these props shows/hides speakers & timecodes live, without
+  // a remount — which matters for the rigid tier (a remount would wipe overlay edits).
+  const showSpeakers = typeof props.showSpeakers === 'boolean' ? props.showSpeakers : true;
+  const showTimecodes = typeof props.showTimecodes === 'boolean' ? props.showTimecodes : true;
   const [speakerOptions, setSpeakerOptions] = useState([]);
   const [showSpeakersCheatShet, setShowSpeakersCheatShet] = useState(true);
   const [saveTimer, setSaveTimer] = useState(null);
@@ -364,14 +365,19 @@ function SlateTranscriptEditor(props) {
     }
   }, [followPlayback, activeWordIndex]);
 
-  const renderElement = useCallback((props) => {
-    switch (props.element.type) {
-      case 'timedText':
-        return <TimedTextElement {...props} />;
-      default:
-        return <DefaultElement {...props} />;
-    }
-  }, []);
+  const renderElement = useCallback(
+    (props) => {
+      switch (props.element.type) {
+        case 'timedText':
+          return <TimedTextElement {...props} />;
+        default:
+          return <DefaultElement {...props} />;
+      }
+    },
+    // showSpeakers/showTimecodes are closed over by TimedTextElement; without them
+    // here Slate keeps the stale closure and the classic editor ignores the toggles.
+    [showSpeakers, showTimecodes]
+  );
 
   // NOTE: activeWordIndex is intentionally in the dependency list even though it
   // is not referenced here. slate-react 0.59 memoizes leaves and only re-renders
@@ -865,6 +871,31 @@ function SlateTranscriptEditor(props) {
                 border: 1px solid #1976d2;
                 border-radius: 2px;
                 padding: 0 2px;
+              }
+              .stw-edit-wrap {
+                position: relative;
+                display: inline-block;
+              }
+              .stw-mute-btn {
+                position: absolute;
+                bottom: 100%;
+                left: 0;
+                margin-bottom: 3px;
+                font: inherit;
+                font-size: 10px;
+                line-height: 1.5;
+                padding: 0 5px;
+                border: 1px solid #1976d2;
+                border-radius: 3px;
+                background: #fff;
+                color: #1976d2;
+                cursor: pointer;
+                white-space: nowrap;
+                z-index: 5;
+              }
+              .stw-mute-btn:hover {
+                background: #1976d2;
+                color: #fff;
               }
 
               // NOTE: The CSS is here, coz if you put it as a separate index.css the current webpack does not bundle it with the component

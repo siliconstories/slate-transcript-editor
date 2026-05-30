@@ -116,10 +116,10 @@ function Playground() {
         setError(`Could not parse JSON: ${err.message}`);
         return;
       }
-      // rev.ai → rigid/faithful tier (immutable original + overlay).
-      // DPE → classic free-text tier (lossy, as before).
+      // give the Title checkbox something to toggle for uploaded files
+      setTitle(file.name.replace(/\.[^/.]+$/, ''));
       const detected = detectProfile(parsed);
-      // rev.ai → rigid/faithful tier (immutable original + overlay).
+      // rev.ai → rigid/faithful tier (immutable original + overlay); DPE → classic free-text.
       if (detected.id === 'rigid') {
         setError('');
         setProfileInst(detected);

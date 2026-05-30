@@ -138,23 +138,39 @@ function WordLevelEditor({
     if (isEditingThis) {
       return (
         <React.Fragment key={wIdx}>
-          <input
-            className="stw-word-input"
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                commitEdit();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                cancelEdit();
-              }
-            }}
-            size={Math.max(draft.length, 2)}
-          />
+          <span className="stw-edit-wrap">
+            <button
+              type="button"
+              className="stw-mute-btn"
+              // mousedown-preventDefault keeps the input focused, so its onBlur
+              // (commit) doesn't fire and unmount this button before the click lands
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                updateWord(pIdx, wIdx, { muted: !word.muted });
+                setEditing(null);
+              }}
+              title={word.muted ? 'Unmute this word' : 'Mute this word (blanked on export)'}
+            >
+              {word.muted ? 'unmute' : 'mute'}
+            </button>
+            <input
+              className="stw-word-input"
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitEdit();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelEdit();
+                }
+              }}
+              size={Math.max(draft.length, 2)}
+            />
+          </span>
           {word.punctAfter ? <span className="stw-punct">{word.punctAfter}</span> : null}{' '}
         </React.Fragment>
       );
