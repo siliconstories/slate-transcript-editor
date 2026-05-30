@@ -21,9 +21,6 @@ describe('buildWordMap', () => {
     const joined = value[0].children[0].text; // "So tell me"
     const map = buildWordMap(value);
     expect(map.length).toBe(3);
-    map.forEach((entry) => {
-      expect(joined.slice(entry.charStart, entry.charEnd)).toBe(words[entry === map[0] ? 0 : map.indexOf(entry)].text);
-    });
     expect(joined.slice(map[0].charStart, map[0].charEnd)).toBe('So');
     expect(joined.slice(map[1].charStart, map[1].charEnd)).toBe('tell');
     expect(joined.slice(map[2].charStart, map[2].charEnd)).toBe('me');
@@ -37,7 +34,6 @@ describe('buildWordMap', () => {
   it('offsets are per-paragraph (reset each paragraph)', () => {
     const value = [paragraph([w('A', 0, 1), w('BB', 1, 2)]), paragraph([w('CCC', 3, 4)])];
     const map = buildWordMap(value);
-    // second paragraph's first word starts at offset 0 again
     const p1 = map.filter((m) => m.pIdx === 1);
     expect(p1[0].charStart).toBe(0);
     expect(p1[0].charEnd).toBe(3);
@@ -51,6 +47,26 @@ describe('buildWordMap', () => {
     const map = buildWordMap(value);
     expect(joined.slice(map[0].charStart, map[0].charEnd)).toBe('werden.');
     expect(joined.slice(map[1].charStart, map[1].charEnd)).toBe('Es');
+  });
+
+  it('skips empty-text words but keeps following offsets aligned', () => {
+    // DPE alignment placeholders have text "" and must not become highlight targets
+    const words = [w('So', 1.0, 1.2), w('', 1.21, 1.22), w('me', 1.3, 1.5)];
+    const value = [paragraph(words)];
+    const joined = value[0].children[0].text; // "So  me" (double space from empty word)
+    const map = buildWordMap(value);
+    expect(map.length).toBe(2);
+    expect(joined.slice(map[0].charStart, map[0].charEnd)).toBe('So');
+    expect(joined.slice(map[1].charStart, map[1].charEnd)).toBe('me');
+    map.forEach((e) => expect(e.charEnd).toBeGreaterThan(e.charStart));
+  });
+
+  it('returns entries sorted ascending by start (DPE words can be out of order)', () => {
+    // first paragraph starts later in time than the second on purpose
+    const value = [paragraph([w('late', 10, 11)]), paragraph([w('early', 1, 2)])];
+    const map = buildWordMap(value);
+    expect(map.map((m) => m.start)).toEqual([1, 10]);
+    expect(map[0].pIdx).toBe(1); // the early word came from the second paragraph
   });
 
   it('handles empty / missing words arrays without throwing', () => {
