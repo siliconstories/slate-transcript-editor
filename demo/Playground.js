@@ -69,6 +69,7 @@ function Playground() {
   const [showSpeakers, setShowSpeakers] = useState(true);
   const [showTimecodes, setShowTimecodes] = useState(true);
   const [showTitle, setShowTitle] = useState(true);
+  const [wordLevelEditing, setWordLevelEditing] = useState(true);
 
   const remount = () => setMountKey((k) => k + 1);
 
@@ -209,6 +210,17 @@ function Playground() {
           <label>
             <input type="checkbox" checked={showTitle} onChange={(e) => setShowTitle(e.target.checked)} /> Title
           </label>
+          <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
+            <input
+              type="checkbox"
+              checked={wordLevelEditing}
+              onChange={(e) => {
+                setWordLevelEditing(e.target.checked);
+                remount();
+              }}
+            />{' '}
+            Word-level editing
+          </label>
         </div>
 
         {error && <div style={styles.error}>{error}</div>}
@@ -225,6 +237,7 @@ function Playground() {
           isEditable={isEditable}
           showSpeakers={showSpeakers}
           showTimecodes={showTimecodes}
+          wordLevelEditing={wordLevelEditing}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
           handleAutoSaveChanges={(content) => console.log('handleAutoSaveChanges', content)}
           handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}

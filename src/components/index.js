@@ -573,10 +573,14 @@ function SlateTranscriptEditor(props) {
       if (isContentModified && isCaptionType(type)) {
         tmpValue = await handleRestoreTimecodes();
       }
+      // muted words are kept (with `muted: true`) in the saved DPE/slate JSON,
+      // but removed from human-facing exports (text, word, subtitles)
+      const shouldStripMuted = type === 'text' || type === 'word' || isCaptionType(type);
+      const exportSlateValue = shouldStripMuted ? stripMutedWords(tmpValue) : tmpValue;
       // export adapter does not doo any alignment
       // just converts between formats
       let editorContnet = exportAdapter({
-        slateValue: tmpValue,
+        slateValue: exportSlateValue,
         type,
         transcriptTitle: getFileTitle(),
         speakers,
@@ -733,6 +737,31 @@ function SlateTranscriptEditor(props) {
                 background-color: #fff59d;
                 border-radius: 2px;
                 box-shadow: 0 0 0 1px #fff59d;
+              }
+
+              /* word-level editing view */
+              .stw-paragraph {
+                margin-bottom: 0.6em;
+              }
+              .stw-word {
+                cursor: pointer;
+                border-radius: 2px;
+              }
+              .stw-word:hover {
+                text-decoration: underline;
+              }
+              .stw-muted {
+                text-decoration: line-through;
+                color: #b0b0b0;
+              }
+              .stw-muted:hover {
+                text-decoration: line-through underline;
+              }
+              .stw-word-input {
+                font: inherit;
+                border: 1px solid #1976d2;
+                border-radius: 2px;
+                padding: 0 2px;
               }
 
               // NOTE: The CSS is here, coz if you put it as a separate index.css the current webpack does not bundle it with the component
@@ -1000,6 +1029,7 @@ SlateTranscriptEditor.propTypes = {
   showTitle: PropTypes.bool,
   transcriptDataLive: PropTypes.object,
   followPlayback: PropTypes.bool,
+  wordLevelEditing: PropTypes.bool,
 };
 
 SlateTranscriptEditor.defaultProps = {
@@ -1009,4 +1039,5 @@ SlateTranscriptEditor.defaultProps = {
   autoSaveContentType: 'digitalpaperedit',
   isEditable: true,
   followPlayback: true,
+  wordLevelEditing: false,
 };
