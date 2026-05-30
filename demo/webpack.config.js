@@ -22,7 +22,10 @@ module.exports = {
           options: {
             babelrc: false,
             configFile: false,
-            presets: ['@babel/preset-env', '@babel/preset-react'],
+            // Target modern browsers so async/await stays native and
+            // preset-env does NOT emit regenerator (which would need a
+            // runtime polyfill we don't bundle).
+            presets: [['@babel/preset-env', { targets: { esmodules: true } }], '@babel/preset-react'],
             plugins: ['transform-react-jsx'],
           },
         },
