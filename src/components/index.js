@@ -268,7 +268,8 @@ function SlateTranscriptEditor(props) {
       if (!followPlayback || activeWordIndex < 0) return [];
       const activeWord = wordMap[activeWordIndex];
       if (!activeWord) return [];
-      if (Text.isText(node) && path[0] === activeWord.pIdx && path[1] === 0) {
+      // Decorate the active word's text leaf (path [paragraphIndex, 0]).
+      if (Text.isText(node) && path.length === 2 && path[0] === activeWord.pIdx && path[1] === 0) {
         return [
           {
             anchor: { path, offset: activeWord.charStart },
@@ -301,20 +302,28 @@ function SlateTranscriptEditor(props) {
     }
   }, []);
 
-  const renderLeaf = useCallback(({ attributes, children, leaf }) => {
-    return (
-      <span
-        onDoubleClick={handleTimedTextClick}
-        className={leaf.currentWord ? 'timecode text current-word' : 'timecode text'}
-        data-start={children.props.parent.start}
-        data-previous-timings={children.props.parent.previousTimings}
-        // title={'double click on a word to jump to the corresponding point in the media'}
-        {...attributes}
-      >
-        {children}
-      </span>
-    );
-  }, []);
+  // NOTE: activeWordIndex is intentionally in the dependency list even though it
+  // is not referenced here. slate-react 0.59 memoizes leaves and only re-renders
+  // them when `renderLeaf` identity (or a leaf's own decorations) changes. By
+  // giving renderLeaf a fresh identity whenever the active word changes, the
+  // leaves re-render and pick up the `currentWord` decoration produced above.
+  const renderLeaf = useCallback(
+    ({ attributes, children, leaf }) => {
+      return (
+        <span
+          onDoubleClick={handleTimedTextClick}
+          className={leaf.currentWord ? 'timecode text current-word' : 'timecode text'}
+          data-start={children.props.parent.start}
+          data-previous-timings={children.props.parent.previousTimings}
+          // title={'double click on a word to jump to the corresponding point in the media'}
+          {...attributes}
+        >
+          {children}
+        </span>
+      );
+    },
+    [activeWordIndex]
+  );
 
   //
 
