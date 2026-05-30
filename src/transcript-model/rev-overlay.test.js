@@ -104,25 +104,43 @@ describe('projectRev (faithful export)', () => {
     expect(projectRev(original, {})).toEqual(SAMPLE);
   });
 
-  it('rewrite sets value + confidence 1.0; mute blanks value + confidence 1.0', () => {
+  it('rewrite keeps the element; mute removes the word + the space before, keeping trailing punctuation', () => {
     const { original } = revToModel(SAMPLE);
     const overlay = {
       [REV_KEY(0, 2)]: { value: 'dog' }, // rewrite "cat" -> "dog"
-      [REV_KEY(0, 4)]: { muted: true }, // mute "sat"
+      [REV_KEY(0, 4)]: { muted: true }, // mute "sat" (followed by ".")
     };
     const out = projectRev(original, overlay);
     const m0 = out.monologues[0].elements;
+    // rewrite kept in place at confidence 1.0
     expect(m0[2]).toEqual({ type: 'text', value: 'dog', ts: 0.2, end_ts: 0.4, confidence: 1.0 });
-    expect(m0[4]).toEqual({ type: 'text', value: '', ts: 0.4, end_ts: 0.6, confidence: 1.0 });
-    // element count + punctuation + order all preserved
-    expect(out.monologues[0].elements.length).toBe(SAMPLE.monologues[0].elements.length);
-    expect(m0[3]).toEqual({ type: 'punct', value: ' ' }); // space after "cat"
-    expect(m0[5]).toEqual({ type: 'punct', value: '.' }); // sentence period preserved
-    // untouched words unchanged, incl. absent-confidence "gamma"
+    // muted "sat" + the space before it are gone; the sentence period stays
+    expect(m0.map((e) => e.value)).toEqual(['the', ' ', 'dog', '.']);
+    expect(m0.length).toBe(4);
+    // untouched monologue unchanged, incl. absent-confidence "gamma"
     expect(out.monologues[1].elements[5]).toEqual({ type: 'text', value: 'gamma', ts: 1.4, end_ts: 1.6 });
     // speakers preserved as numeric
     expect(out.monologues[0].speaker).toBe(0);
     expect(out.monologues[1].speaker).toBe(1);
+  });
+
+  it('mute followed by a space drops the word + that trailing space', () => {
+    const { original } = revToModel(SAMPLE);
+    const out = projectRev(original, { [REV_KEY(0, 2)]: { muted: true } }); // "cat" is followed by a space
+    expect(out.monologues[0].elements.map((e) => e.value)).toEqual(['the', ' ', 'sat', '.']); // "the sat."
+  });
+
+  it('mute followed by punctuation keeps the punct + drops the space before', () => {
+    const { original } = revToModel(SAMPLE);
+    const out = projectRev(original, { [REV_KEY(0, 4)]: { muted: true } }); // "sat" is followed by "."
+    expect(out.monologues[0].elements.map((e) => e.value)).toEqual(['the', ' ', 'cat', '.']); // "the cat."
+  });
+
+  it('mute a sentence-initial word drops the word + its trailing punctuation + the following space', () => {
+    const HELLO = { monologues: [{ speaker: 0, elements: [txt('Hi', 0, 0.2, 0.9), pn('.'), sp, txt('there', 0.3, 0.5, 0.8)] }] };
+    const { original } = revToModel(HELLO);
+    const out = projectRev(original, { [REV_KEY(0, 0)]: { muted: true } }); // mute first word "Hi"
+    expect(out.monologues[0].elements.map((e) => e.value)).toEqual(['there']);
   });
 
   it('routes duplicate word values to the correct occurrence by anchor', () => {

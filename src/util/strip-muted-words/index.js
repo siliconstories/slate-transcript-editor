@@ -12,6 +12,13 @@
  * the slate->dpe round-trip rebuilds paragraphs by counting words in the text
  * (see createDpeParagraphsFromSlateJs in src/util/export-adapters/slate-to-dpe).
  *
+ * Punctuation: in the rigid rev.ai tier each word carries its trailing punctuation
+ * on `punctAfter` (separate from the inter-word spaces, which are the join). When a
+ * muted word has trailing punctuation we keep it by moving it onto the previous kept
+ * word; a muted word with only a space after it just disappears (the join collapses
+ * the spacing); a sentence-initial muted word drops its punctuation entirely. Classic
+ * DPE words have no `punctAfter`, so this degrades to the original bare-text join.
+ *
  * @param {Array} slateValue
  * @returns {Array} a new value with muted words removed
  */
@@ -21,9 +28,21 @@ const stripMutedWords = (slateValue) => {
     .map((paragraph) => {
       const child = paragraph && Array.isArray(paragraph.children) ? paragraph.children[0] : null;
       if (!child || !Array.isArray(child.words)) return paragraph;
-      const words = child.words.filter((word) => word.muted !== true);
-      const text = words.map((word) => (typeof word.text === 'string' ? word.text : '')).join(' ');
-      return { ...paragraph, children: [{ ...child, words, text }] };
+      const kept = [];
+      child.words.forEach((word) => {
+        if (word.muted === true) {
+          if (word.punctAfter && kept.length > 0) {
+            // followed by real punctuation -> keep it, attached to the previous word
+            const prev = kept[kept.length - 1];
+            kept[kept.length - 1] = { ...prev, punctAfter: (prev.punctAfter || '') + word.punctAfter };
+          }
+          // (space-after -> just drop; sentence-initial punct -> drop punctuation too)
+          return;
+        }
+        kept.push(word);
+      });
+      const text = kept.map((word) => (typeof word.text === 'string' ? word.text : '') + (word.punctAfter || '')).join(' ');
+      return { ...paragraph, children: [{ ...child, words: kept, text }] };
     })
     .filter((paragraph) => {
       const child = paragraph && Array.isArray(paragraph.children) ? paragraph.children[0] : null;

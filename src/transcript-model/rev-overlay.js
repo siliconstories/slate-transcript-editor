@@ -14,11 +14,16 @@
  *       { type:'punct', value }                       // spaces / '.' ',' '?' ...
  *   ] } ] }
  *
- * Edit states (per the agreed rules, confidence stays on rev.ai's native 0..1 scale):
- *   - rewritten word  -> value = newText,  confidence = 1.0
- *   - muted word      -> value = ''     ,  confidence = 1.0   (blanked in the rev export)
+ * Edit states (confidence stays on rev.ai's native 0..1 scale):
+ *   - rewritten word  -> value = newText, confidence = 1.0 (element kept in place)
  *   - untouched word  -> original value + original confidence (absent confidence stays absent)
- * No word is ever removed, added, or reordered.
+ *   - muted word      -> REMOVED from the export, together with one adjacent punct
+ *     element so the text stays clean:
+ *       * followed by a space  -> drop the word + that trailing space
+ *       * followed by real punctuation (.,?…) -> keep it, drop the space BEFORE the word
+ *       * sentence-initial (no space before) -> also drop the trailing punctuation
+ *         and its following space
+ * Rewrites never remove; only muting does.
  */
 
 export const REV_KEY = (monoIdx, elemIdx) => `${monoIdx}:${elemIdx}`;
@@ -83,14 +88,25 @@ export const revToModel = (revJson) => {
 
 /**
  * Faithful rev.ai export: deep-clone the frozen original and apply the overlay.
- * Throws if an overlay anchor does not resolve to a text element (loud failure
- * beats a schema-valid-but-wrong file).
+ * Rewrites set value + confidence in place; muted words are REMOVED together with
+ * one adjacent punct element (see the header comment for the space/punctuation
+ * rule). Removals are computed against original indices first, then applied in a
+ * single filter pass so anchors stay valid while editing. Throws if an overlay
+ * anchor does not resolve to a text element (loud failure beats a wrong file).
  * @param {object} original - the immutable rev.ai transcript
  * @param {Object<string,{value?:string,muted?:boolean}>} overlay
  * @returns {object} a new rev.ai transcript
  */
 export const projectRev = (original, overlay) => {
   const out = clone(original);
+  const isPunct = (e) => Boolean(e) && e.type === 'punct';
+  const isSpace = (e) => isPunct(e) && e.value === ' ';
+  const removals = new Map(); // monoIdx -> Set of element indices to drop
+  const markRemoval = (monoIdx, idx) => {
+    if (!removals.has(monoIdx)) removals.set(monoIdx, new Set());
+    removals.get(monoIdx).add(idx);
+  };
+
   Object.keys(overlay || {}).forEach((key) => {
     const o = overlay[key];
     if (!o || (typeof o.value !== 'string' && !o.muted)) return; // no-op entry
@@ -98,16 +114,35 @@ export const projectRev = (original, overlay) => {
     const monoIdx = Number(key.slice(0, sep));
     const elemIdx = Number(key.slice(sep + 1));
     const mono = out.monologues[monoIdx];
-    const el = mono && Array.isArray(mono.elements) ? mono.elements[elemIdx] : null;
+    const elements = mono && Array.isArray(mono.elements) ? mono.elements : null;
+    const el = elements ? elements[elemIdx] : null;
     if (!el || el.type !== 'text') {
       throw new Error(`projectRev: overlay anchor "${key}" does not resolve to a text element`);
     }
     if (o.muted) {
-      el.value = ''; // muted words are blanked in the faithful export
-      el.confidence = 1.0;
+      // drop the word + one adjacent punct so the export reads cleanly
+      markRemoval(monoIdx, elemIdx);
+      const afterEl = elements[elemIdx + 1];
+      const beforeEl = elements[elemIdx - 1];
+      if (isSpace(afterEl)) {
+        markRemoval(monoIdx, elemIdx + 1); // followed by a space -> drop that space
+      } else if (isSpace(beforeEl)) {
+        markRemoval(monoIdx, elemIdx - 1); // followed by punctuation -> drop the space before, keep the punct
+      } else if (isPunct(afterEl)) {
+        // sentence-initial (no space before): drop the trailing punct + its space too
+        markRemoval(monoIdx, elemIdx + 1);
+        if (isSpace(elements[elemIdx + 2])) markRemoval(monoIdx, elemIdx + 2);
+      }
     } else {
       el.value = o.value;
       el.confidence = 1.0;
+    }
+  });
+
+  removals.forEach((set, monoIdx) => {
+    const mono = out.monologues[monoIdx];
+    if (mono && Array.isArray(mono.elements)) {
+      mono.elements = mono.elements.filter((_, idx) => !set.has(idx));
     }
   });
   return out;

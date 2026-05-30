@@ -50,4 +50,28 @@ describe('stripMutedWords', () => {
     expect(stripMutedWords(null)).toBe(null);
     expect(stripMutedWords([{}])).toEqual([]);
   });
+
+  // rev.ai tier: words carry trailing punctuation on `punctAfter`
+  const pw = (text, start, end, punctAfter, muted) => ({ text, start, end, punctAfter, ...(muted ? { muted: true } : {}) });
+
+  it('rev.ai: includes punctuation in the regenerated text when nothing is muted', () => {
+    const out = stripMutedWords([para([pw('the', 1, 2, ''), pw('cat', 2, 3, ','), pw('sat', 3, 4, '.')])]);
+    expect(out[0].children[0].text).toBe('the cat, sat.');
+  });
+
+  it('rev.ai: muting a word followed by a space just drops it', () => {
+    const out = stripMutedWords([para([pw('the', 1, 2, ''), pw('cat', 2, 3, '', true), pw('sat', 3, 4, '.')])]);
+    expect(out[0].children[0].text).toBe('the sat.');
+  });
+
+  it('rev.ai: muting a word with trailing punctuation moves the punctuation onto the previous word', () => {
+    const out = stripMutedWords([para([pw('the', 1, 2, ''), pw('cat', 2, 3, ''), pw('sat', 3, 4, '.', true)])]);
+    expect(out[0].children[0].words.map((x) => x.text)).toEqual(['the', 'cat']);
+    expect(out[0].children[0].text).toBe('the cat.');
+  });
+
+  it('rev.ai: muting the first word drops its trailing punctuation', () => {
+    const out = stripMutedWords([para([pw('Hi', 1, 2, '.', true), pw('there', 2, 3, '')])]);
+    expect(out[0].children[0].text).toBe('there');
+  });
 });
