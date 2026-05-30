@@ -4,10 +4,11 @@
   "description": "A React component to make correcting automated transcriptions of audio and video easier and faster. Using the Slate Editor",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --findRelatedTests ./src/util/export-adapters/subtitles-generator/compose-subtitles/csv/index.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:related": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --findRelatedTests ./src/util/export-adapters/subtitles-generator/compose-subtitles/csv/index.js",
     "start": "npm run storybook",
-    "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook -c .storybook -o .out",
+    "storybook": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider --max-old-space-size=4096\" start-storybook -p 6006",
+    "build-storybook": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider --max-old-space-size=4096\" build-storybook -c .storybook -o .out",
     "deploy:ghpages": "npm run build-storybook  && cp .nojekyll .out/.nojekyll && gh-pages -d .out",
     "build:component": "cross-env BABEL_ENV=production babel src -d dist && /bin/cp -rf package.json dist && /bin/cp -rf README.md dist",
     "publish:public": "npm run build:component && npm publish dist --access public",
@@ -31,6 +32,9 @@
     "url": "git+https://github.com/pietrop/slate-transcript-editor.git"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.9.0",
@@ -72,5 +76,8 @@
     "hooks": {
       "pre-commit": "pretty-quick --staged"
     }
+  },
+  "jest": {
+    "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
   }
 }
