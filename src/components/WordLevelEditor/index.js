@@ -72,7 +72,7 @@ function WordLevelEditor({
         return { ...paragraph, children: [{ ...child, words, text }] };
       });
       setValue(newValue);
-      if (onContentChange) onContentChange();
+      if (onContentChange) onContentChange(newValue);
     },
     [value, setValue, onContentChange]
   );

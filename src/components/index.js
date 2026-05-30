@@ -292,9 +292,14 @@ function SlateTranscriptEditor(props) {
     }
   };
 
-  const handleWordLevelContentChange = () => {
+  const handleWordLevelContentChange = (newValue) => {
     setIsContentIsModified(true);
     setIsContentSaved(false);
+    // forward word-level edits to the host (same prop classic free-text uses),
+    // so a host can observe mutes/rewrites — e.g. for a faithful rev.ai round-trip
+    if (props.handleAutoSaveChanges) {
+      props.handleAutoSaveChanges(newValue);
+    }
   };
 
   // word-level "follow the speech" highlight (karaoke)
