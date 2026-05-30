@@ -81,6 +81,14 @@ describe('revToModel', () => {
     expect(words.find((w) => w.value === 'gamma').hasConfidence).toBe(false);
   });
 
+  it('glues trailing punctuation per word for display (plain spaces trim to empty)', () => {
+    const { words } = revToModel(SAMPLE);
+    // the->space->'' , cat->space->'' , sat->'.' , the->space->'' , beta->space->'' , gamma->'!'
+    expect(words.map((w) => w.punctAfter)).toEqual(['', '', '.', '', '', '!']);
+    // the leading orphan '-' before m1's first word is NOT glued to any word
+    expect(words.find((w) => w.key === '1:1').punctAfter).toBe('');
+  });
+
   it('freezes the original', () => {
     const { original } = revToModel(SAMPLE);
     expect(Object.isFrozen(original)).toBe(true);

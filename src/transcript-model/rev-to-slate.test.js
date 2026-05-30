@@ -24,6 +24,8 @@ describe('revModelToSlate', () => {
     expect(w0._key).toBe('0:0');
     expect(w0.text).toBe('the');
     expect(w0.confidence).toBe(0.9);
+    expect(w0.punctAfter).toBe(''); // plain space after "the"
+    expect(value[0].children[0].words[2].punctAfter).toBe('.'); // "sat" carries the period
   });
 
   it('splits paragraphs on speaker change with 1-indexed labels', () => {
@@ -32,8 +34,8 @@ describe('revModelToSlate', () => {
     expect(value.length).toBe(2);
     expect(value[0].speaker).toBe('Speaker 1');
     expect(value[1].speaker).toBe('Speaker 2');
-    expect(value[0].children[0].text).toBe('the cat sat');
-    expect(value[1].children[0].text).toBe('and ran');
+    expect(value[0].children[0].text).toBe('the cat sat.');
+    expect(value[1].children[0].text).toBe('and ran.');
   });
 
   it('keeps word count constant; reflects overlay rewrite in display text', () => {
@@ -42,7 +44,7 @@ describe('revModelToSlate', () => {
     h = commit(h, setWordValue({}, '0:2', 'dog', 'cat')); // rewrite "cat"->"dog"
     const value = revModelToSlate(model, h);
     expect(value[0].children[0].words.length).toBe(3); // count unchanged
-    expect(value[0].children[0].text).toBe('the dog sat');
+    expect(value[0].children[0].text).toBe('the dog sat.');
     expect(value[0].children[0].words[1]._key).toBe('0:2');
   });
 

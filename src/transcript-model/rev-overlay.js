@@ -49,8 +49,20 @@ export const revToModel = (revJson) => {
   const original = deepFreeze(clone(revJson));
   const words = [];
   revJson.monologues.forEach((mono, monoIdx) => {
-    (mono.elements || []).forEach((el, elemIdx) => {
+    const elements = mono.elements || [];
+    elements.forEach((el, elemIdx) => {
       if (el && el.type === 'text') {
+        // DISPLAY-ONLY: glue the punctuation that follows this word (up to the
+        // next text element) so the rendered transcript reads naturally. The
+        // punct elements themselves stay immutable in `original`; this never
+        // enters the editable value or the overlay, so faithful export is
+        // unaffected. Pure spaces trim to '' (the renderer adds its own space).
+        let punctAfter = '';
+        for (let j = elemIdx + 1; j < elements.length; j += 1) {
+          const next = elements[j];
+          if (!next || next.type === 'text') break;
+          if (typeof next.value === 'string') punctAfter += next.value;
+        }
         words.push({
           key: REV_KEY(monoIdx, elemIdx),
           monoIdx,
@@ -60,6 +72,7 @@ export const revToModel = (revJson) => {
           end: typeof el.end_ts === 'number' ? el.end_ts : null,
           confidence: typeof el.confidence === 'number' ? el.confidence : null,
           hasConfidence: typeof el.confidence === 'number',
+          punctAfter: punctAfter.trim(),
           speaker: mono.speaker,
         });
       }

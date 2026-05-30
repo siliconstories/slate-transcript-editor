@@ -14,9 +14,10 @@ const MULTI_CLICK_DELAY_MS = 260;
  * The base library renders each paragraph as one editable text blob; this view
  * instead renders every word as its own span so editing happens at exactly the
  * granularity the DPE/rev.ai JSON stores words in. Gestures:
- *   - single click  -> seek media to the word's start and play
- *   - double click  -> edit just that word (inline input); commit writes words[i].text
- *   - ctrl/cmd click -> toggle muted (adds `muted: true` to the word; strikethrough)
+ *   - single click     -> seek media to the word's start (no play-state change)
+ *   - double click     -> edit just that word (inline input); commit writes words[i].text
+ *   - alt/option click -> seek to the word and toggle play/pause
+ *   - ctrl/cmd click   -> toggle muted (adds `muted: true` to the word; strikethrough)
  *
  * It edits the Slate `value` directly via setValue (no stt-align pass), so other
  * words' custom props (incl. `muted`) are preserved, and the slate->dpe save
@@ -32,6 +33,7 @@ function WordLevelEditor({
   followPlayback,
   onSeek,
   onSeekAndPlay,
+  onSeekAndTogglePlay,
   onContentChange,
   onSetSpeakerName,
 }) {
@@ -68,7 +70,7 @@ function WordLevelEditor({
         if (pi !== pIdx) return paragraph;
         const child = paragraph.children[0];
         const words = child.words.map((word, wi) => (wi === wIdx ? { ...word, ...changes } : word));
-        const text = words.map((word) => (typeof word.text === 'string' ? word.text : '')).join(' ');
+        const text = words.map((word) => (typeof word.text === 'string' ? word.text : '') + (word.punctAfter || '')).join(' ');
         return { ...paragraph, children: [{ ...child, words, text }] };
       });
       setValue(newValue);
@@ -91,11 +93,11 @@ function WordLevelEditor({
 
   const cancelEdit = () => setEditing(null);
 
-  // Disambiguate the click count, then act once the click burst ends:
-  //   1 click  -> seek only, do NOT change play state
-  //   2 clicks -> edit this word
-  //   3+ clicks -> seek and play
-  //   Ctrl/Cmd + click -> toggle muted (immediate)
+  // Disambiguate the click, then act once the click burst ends:
+  //   1 click            -> seek only, do NOT change play state
+  //   2+ clicks          -> edit this word
+  //   Alt/Option + click -> seek to the word and toggle play/pause (immediate)
+  //   Ctrl/Cmd + click   -> toggle muted (immediate)
   const handleWordClick = (e, pIdx, wIdx, word) => {
     if (e.ctrlKey || e.metaKey) {
       if (clickTimer.current) {
@@ -106,15 +108,22 @@ function WordLevelEditor({
       if (isEditable !== false) updateWord(pIdx, wIdx, { muted: !word.muted });
       return;
     }
+    if (e.altKey) {
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+      }
+      clickCount.current = 0;
+      if (onSeekAndTogglePlay && typeof word.start === 'number') onSeekAndTogglePlay(word.start);
+      return;
+    }
     clickCount.current += 1;
     if (clickTimer.current) clearTimeout(clickTimer.current);
     clickTimer.current = setTimeout(() => {
       const count = clickCount.current;
       clickCount.current = 0;
       clickTimer.current = null;
-      if (count >= 3) {
-        if (onSeekAndPlay && typeof word.start === 'number') onSeekAndPlay(word.start);
-      } else if (count === 2) {
+      if (count >= 2) {
         beginEdit(pIdx, wIdx, word);
       } else {
         if (onSeek && typeof word.start === 'number') onSeek(word.start);
@@ -145,7 +154,8 @@ function WordLevelEditor({
               }
             }}
             size={Math.max(draft.length, 2)}
-          />{' '}
+          />
+          {word.punctAfter ? <span className="stw-punct">{word.punctAfter}</span> : null}{' '}
         </React.Fragment>
       );
     }
@@ -159,11 +169,12 @@ function WordLevelEditor({
           className={className}
           role="button"
           tabIndex={0}
-          title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Triple-click: play · Ctrl/Cmd-click: mute'}
+          title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Alt/Opt-click: play/pause · Ctrl/Cmd-click: mute'}
           onClick={(e) => handleWordClick(e, pIdx, wIdx, word)}
         >
           {text}
-        </span>{' '}
+        </span>
+        {word.punctAfter ? <span className="stw-punct">{word.punctAfter}</span> : null}{' '}
       </React.Fragment>
     );
   };
@@ -220,6 +231,7 @@ WordLevelEditor.propTypes = {
   followPlayback: PropTypes.bool,
   onSeek: PropTypes.func,
   onSeekAndPlay: PropTypes.func,
+  onSeekAndTogglePlay: PropTypes.func,
   onContentChange: PropTypes.func,
   onSetSpeakerName: PropTypes.func,
 };

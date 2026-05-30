@@ -1,24 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
-import { isRevTranscript } from '../src/util/rev-to-dpe';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 import REV_SAMPLE from './sample-data/rev-ai-sample.json';
-import download from '../src/util/downlaod/index.js';
-import {
-  revToModel,
-  projectRev,
-  newHistory,
-  commit,
-  undo as historyUndo,
-  redo as historyRedo,
-  canUndo,
-  canRedo,
-  currentOverlay,
-  overlayFromSlate,
-} from './transcript-model/rev-overlay.js';
-import revModelToSlate, { revModelToDpe } from './transcript-model/rev-to-slate.js';
+import { detectProfile } from '../src/transcript-model/profile';
 
 const SAMPLES = {
   kate: {
@@ -89,72 +75,15 @@ function Playground() {
   const [showTitle, setShowTitle] = useState(true);
   const [wordLevelEditing, setWordLevelEditing] = useState(true);
 
-  // rigid (rev.ai / scientific) tier: immutable model + sparse-overlay snapshot history
-  const [profile, setProfile] = useState('classic');
-  const revModelRef = useRef(null);
-  const [history, setHistory] = useState(() => newHistory());
-  const historyRef = useRef(history);
-  historyRef.current = history;
+  // The active transcript profile instance (classic for DPE, rigid for rev.ai).
+  // The editor now owns import / edit-capture / versioning / faithful export;
+  // the Playground just detects the tier and passes the instance down.
+  const [profileInst, setProfileInst] = useState(null);
+  const isRigid = profileInst ? profileInst.id === 'rigid' : false;
 
   const remount = () => setMountKey((k) => k + 1);
 
-  // build the rigid model + fresh history, return the projected Slate value
-  const loadRigid = (parsed) => {
-    const model = revToModel(parsed);
-    const h = newHistory();
-    revModelRef.current = model;
-    setProfile('rigid');
-    setHistory(h);
-    // DPE object (not a Slate array) — the component runs convertDpeToSlate
-    // internally; words carry _key/confidence/muted by reference onto the leaf.
-    return revModelToDpe(model, h);
-  };
-
-  const loadClassic = () => {
-    revModelRef.current = null;
-    setProfile('classic');
-    setHistory(newHistory());
-  };
-
-  // capture rigid edits emitted by the editor → overlay → snapshot.
-  // count/anchor mismatch returns null (structural leak) → ignore, the projection stands.
-  const handleRigidChange = useCallback((value) => {
-    const model = revModelRef.current;
-    if (!model) return;
-    const overlay = overlayFromSlate(model, value);
-    if (!overlay) return;
-    setHistory((h) => (JSON.stringify(currentOverlay(h)) === JSON.stringify(overlay) ? h : commit(h, overlay)));
-  }, []);
-
-  const reprojectRigid = (h) => {
-    const model = revModelRef.current;
-    if (!model) return;
-    setTranscriptData(revModelToDpe(model, h));
-    remount();
-  };
-
-  const handleUndo = () => {
-    const h = historyUndo(historyRef.current);
-    setHistory(h);
-    reprojectRigid(h);
-  };
-  const handleRedo = () => {
-    const h = historyRedo(historyRef.current);
-    setHistory(h);
-    reprojectRigid(h);
-  };
-  const handleRevertAll = () => {
-    const h = newHistory();
-    setHistory(h);
-    reprojectRigid(h);
-  };
-
-  const handleExportRev = () => {
-    const model = revModelRef.current;
-    if (!model) return;
-    const out = projectRev(model.original, currentOverlay(historyRef.current));
-    download(JSON.stringify(out, null, 2), `${(title || 'transcript').replace(/\s+/g, '-')}.rev.json`);
-  };
+  const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
 
   const handleMediaFile = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -189,29 +118,24 @@ function Playground() {
       }
       // rev.ai → rigid/faithful tier (immutable original + overlay).
       // DPE → classic free-text tier (lossy, as before).
-      if (isRevTranscript(parsed)) {
-        let value;
-        try {
-          value = loadRigid(parsed);
-        } catch (err) {
-          setTranscriptData(null);
-          setError(`rev.ai file could not be loaded: ${err.message}`);
-          return;
-        }
-        const words = revModelRef.current.words.length;
+      const detected = detectProfile(parsed);
+      // rev.ai → rigid/faithful tier (immutable original + overlay).
+      if (detected.id === 'rigid') {
         setError('');
-        setTranscriptData(value);
-        setTranscriptName(`${file.name} — rev.ai (rigid, ${words} words, faithful round-trip)`);
+        setProfileInst(detected);
+        setTranscriptData(parsed);
+        setTranscriptName(`${file.name} — rev.ai (rigid, ${revWordCount(parsed)} words, faithful round-trip)`);
         remount();
         return;
       }
+      // DPE → classic free-text tier.
       const dpeError = validateDpe(parsed);
       if (dpeError) {
         setTranscriptData(null);
         setError(`Unsupported transcript format. Expected DPE ({ words, paragraphs }) or rev.ai ({ monologues }). ${dpeError}`);
         return;
       }
-      loadClassic();
+      setProfileInst(detected);
       setError('');
       setTranscriptData(parsed);
       setTranscriptName(file.name);
@@ -226,7 +150,7 @@ function Playground() {
     setMediaUrl(sample.mediaUrl);
     setMediaName(sample.mediaUrl.split('/').pop());
     setUrlField('');
-    loadClassic();
+    setProfileInst(detectProfile(sample.transcriptData));
     setTranscriptData(sample.transcriptData);
     setTranscriptName(`${sample.label} (bundled)`);
     setTitle(sample.title);
@@ -239,15 +163,9 @@ function Playground() {
     setMediaName('KateDarling_2018S-950k.mp4');
     setUrlField('');
     setTitle('rev.ai sample (rigid / faithful)');
-    let value;
-    try {
-      value = loadRigid(REV_SAMPLE);
-    } catch (err) {
-      setError(`rev.ai sample could not be loaded: ${err.message}`);
-      return;
-    }
-    setTranscriptData(value);
-    setTranscriptName(`rev.ai sample — rigid (${revModelRef.current.words.length} words, faithful round-trip)`);
+    setProfileInst(detectProfile(REV_SAMPLE));
+    setTranscriptData(REV_SAMPLE);
+    setTranscriptName(`rev.ai sample — rigid (${revWordCount(REV_SAMPLE)} words, faithful round-trip)`);
     remount();
   };
 
@@ -321,7 +239,7 @@ function Playground() {
           <label>
             <input type="checkbox" checked={showTitle} onChange={(e) => setShowTitle(e.target.checked)} /> Title
           </label>
-          {profile !== 'rigid' && (
+          {!isRigid && (
             <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
               <input
                 type="checkbox"
@@ -338,23 +256,12 @@ function Playground() {
 
         {ready && (
           <div style={styles.tier}>
-            {profile === 'rigid' ? (
+            {isRigid ? (
               <>
                 <span style={styles.badgeRigid}>rev.ai · rigid (faithful)</span>
-                <button style={styles.btn} onClick={handleExportRev}>
-                  Export rev.ai (faithful)
-                </button>
-                <button style={styles.btn} disabled={!canUndo(history)} onClick={handleUndo}>
-                  Undo
-                </button>
-                <button style={styles.btn} disabled={!canRedo(history)} onClick={handleRedo}>
-                  Redo
-                </button>
-                <button style={styles.btn} disabled={!canUndo(history)} onClick={handleRevertAll}>
-                  Revert all
-                </button>
                 <span style={styles.hint}>
-                  {Object.keys(currentOverlay(history)).length} edit(s) · double-click a word to rewrite, Ctrl/Cmd-click to mute (blanked on export)
+                  Read-only base · double-click a word to rewrite · Alt/Opt-click to play/pause · Ctrl/Cmd-click to mute. The “rev.ai (faithful)”
+                  export plus Undo/Redo now live in the editor’s side menu →
                 </span>
               </>
             ) : (
@@ -371,15 +278,16 @@ function Playground() {
         <SlateTranscriptEditor
           key={mountKey}
           transcriptData={transcriptData}
+          profile={profileInst}
           mediaUrl={mediaUrl}
           title={title}
           showTitle={showTitle}
           isEditable={isEditable}
           showSpeakers={showSpeakers}
           showTimecodes={showTimecodes}
-          wordLevelEditing={profile === 'rigid' ? true : wordLevelEditing}
+          wordLevelEditing={wordLevelEditing}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
-          handleAutoSaveChanges={profile === 'rigid' ? handleRigidChange : (content) => console.log('handleAutoSaveChanges', content)}
+          handleAutoSaveChanges={(content) => console.log('handleAutoSaveChanges', content)}
           handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
         />
       )}

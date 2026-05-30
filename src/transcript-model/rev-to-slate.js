@@ -15,8 +15,8 @@
  * The `words` carried on the leaf are NEW objects each projection (so a remount
  * re-stamps `_key`; we never rely on by-reference survival across remounts).
  */
-import { shortTimecode } from '../../src/util/timecode-converter';
-import generatePreviousTimingsUpToCurrent from '../../src/util/dpe-to-slate/generate-previous-timings-up-to-current';
+import { shortTimecode } from '../util/timecode-converter';
+import generatePreviousTimingsUpToCurrent from '../util/dpe-to-slate/generate-previous-timings-up-to-current';
 import { currentOverlay } from './rev-overlay.js';
 
 const SENTENCE_END = /[.?!…]$/;
@@ -47,6 +47,7 @@ const displayWords = (words, overlay) =>
       confidence: w.confidence,
       muted: o.muted === true,
       speaker: w.speaker,
+      punctAfter: w.punctAfter || '',
     };
   });
 
@@ -80,7 +81,7 @@ export const revModelToSlate = (model, history, options = {}) => {
       start,
       previousTimings: generatePreviousTimingsUpToCurrent(start),
       startTimecode: shortTimecode(start),
-      children: [{ text: buffer.map((w) => w.text).join(' '), words: buffer.slice() }],
+      children: [{ text: buffer.map((w) => w.text + (w.punctAfter || '')).join(' '), words: buffer.slice() }],
     });
     buffer = [];
   };
@@ -89,7 +90,7 @@ export const revModelToSlate = (model, history, options = {}) => {
     if (buffer.length > 0 && w.speaker !== bufferSpeaker) flush();
     if (buffer.length === 0) bufferSpeaker = w.speaker;
     buffer.push(w);
-    const endsSentence = SENTENCE_END.test(w.text);
+    const endsSentence = SENTENCE_END.test(w.punctAfter || '');
     if ((endsSentence && buffer.length >= wordsPerParagraph) || buffer.length >= hardLimit) flush();
   });
   flush();

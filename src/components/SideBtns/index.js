@@ -39,6 +39,8 @@ function SideBtns({
   handleUndo,
   handleRedo,
   isEditable,
+  exporters,
+  allowReplaceText = true,
 }) {
   const [anchorMenuEl, setAnchorMenuEl] = useState(null);
 
@@ -267,6 +269,20 @@ function SideBtns({
               DPE (<code>.json</code>)
             </Link>
           </MenuItem>
+          {exporters && exporters.length > 0 && <Divider />}
+          {(exporters || []).map(({ id, label, ext }, index) => (
+            <MenuItem
+              key={`profile-exporter-${index}`}
+              onClick={() => {
+                handleExport({ type: id, ext, isDownload: true });
+                handleMenuClose();
+              }}
+            >
+              <Link color="primary">
+                {label} (<code>.{ext}</code>)
+              </Link>
+            </MenuItem>
+          ))}
         </Menu>
 
         {isEditable && (
@@ -372,13 +388,15 @@ function SideBtns({
           <Grid item>
             <br />
           </Grid>
-          <Grid item>
-            <Tooltip title={<Typography variant="body1">{REPLACE_WHOLE_TEXT_INSTRUCTION}</Typography>}>
-              <Button onClick={handleReplaceText} color="primary">
-                <ImportExportIcon color="primary" />
-              </Button>
-            </Tooltip>
-          </Grid>
+          {allowReplaceText && (
+            <Grid item>
+              <Tooltip title={<Typography variant="body1">{REPLACE_WHOLE_TEXT_INSTRUCTION}</Typography>}>
+                <Button onClick={handleReplaceText} color="primary">
+                  <ImportExportIcon color="primary" />
+                </Button>
+              </Tooltip>
+            </Grid>
+          )}
           {/* <Tooltip title={' Double click on a word to jump to the corresponding point in the media'}>
         <Button disabled={isProcessing} color="primary">
           <InfoOutlined color="primary" />

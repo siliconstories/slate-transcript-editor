@@ -3,7 +3,24 @@ import { secondsToTimecode, timecodeToSeconds, shortTimecode } from './util/time
 import convertDpeToSlate from './util/dpe-to-slate/index.js';
 import converSlateToDpe from './util/export-adapters/slate-to-dpe/index.js';
 import slateToText from './util/export-adapters/txt';
+import { registerProfile, getProfile, detectProfile, resolveProfile } from './transcript-model/profile';
+import { createRigidProfile } from './transcript-model/rigid-profile';
+import { createClassicProfile } from './transcript-model/classic-profile';
 
 export default SlateTranscriptEditor;
 
-export { SlateTranscriptEditor, secondsToTimecode, timecodeToSeconds, shortTimecode, convertDpeToSlate, converSlateToDpe, slateToText };
+export {
+  SlateTranscriptEditor,
+  secondsToTimecode,
+  timecodeToSeconds,
+  shortTimecode,
+  convertDpeToSlate,
+  converSlateToDpe,
+  slateToText,
+  registerProfile,
+  getProfile,
+  detectProfile,
+  resolveProfile,
+  createRigidProfile,
+  createClassicProfile,
+};

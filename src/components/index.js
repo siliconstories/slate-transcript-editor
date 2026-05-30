@@ -48,6 +48,7 @@ import findActiveWord from '../util/find-active-word';
 import stripMutedWords from '../util/strip-muted-words';
 import WordLevelEditor from './WordLevelEditor';
 import SlateHelpers from './slate-helpers';
+import { resolveProfile } from '../transcript-model/profile';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
 const SEEK_BACK_SEC = 10;
@@ -68,6 +69,10 @@ function SlateTranscriptEditor(props) {
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const editor = useMemo(() => withReact(withHistory(createEditor())), []);
+  // The active transcript profile decides import / edit-gate / export / versioning.
+  // No `profile` prop => classic free-text DPE tier => the editor's original behavior.
+  const profile = useMemo(() => resolveProfile(props.profile), [props.profile]);
+  const editPolicy = profile.editPolicy;
   const [value, setValue] = useState([]);
   const defaultShowSpeakersPreference = typeof props.showSpeakers === 'boolean' ? props.showSpeakers : true;
   const defaultShowTimecodesPreference = typeof props.showTimecodes === 'boolean' ? props.showTimecodes : true;
@@ -93,8 +98,8 @@ function SlateTranscriptEditor(props) {
 
   useEffect(() => {
     if (props.transcriptData) {
-      const res = convertDpeToSlate(props.transcriptData);
-      setValue(res);
+      const { value: importedValue } = profile.import(props.transcriptData);
+      setValue(importedValue);
     }
   }, []);
 
@@ -260,7 +265,7 @@ function SlateTranscriptEditor(props) {
   };
 
   const followPlayback = typeof props.followPlayback === 'boolean' ? props.followPlayback : true;
-  const wordLevelEditing = typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : false;
+  const wordLevelEditing = editPolicy.wordLevelOnly === true ? true : typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : false;
 
   // seek + play for the word-level editor (single click on a word)
   // single-click: move the playhead to the word but do NOT change play state
@@ -277,7 +282,7 @@ function SlateTranscriptEditor(props) {
     }
   };
 
-  // triple-click: jump to the word and start playing
+  // jump to a word/paragraph and start playing (used by the paragraph timecode click)
   const seekAndPlayWord = (seconds) => {
     if (mediaRef && mediaRef.current && typeof seconds === 'number') {
       mediaRef.current.currentTime = seconds;
@@ -292,9 +297,32 @@ function SlateTranscriptEditor(props) {
     }
   };
 
+  // alt/option-click on a word: jump to it and toggle play/pause
+  const seekAndTogglePlayWord = (seconds) => {
+    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
+      mediaRef.current.currentTime = seconds;
+      if (mediaRef.current.paused) {
+        mediaRef.current.play();
+      } else {
+        mediaRef.current.pause();
+      }
+      if (props.handleAnalyticsEvents) {
+        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
+          fn: 'wordLevelTogglePlay',
+          clickOrigin: 'word',
+          timeInSeconds: seconds,
+        });
+      }
+    }
+  };
+
   const handleWordLevelContentChange = (newValue) => {
     setIsContentIsModified(true);
     setIsContentSaved(false);
+    // a versioned profile (rigid) records each word-level edit as a snapshot
+    if (profile.versioning) {
+      profile.versioning.snapshot(newValue);
+    }
     // forward word-level edits to the host (same prop classic free-text uses),
     // so a host can observe mutes/rewrites — e.g. for a faithful rev.ai round-trip
     if (props.handleAutoSaveChanges) {
@@ -540,6 +568,7 @@ function SlateTranscriptEditor(props) {
   };
 
   const handleReplaceText = () => {
+    if (editPolicy.allowsStructuralEdits === false) return;
     const newText = prompt(`Paste the text to replace here.\n\n${REPLACE_WHOLE_TEXT_INSTRUCTION}`);
     if (newText) {
       const newValue = plainTextalignToSlateJs(props.transcriptData, newText, value);
@@ -592,6 +621,16 @@ function SlateTranscriptEditor(props) {
         atlasFormat,
         isDownload,
       });
+    }
+
+    // profile-provided exporters (e.g. rigid "rev.ai (faithful)") bypass the classic
+    // slate->DPE pipeline + muted-strip below, which assume the DPE slate shape.
+    const profileExporter = (profile.exporters || []).find((e) => e.id === type);
+    if (profileExporter) {
+      let out = profileExporter.run(getSlateContent());
+      if (ext === 'json') out = JSON.stringify(out, null, 2);
+      if (isDownload) download(out, `${getFileTitle()}.${ext}`);
+      return out;
     }
 
     try {
@@ -686,14 +725,25 @@ function SlateTranscriptEditor(props) {
   };
 
   const handleSplitParagraph = () => {
+    if (editPolicy.allowsStructuralEdits === false) return;
     SlateHelpers.handleSplitParagraph(editor);
   };
 
   const handleUndo = () => {
+    if (profile.versioning) {
+      profile.versioning.undo();
+      setValue(profile.reproject());
+      return;
+    }
     editor.undo();
   };
 
   const handleRedo = () => {
+    if (profile.versioning) {
+      profile.versioning.redo();
+      setValue(profile.reproject());
+      return;
+    }
     editor.redo();
   };
 
@@ -705,6 +755,13 @@ function SlateTranscriptEditor(props) {
   const handleOnKeyDown = async (event) => {
     setIsContentIsModified(true);
     setIsContentSaved(false);
+    // profiles that forbid structural edits (rigid) block paragraph split/merge
+    if (editPolicy.allowsStructuralEdits === false) {
+      if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+      }
+      return;
+    }
     //  ArrowRight ArrowLeft ArrowUp ArrowUp
     if (event.key === 'Enter') {
       // intercept Enter, and handle timecodes when splitting a paragraph
@@ -792,6 +849,9 @@ function SlateTranscriptEditor(props) {
               }
               .stw-word:hover {
                 text-decoration: underline;
+              }
+              .stw-punct {
+                cursor: default;
               }
               .stw-muted {
                 text-decoration: line-through;
@@ -1010,6 +1070,7 @@ function SlateTranscriptEditor(props) {
                         followPlayback={followPlayback}
                         onSeek={seekWord}
                         onSeekAndPlay={seekAndPlayWord}
+                        onSeekAndTogglePlay={seekAndTogglePlayWord}
                         onContentChange={handleWordLevelContentChange}
                         onSetSpeakerName={handleSetSpeakerName}
                       />
@@ -1065,6 +1126,8 @@ function SlateTranscriptEditor(props) {
               handleUndo={handleUndo}
               handleRedo={handleRedo}
               isEditable={props.isEditable}
+              exporters={profile.exporters}
+              allowReplaceText={editPolicy.allowsStructuralEdits}
             />
           </Grid>
         </Grid>
@@ -1089,6 +1152,7 @@ SlateTranscriptEditor.propTypes = {
   transcriptDataLive: PropTypes.object,
   followPlayback: PropTypes.bool,
   wordLevelEditing: PropTypes.bool,
+  profile: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
 };
 
 SlateTranscriptEditor.defaultProps = {
