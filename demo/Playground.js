@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
+import convertRevToDpe, { isRevTranscript } from '../src/util/rev-to-dpe';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 
@@ -102,15 +103,28 @@ function Playground() {
         setError(`Could not parse JSON: ${err.message}`);
         return;
       }
-      const validationError = validateDpe(parsed);
-      if (validationError) {
-        setTranscriptData(null);
-        setError(validationError);
-        return;
+      // 1) already DPE? use as-is. 2) rev.ai? convert. 3) otherwise error.
+      let dpe = parsed;
+      let note = file.name;
+      if (validateDpe(parsed)) {
+        if (isRevTranscript(parsed)) {
+          dpe = convertRevToDpe(parsed);
+          const stillInvalid = validateDpe(dpe);
+          if (stillInvalid) {
+            setTranscriptData(null);
+            setError(`rev.ai file converted but is empty/invalid: ${stillInvalid}`);
+            return;
+          }
+          note = `${file.name} — converted from rev.ai (${dpe.paragraphs.length} paragraphs, ${dpe.words.length} words)`;
+        } else {
+          setTranscriptData(null);
+          setError(`Unsupported transcript format. Expected DPE ({ words, paragraphs }) or rev.ai ({ monologues }). ${validateDpe(parsed)}`);
+          return;
+        }
       }
       setError('');
-      setTranscriptData(parsed);
-      setTranscriptName(file.name);
+      setTranscriptData(dpe);
+      setTranscriptName(note);
       remount();
     };
     reader.onerror = () => setError('Could not read the file.');
