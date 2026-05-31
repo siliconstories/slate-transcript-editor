@@ -1,10 +1,11 @@
 {
-  "plugins": ["transform-react-jsx"],
-  "ignore": ["src/components/*.storiesjs", "src/components/sample-data/**"],
-  "presets": ["@babel/preset-react"],
+  "presets": [["@babel/preset-react", { "runtime": "automatic" }]],
   "env": {
     "test": {
-      "presets": [["@babel/preset-env", { "targets": { "node": "current" } }], "@babel/preset-react"]
+      "presets": [
+        ["@babel/preset-env", { "targets": { "node": "current" } }],
+        ["@babel/preset-react", { "runtime": "automatic" }]
+      ]
     }
   }
 }
