@@ -117,7 +117,7 @@ function SlateTranscriptEditorInner(props) {
       setEditable(props.isEditable !== false);
       prevIsEditableRef.current = props.isEditable;
     }
-  });
+  }, [props.isEditable]);
 
   // Host props are controlled inputs: when one CHANGES, write it through to prefs
   // (the single source the UI renders from), so a host toggling showSpeakers/etc.
@@ -915,7 +915,10 @@ function SlateTranscriptEditorInner(props) {
       if (props.handleSaveEditor && editable) {
         props.handleSaveEditor(editorContnet);
       }
-      lastSavedValueRef.current = cloneValue(editor.children);
+      // Snapshot `value` (the React state), not `editor.children`: in word-level mode
+      // edits go through setValue and never touch the Slate tree, so editor.children
+      // would be the stale initial import. `value` is current in both edit paths.
+      lastSavedValueRef.current = cloneValue(value);
       setIsContentIsModified(false);
       setIsContentSaved(true);
     } finally {
