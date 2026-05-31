@@ -60,7 +60,22 @@ const pauseWhileTypeing = (current) => {
 };
 const debouncePauseWhileTyping = debounce(pauseWhileTypeing, PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS);
 
+// React 19 ignores `Component.defaultProps` on function components, so the defaults
+// are merged here instead. Matters most for `isEditable`, which several reads consume
+// directly (props.isEditable) with no inline fallback — without this it would default
+// to non-editable under React 19.
+const DEFAULT_PROPS = {
+  showTitle: false,
+  showTimecodes: true,
+  showSpeakers: true,
+  autoSaveContentType: 'digitalpaperedit',
+  isEditable: true,
+  followPlayback: true,
+  wordLevelEditing: false,
+};
+
 function SlateTranscriptEditor(props) {
+  props = { ...DEFAULT_PROPS, ...props };
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -1229,12 +1244,5 @@ SlateTranscriptEditor.propTypes = {
   onShowRawSource: PropTypes.func,
 };
 
-SlateTranscriptEditor.defaultProps = {
-  showTitle: false,
-  showTimecodes: true,
-  showSpeakers: true,
-  autoSaveContentType: 'digitalpaperedit',
-  isEditable: true,
-  followPlayback: true,
-  wordLevelEditing: false,
-};
+// defaults are applied via DEFAULT_PROPS at the top of the component (React 19
+// no longer reads Component.defaultProps on function components).
