@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import findActiveWord from '../../util/find-active-word';
+import { confidenceToStyle } from '../../util/confidence-scale';
+import { confidenceOf, groupSlateWordsIntoSentences } from '../../util/rev-to-sentences';
 
 // window after the last click in which further clicks are collected, so we can
 // tell single- / double- / triple-click apart
@@ -37,6 +39,7 @@ function WordLevelEditor({
   onContentChange,
   onSetSpeakerName,
   onShowRawSource,
+  confidenceOverlay,
 }) {
   const [editing, setEditing] = useState(null); // { pIdx, wIdx }
   const [draft, setDraft] = useState('');
@@ -64,6 +67,24 @@ function WordLevelEditor({
     const i = findActiveWord(flatWords, currentTime);
     return i >= 0 ? flatWords[i] : null;
   }, [followPlayback, flatWords, currentTime]);
+
+  // confidence "heat" overlay (word or sentence level), driven by preferences
+  const ov = confidenceOverlay || {};
+  const overlayOn = ov.overlay === true;
+  const styleOpts = { cutoff: ov.cutoff, floor: ov.floor, highlightOpacity: ov.highlightOpacity };
+  const metricIdx = ov.sentenceMetric === 'duration_weighted' ? 1 : 0;
+  const sentenceWash = useMemo(() => {
+    if (!overlayOn || ov.level !== 'sentence') return null;
+    return value.map((paragraph) => {
+      const words = paragraph && paragraph.children && Array.isArray(paragraph.children[0].words) ? paragraph.children[0].words : [];
+      const colors = new Array(words.length).fill(null);
+      groupSlateWordsIntoSentences(words).forEach(({ wIdxStart, wIdxEnd, words: sWords }) => {
+        const color = confidenceToStyle(confidenceOf(sWords)[metricIdx], styleOpts);
+        for (let i = wIdxStart; i <= wIdxEnd; i += 1) colors[i] = color;
+      });
+      return colors;
+    });
+  }, [value, overlayOn, ov.level, ov.cutoff, ov.floor, ov.highlightOpacity, metricIdx]);
 
   const updateWord = useCallback(
     (pIdx, wIdx, changes) => {
@@ -197,10 +218,22 @@ function WordLevelEditor({
     let className = 'stw-word';
     if (word.muted) className += ' stw-muted';
     if (isActive) className += ' current-word';
+    // active (karaoke) word keeps its highlight; otherwise paint the confidence wash
+    let confBg = null;
+    if (overlayOn && !isActive) {
+      confBg =
+        ov.level === 'sentence'
+          ? sentenceWash && sentenceWash[pIdx]
+            ? sentenceWash[pIdx][wIdx]
+            : null
+          : confidenceToStyle(word.confidence, styleOpts);
+    }
+    const wordStyle = confBg ? { backgroundColor: confBg, borderRadius: '2px' } : undefined;
     return (
       <React.Fragment key={wIdx}>
         <span
           className={className}
+          style={wordStyle}
           role="button"
           tabIndex={0}
           title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Alt/Opt-click: play/pause · Ctrl/Cmd-click: mute'}

@@ -12,16 +12,16 @@
  * and `Number(x.toFixed(dp))` rounding semantics.
  */
 
-const DEFAULT_TERMINAL = /[.!?…]/;
+export const DEFAULT_TERMINAL = /[.!?…]/;
 
 export const isRevTranscript = (obj) => Boolean(obj) && typeof obj === 'object' && Array.isArray(obj.monologues);
 
-const round = (n, dp) => Number(n.toFixed(dp));
+export const round = (n, dp) => Number(n.toFixed(dp));
 
 const wordFromElement = (el) => ({ value: el.value, start: el.ts, end: el.end_ts, confidence: el.confidence });
 
 // [mean, duration_weighted] over the words that carry a numeric confidence.
-const confidenceOf = (words) => {
+export const confidenceOf = (words) => {
   const scored = words.filter((w) => typeof w.confidence === 'number');
   if (scored.length === 0) return [null, null];
   const mean = scored.reduce((sum, w) => sum + w.confidence, 0) / scored.length;
@@ -148,6 +148,35 @@ const buildSentenceModel = (revJson, options = {}) => {
     confidence: confidenceOf(allWords),
     monologues: outMonologues,
   };
+};
+
+/**
+ * Group a paragraph's Slate words[] into runs that end on terminal punctuation —
+ * the Slate-word analog of the rev.ai element walk above, so the terminal-split
+ * rule lives in exactly one place. A sentence closes when a word's text ends with
+ * a terminal char OR its `punctAfter` contains one.
+ *
+ * @param {Array<{text,start,end,confidence,punctAfter}>} words
+ * @param {RegExp} [terminal=DEFAULT_TERMINAL]
+ * @returns {Array<{wIdxStart:number, wIdxEnd:number, words:object[]}>}
+ */
+export const groupSlateWordsIntoSentences = (words, terminal = DEFAULT_TERMINAL) => {
+  const list = Array.isArray(words) ? words : [];
+  const out = [];
+  let run = [];
+  let startIdx = 0;
+  list.forEach((w, i) => {
+    run.push(w);
+    const text = typeof w.text === 'string' ? w.text : '';
+    const punctAfter = w.punctAfter || '';
+    if (terminal.test(text.slice(-1)) || terminal.test(punctAfter)) {
+      out.push({ wIdxStart: startIdx, wIdxEnd: i, words: run });
+      run = [];
+      startIdx = i + 1;
+    }
+  });
+  if (run.length) out.push({ wIdxStart: startIdx, wIdxEnd: list.length - 1, words: run });
+  return out;
 };
 
 export default buildSentenceModel;

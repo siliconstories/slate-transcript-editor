@@ -77,6 +77,7 @@ function Playground() {
   const [showTimecodes, setShowTimecodes] = useState(true);
   const [showTitle, setShowTitle] = useState(true);
   const [wordLevelEditing, setWordLevelEditing] = useState(true);
+  const [confidenceOverlay, setConfidenceOverlay] = useState(true);
 
   // The active transcript profile instance (classic for DPE, rigid for rev.ai).
   // The editor now owns import / edit-capture / versioning / faithful export;
@@ -311,6 +312,9 @@ function Playground() {
           <label>
             <input type="checkbox" checked={showTitle} onChange={(e) => setShowTitle(e.target.checked)} /> Title
           </label>
+          <label title="Highlight low-confidence words/sentences (rev.ai transcripts)">
+            <input type="checkbox" checked={confidenceOverlay} onChange={(e) => setConfidenceOverlay(e.target.checked)} /> Confidence
+          </label>
           {!isRigid && (
             <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
               <input
@@ -364,6 +368,7 @@ function Playground() {
           key={mountKey}
           transcriptData={transcriptData}
           profile={profileInst}
+          defaultPreferences={{ confidence: { overlay: confidenceOverlay } }}
           mediaUrl={mediaUrl}
           title={title}
           showTitle={showTitle}

@@ -47,9 +47,13 @@ import stripMutedWords from '../util/strip-muted-words';
 import WordLevelEditor from './WordLevelEditor';
 import SlateHelpers from './slate-helpers';
 import { resolveProfile } from '../transcript-model/profile';
+import { PreferencesProvider } from '../preferences/PreferencesProvider';
+import { usePreferences } from '../preferences/PreferencesContext';
+import buildConfidenceDecorations from '../util/confidence-decorations';
+import PreferencesDialog from './PreferencesDialog';
+import ConfidenceToolbarControl from './ConfidenceToolbarControl';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
-const SEEK_BACK_SEC = 10;
 const PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS = 1500;
 // const MAX_DURATION_FOR_PERFORMANCE_OPTIMIZATION_IN_SECONDS = 3600;
 const REPLACE_WHOLE_TEXT_INSTRUCTION =
@@ -74,11 +78,42 @@ const DEFAULT_PROPS = {
   wordLevelEditing: false,
 };
 
-function SlateTranscriptEditor(props) {
+function SlateTranscriptEditorInner(props) {
   props = { ...DEFAULT_PROPS, ...props };
+  const { settings, actions } = usePreferences();
+  const seekStepSeconds = settings.playback.seekStepSeconds;
+  const [prefsOpen, setPrefsOpen] = useState(false);
+
+  // Host props are controlled inputs: when one CHANGES, write it through to prefs
+  // (the single source the UI renders from), so a host toggling showSpeakers/etc.
+  // — or the demo's confidence checkbox via defaultPreferences — still drives the
+  // editor. Compared per-key against the previous render so prefs-dialog edits
+  // (which never change props) are never clobbered.
+  const dp = props.defaultPreferences || {};
+  const hostControlled = {
+    'display.showSpeakers': typeof props.showSpeakers === 'boolean' ? props.showSpeakers : undefined,
+    'display.showTimecodes': typeof props.showTimecodes === 'boolean' ? props.showTimecodes : undefined,
+    'display.showTitle': typeof props.showTitle === 'boolean' ? props.showTitle : undefined,
+    'playback.followPlayback': typeof props.followPlayback === 'boolean' ? props.followPlayback : undefined,
+    'editing.wordLevelEditing': typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : undefined,
+    'editing.autoSaveContentType': typeof props.autoSaveContentType === 'string' ? props.autoSaveContentType : undefined,
+    'confidence.overlay': dp.confidence && typeof dp.confidence.overlay === 'boolean' ? dp.confidence.overlay : undefined,
+  };
+  const prevControlledRef = useRef(hostControlled);
+  useEffect(() => {
+    const prev = prevControlledRef.current;
+    Object.keys(hostControlled).forEach((key) => {
+      const val = hostControlled[key];
+      if (typeof val !== 'undefined' && val !== prev[key]) {
+        const dot = key.indexOf('.');
+        actions.setField(key.slice(0, dot), key.slice(dot + 1), val);
+      }
+    });
+    prevControlledRef.current = hostControlled;
+  });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(settings.playback.playbackSpeed);
   const editor = useMemo(() => withReact(withHistory(createEditor())), []);
   // Per-instance media element ref (was a module-scope React.createRef(), which is
   // shared across every mounted editor — a latent multi-instance bug).
@@ -126,12 +161,12 @@ function SlateTranscriptEditor(props) {
   // Derived from props every render (not copied into state) so the component is
   // controlled: toggling these props shows/hides speakers & timecodes live, without
   // a remount — which matters for the rigid tier (a remount would wipe overlay edits).
-  const showSpeakers = typeof props.showSpeakers === 'boolean' ? props.showSpeakers : true;
-  const showTimecodes = typeof props.showTimecodes === 'boolean' ? props.showTimecodes : true;
+  const showSpeakers = settings.display.showSpeakers;
+  const showTimecodes = settings.display.showTimecodes;
   const [speakerOptions, setSpeakerOptions] = useState([]);
   const [showSpeakersCheatShet, setShowSpeakersCheatShet] = useState(true);
   const [saveTimer, setSaveTimer] = useState(null);
-  const [isPauseWhiletyping, setIsPauseWhiletyping] = useState(false);
+  const [isPauseWhiletyping, setIsPauseWhiletyping] = useState(settings.editing.pauseWhileTyping);
   const [isProcessing, setIsProcessing] = useState(false);
   // used isContentModified to avoid unecessarily run alignment if the slate value contnet has not been modified by the user since
   // last save or alignment
@@ -299,14 +334,14 @@ function SlateTranscriptEditor(props) {
 
   const handleSeekBack = () => {
     if (mediaRef && mediaRef.current) {
-      const newCurrentTime = mediaRef.current.currentTime - SEEK_BACK_SEC;
+      const newCurrentTime = mediaRef.current.currentTime - seekStepSeconds;
       mediaRef.current.currentTime = newCurrentTime;
 
       if (props.handleAnalyticsEvents) {
         props.handleAnalyticsEvents('ste_handle_seek_back', {
           fn: 'handleSeekBack',
           newCurrentTimeInSeconds: newCurrentTime,
-          seekBackValue: SEEK_BACK_SEC,
+          seekBackValue: seekStepSeconds,
         });
       }
     }
@@ -314,21 +349,21 @@ function SlateTranscriptEditor(props) {
 
   const handleFastForward = () => {
     if (mediaRef && mediaRef.current) {
-      const newCurrentTime = mediaRef.current.currentTime + SEEK_BACK_SEC;
+      const newCurrentTime = mediaRef.current.currentTime + seekStepSeconds;
       mediaRef.current.currentTime = newCurrentTime;
 
       if (props.handleAnalyticsEvents) {
         props.handleAnalyticsEvents('ste_handle_fast_forward', {
           fn: 'handleFastForward',
           newCurrentTimeInSeconds: newCurrentTime,
-          seekBackValue: SEEK_BACK_SEC,
+          seekBackValue: seekStepSeconds,
         });
       }
     }
   };
 
-  const followPlayback = typeof props.followPlayback === 'boolean' ? props.followPlayback : true;
-  const wordLevelEditing = editPolicy.wordLevelOnly === true ? true : typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : false;
+  const followPlayback = settings.playback.followPlayback;
+  const wordLevelEditing = editPolicy.wordLevelOnly === true ? true : settings.editing.wordLevelEditing;
 
   // seek + play for the word-level editor (single click on a word)
   // single-click: move the playhead to the word but do NOT change play state
@@ -401,24 +436,47 @@ function SlateTranscriptEditor(props) {
   const wordMap = useMemo(() => buildWordMap(value), [value]);
   const activeWordIndex = useMemo(() => (followPlayback ? findActiveWord(wordMap, currentTime) : -1), [followPlayback, wordMap, currentTime]);
 
+  // Confidence "heat" overlay decorations — derived from value + confidence settings
+  // only (never caret/time), so they don't recompute on playback ticks.
+  const confidenceSettings = useMemo(
+    () => ({ ...settings.confidence, highlightOpacity: settings.appearance.highlightOpacity }),
+    [settings.confidence, settings.appearance.highlightOpacity]
+  );
+  const confidenceDecos = useMemo(() => buildConfidenceDecorations(value, confidenceSettings), [value, confidenceSettings]);
+
   const decorate = useCallback(
     ([node, path]) => {
-      if (!followPlayback || activeWordIndex < 0) return [];
-      const activeWord = wordMap[activeWordIndex];
-      if (!activeWord) return [];
-      // Decorate the active word's text leaf (path [paragraphIndex, 0]).
-      if (Text.isText(node) && path.length === 2 && path[0] === activeWord.pIdx && path[1] === 0) {
-        return [
-          {
+      if (!Text.isText(node) || path.length !== 2 || path[1] !== 0) return [];
+      const pIdx = path[0];
+      const ranges = [];
+      // (A) confidence heat — independent of playback, keyed on value + settings
+      if (confidenceDecos.enabled) {
+        const paraDecos = confidenceDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            ranges.push({
+              anchor: { path, offset: d.charStart },
+              focus: { path, offset: d.charEnd },
+              confidenceStyle: d.confidenceStyle,
+              confidenceBand: d.confidenceBand,
+            });
+          });
+        }
+      }
+      // (B) karaoke active word — may overlap a confidence range
+      if (followPlayback && activeWordIndex >= 0) {
+        const activeWord = wordMap[activeWordIndex];
+        if (activeWord && pIdx === activeWord.pIdx) {
+          ranges.push({
             anchor: { path, offset: activeWord.charStart },
             focus: { path, offset: activeWord.charEnd },
             currentWord: true,
-          },
-        ];
+          });
+        }
       }
-      return [];
+      return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -452,20 +510,24 @@ function SlateTranscriptEditor(props) {
   // leaves re-render and pick up the `currentWord` decoration produced above.
   const renderLeaf = useCallback(
     ({ attributes, children, leaf }) => {
+      const className = leaf.currentWord ? 'timecode text current-word' : 'timecode text';
+      // active (karaoke) word keeps its yellow bg; otherwise paint the confidence wash
+      const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : undefined;
       return (
         <span
           onDoubleClick={handleTimedTextClick}
-          className={leaf.currentWord ? 'timecode text current-word' : 'timecode text'}
+          className={className}
+          style={style}
           data-start={children.props.parent.start}
           data-previous-timings={children.props.parent.previousTimings}
-          // title={'double click on a word to jump to the corresponding point in the media'}
+          data-confidence-band={leaf.confidenceBand || undefined}
           {...attributes}
         >
           {children}
         </span>
       );
     },
-    [activeWordIndex]
+    [activeWordIndex, confidenceDecos]
   );
 
   //
@@ -761,7 +823,7 @@ function SlateTranscriptEditor(props) {
   const handleSave = async () => {
     try {
       setIsProcessing(true);
-      const format = props.autoSaveContentType ? props.autoSaveContentType : 'digitalpaperedit';
+      const format = settings.editing.autoSaveContentType || 'digitalpaperedit';
       const editorContnet = await handleExport({ type: `json-${format}`, isDownload: false });
       if (props.handleAnalyticsEvents) {
         // handles if click cancel and doesn't set speaker name
@@ -1018,7 +1080,7 @@ function SlateTranscriptEditor(props) {
               }
           `}
         </style>
-        {props.showTitle && (
+        {settings.display.showTitle && (
           <Tooltip title={<Typography variant="body1">{props.title}</Typography>}>
             <Typography variant="h5" noWrap>
               {props.title}
@@ -1068,18 +1130,21 @@ function SlateTranscriptEditor(props) {
                   </FormControl>
                 </Grid>
                 <Grid>
-                  <Tooltip title={<Typography variant="body1">{` Seek back by ${SEEK_BACK_SEC} seconds`}</Typography>}>
+                  <Tooltip title={<Typography variant="body1">{` Seek back by ${seekStepSeconds} seconds`}</Typography>}>
                     <Button color="primary" onClick={handleSeekBack}>
                       <Replay10Icon color="primary" fontSize="large" />
                     </Button>
                   </Tooltip>
-                  <Tooltip title={<Typography variant="body1">{` Fast forward by ${SEEK_BACK_SEC} seconds`}</Typography>}>
+                  <Tooltip title={<Typography variant="body1">{` Fast forward by ${seekStepSeconds} seconds`}</Typography>}>
                     <Button color="primary" onClick={handleFastForward}>
                       <Forward10Icon color="primary" fontSize="large" />
                     </Button>
                   </Tooltip>
                 </Grid>
 
+                <Grid>
+                  <ConfidenceToolbarControl />
+                </Grid>
                 <Grid>
                   {props.isEditable && (
                     <Tooltip
@@ -1180,11 +1245,15 @@ function SlateTranscriptEditor(props) {
             {value.length !== 0 ? (
               <>
                 <Paper elevation={3}>
-                  <section className="editor-wrapper-container">
+                  <section
+                    className="editor-wrapper-container"
+                    style={{ fontSize: settings.appearance.fontSize, lineHeight: settings.appearance.lineSpacing }}
+                  >
                     {wordLevelEditing ? (
                       <WordLevelEditor
                         value={value}
                         setValue={setValue}
+                        confidenceOverlay={confidenceSettings}
                         isEditable={typeof props.isEditable === 'boolean' ? props.isEditable : true}
                         showSpeakers={showSpeakers}
                         showTimecodes={showTimecodes}
@@ -1251,12 +1320,43 @@ function SlateTranscriptEditor(props) {
               handleRedo={handleRedo}
               isEditable={props.isEditable}
               exporters={profile.exporters}
+              onOpenPreferences={() => setPrefsOpen(true)}
               allowReplaceText={editPolicy.allowsStructuralEdits}
             />
           </Grid>
         </Grid>
+        <PreferencesDialog open={prefsOpen} onClose={() => setPrefsOpen(false)} profileId={profile.id} />
       </Container>
     </div>
+  );
+}
+
+const transcriptHasConfidence = (data) => {
+  if (!data || typeof data !== 'object') return false;
+  if (Array.isArray(data.monologues)) {
+    return data.monologues.some((m) => (m.elements || []).some((el) => el && el.type === 'text' && typeof el.confidence === 'number'));
+  }
+  if (Array.isArray(data.words)) {
+    return data.words.some((w) => typeof w.confidence === 'number' || typeof w.score === 'number');
+  }
+  return false;
+};
+
+// Public component: owns the preferences store (localStorage + presets) and wraps
+// the editor body so usePreferences() works throughout. Existing display/behavior
+// props seed the store on first init (see seedSettingsFromProps).
+function SlateTranscriptEditor(props) {
+  const merged = { ...DEFAULT_PROPS, ...props };
+  const hasConfidence = useMemo(() => transcriptHasConfidence(merged.transcriptData), [merged.transcriptData]);
+  return (
+    <PreferencesProvider
+      seedProps={merged}
+      defaultPreferences={merged.defaultPreferences}
+      onPreferencesChange={merged.onPreferencesChange}
+      hasConfidence={hasConfidence}
+    >
+      <SlateTranscriptEditorInner {...merged} />
+    </PreferencesProvider>
   );
 }
 
@@ -1279,6 +1379,8 @@ SlateTranscriptEditor.propTypes = {
   profile: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
   onShowRawSource: PropTypes.func,
   onSentenceModel: PropTypes.func,
+  defaultPreferences: PropTypes.object,
+  onPreferencesChange: PropTypes.func,
 };
 
 // defaults are applied via DEFAULT_PROPS at the top of the component (React 19

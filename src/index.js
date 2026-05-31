@@ -8,6 +8,10 @@ import { createRigidProfile } from './transcript-model/rigid-profile';
 import { createClassicProfile } from './transcript-model/classic-profile';
 import buildSentenceModel from './util/rev-to-sentences/index.js';
 import splitSentences from './util/rev-to-sentences/split-sentences.js';
+import { PreferencesProvider } from './preferences/PreferencesProvider';
+import { usePreferences } from './preferences/PreferencesContext';
+import { confidenceToStyle } from './util/confidence-scale';
+import { DEFAULT_SETTINGS, BUILTIN_PRESETS } from './preferences/defaults';
 
 export default SlateTranscriptEditor;
 
@@ -27,4 +31,9 @@ export {
   createClassicProfile,
   buildSentenceModel,
   splitSentences,
+  PreferencesProvider,
+  usePreferences,
+  confidenceToStyle,
+  DEFAULT_SETTINGS,
+  BUILTIN_PRESETS,
 };

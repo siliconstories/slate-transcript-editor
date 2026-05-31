@@ -39,6 +39,7 @@ function SideBtns({
   handleRedo,
   isEditable,
   exporters,
+  onOpenPreferences,
   allowReplaceText = true,
 }) {
   const [anchorMenuEl, setAnchorMenuEl] = useState(null);
@@ -62,6 +63,17 @@ function SideBtns({
           </Button>
         </Tooltip>
         <Menu id="simple-menu" anchorEl={anchorMenuEl} keepMounted open={Boolean(anchorMenuEl)} onClose={handleMenuClose}>
+          {onOpenPreferences && (
+            <MenuItem
+              onClick={() => {
+                onOpenPreferences();
+                handleMenuClose();
+              }}
+            >
+              <Link color="primary">Preferences…</Link>
+            </MenuItem>
+          )}
+          {onOpenPreferences && <Divider />}
           <MenuItem onClick={handleMenuClose} disabled>
             <Link style={{ color: 'black' }}>Text Export</Link>
           </MenuItem>

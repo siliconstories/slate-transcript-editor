@@ -1,4 +1,4 @@
-import buildSentenceModel, { isRevTranscript } from './index';
+import buildSentenceModel, { isRevTranscript, confidenceOf, round, groupSlateWordsIntoSentences } from './index';
 import splitSentences from './split-sentences';
 import revInput from './__fixtures__/GEMS-01.json';
 import goldSentences from './__fixtures__/GEMS-01.sentences.json';
@@ -121,6 +121,38 @@ describe('buildSentenceModel — opt-in segmenter', () => {
     const model = buildSentenceModel(revInput, { splitter: (t) => t.split('\n') });
     expect(model.sentence_count).toBe(2);
     expect(model.word_count).toBe(259);
+  });
+});
+
+describe('reusable exports for the overlay (confidenceOf, round, groupSlateWordsIntoSentences)', () => {
+  it('round uses Number(toFixed) semantics', () => {
+    expect(round(0.7775, 3)).toBe(0.777);
+    expect(round(100.48, 2)).toBe(100.48);
+  });
+
+  it('confidenceOf works on the Slate word shape', () => {
+    const words = [
+      { text: 'a', start: 0, end: 1, confidence: 0.9 },
+      { text: 'b', start: 1, end: 2, confidence: 0.7 },
+    ];
+    expect(confidenceOf(words)).toEqual([0.8, expect.any(Number)]);
+    expect(confidenceOf([{ text: 'x', start: 0, end: 1 }])).toEqual([null, null]);
+  });
+
+  it('groupSlateWordsIntoSentences splits on terminal punct in text or punctAfter', () => {
+    const words = [
+      { text: 'Hi', punctAfter: '' },
+      { text: 'there', punctAfter: '.' },
+      { text: 'Next', punctAfter: '' },
+      { text: 'one.', punctAfter: '' },
+      { text: 'tail', punctAfter: '' },
+    ];
+    const groups = groupSlateWordsIntoSentences(words);
+    expect(groups.map((g) => [g.wIdxStart, g.wIdxEnd])).toEqual([
+      [0, 1],
+      [2, 3],
+      [4, 4],
+    ]);
   });
 });
 
