@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import PropTypes, { string } from 'prop-types';
 import path from 'path';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -55,8 +55,6 @@ const PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS = 1500;
 const REPLACE_WHOLE_TEXT_INSTRUCTION =
   'Replace whole text. \n\nAdvanced feature, if you already have an accurate transcription for the whole text, and you want to restore timecodes for it, you can use this to replace the text in this transcript. \n\nFor now this is an experimental feature. \n\nIt expects plain text, with paragraph breaks as new line breaks but no speakers.';
 
-const mediaRef = React.createRef();
-
 const pauseWhileTypeing = (current) => {
   current.play();
 };
@@ -67,11 +65,19 @@ function SlateTranscriptEditor(props) {
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const editor = useMemo(() => withReact(withHistory(createEditor())), []);
+  // Per-instance media element ref (was a module-scope React.createRef(), which is
+  // shared across every mounted editor — a latent multi-instance bug).
+  const mediaRef = useRef(null);
   // The active transcript profile decides import / edit-gate / export / versioning.
   // No `profile` prop => classic free-text DPE tier => the editor's original behavior.
   const profile = useMemo(() => resolveProfile(props.profile), [props.profile]);
   const editPolicy = profile.editPolicy;
   const [value, setValue] = useState([]);
+  // slate-react 0.95+ reads `<Slate initialValue>` once at mount; it is no longer a
+  // controlled `value`. Programmatic whole-document replacements (replace-text,
+  // restore-timecodes, rigid undo/redo reproject) bump this key to remount <Slate>
+  // so it re-reads initialValue. See replaceSlateValue below.
+  const [slateKey, setSlateKey] = useState(0);
   // Derived from props every render (not copied into state) so the component is
   // controlled: toggling these props shows/hides speakers & timecodes live, without
   // a remount — which matters for the rigid tier (a remount would wipe overlay edits).
@@ -86,6 +92,19 @@ function SlateTranscriptEditor(props) {
   // last save or alignment
   const [isContentModified, setIsContentIsModified] = useState(false);
   const [isContentSaved, setIsContentSaved] = useState(true);
+
+  // Replace the whole Slate document programmatically. Under slate-react 0.124
+  // setting `value` state no longer drives the mounted editor (initialValue is read
+  // once), so we clear the now-stale selection and remount <Slate> via slateKey,
+  // which re-runs `editor.children = initialValue` with the new value.
+  const replaceSlateValue = useCallback(
+    (newValue) => {
+      setValue(newValue);
+      editor.selection = null;
+      setSlateKey((k) => k + 1);
+    },
+    [editor]
+  );
 
   useEffect(() => {
     if (isProcessing) {
@@ -576,7 +595,7 @@ function SlateTranscriptEditor(props) {
     const newText = prompt(`Paste the text to replace here.\n\n${REPLACE_WHOLE_TEXT_INSTRUCTION}`);
     if (newText) {
       const newValue = plainTextalignToSlateJs(props.transcriptData, newText, value);
-      setValue(newValue);
+      replaceSlateValue(newValue);
 
       // TODO: consider adding some kind of word count here?
       if (props.handleAnalyticsEvents) {
@@ -597,7 +616,7 @@ function SlateTranscriptEditor(props) {
     }
     // only used by Word (OHMS) export
     const alignedSlateData = await updateBloocksTimestamps(value, inlineTimecodes);
-    setValue(alignedSlateData);
+    replaceSlateValue(alignedSlateData);
     setIsContentIsModified(false);
 
     if (inlineTimecodes) {
@@ -736,7 +755,7 @@ function SlateTranscriptEditor(props) {
   const handleUndo = () => {
     if (profile.versioning) {
       profile.versioning.undo();
-      setValue(profile.reproject());
+      replaceSlateValue(profile.reproject());
       return;
     }
     editor.undo();
@@ -745,7 +764,7 @@ function SlateTranscriptEditor(props) {
   const handleRedo = () => {
     if (profile.versioning) {
       profile.versioning.redo();
-      setValue(profile.reproject());
+      replaceSlateValue(profile.reproject());
       return;
     }
     editor.redo();
@@ -1129,8 +1148,9 @@ function SlateTranscriptEditor(props) {
                       />
                     ) : (
                       <Slate
+                        key={slateKey}
                         editor={editor}
-                        value={value}
+                        initialValue={value}
                         onChange={(value) => {
                           if (props.handleAutoSaveChanges) {
                             props.handleAutoSaveChanges(value);
