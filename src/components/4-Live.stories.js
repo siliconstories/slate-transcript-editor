@@ -1,22 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { action } from '@storybook/addon-actions';
-import { withKnobs, text, boolean, number, object, select } from '@storybook/addon-knobs';
-import { withInfo } from '@storybook/addon-info';
+import React, { useState, useEffect } from 'react';
+import { action } from 'storybook/actions';
 import SlateTranscriptEditor from './index.js';
 
 export default {
   title: 'Live',
   component: SlateTranscriptEditor,
-  decorators: [withKnobs, withInfo],
-  parameters: {
-    info: {
-      maxPropArrayLength: 3,
-      maxPropsIntoLine: 3,
-      maxPropObjectKeys: 1,
-      excludedPropTypes: ['transcriptData'],
-      source: false,
-    },
-  },
 };
 
 const DEMO_MEDIA_URL_SOLEIO =
@@ -25,18 +13,8 @@ import DEMO_SOLEIO_LIVE from '../sample-data/segmented-transcript-soleio-dpe.jso
 
 // Parent component to simulate results from a live STT stream.
 const Example = (props) => {
-  // Declare a new state variable, which we'll call "count"
-  const [jsonData, setJsonData] = useState({});
+  const [jsonData] = useState({});
   const [interimResults, setInterimResults] = useState({});
-
-  useEffect(() => {
-    props.transcriptInParts &&
-      props.transcriptInParts.forEach(
-        delayLoop((transcriptPart) => {
-          setInterimResults(transcriptPart);
-        }, 3000)
-      );
-  }, []);
 
   // https://travishorn.com/delaying-foreach-iterations-2ebd4b29ad30
   const delayLoop = (fn, delay) => {
@@ -47,42 +25,48 @@ const Example = (props) => {
     };
   };
 
+  useEffect(() => {
+    props.transcriptInParts &&
+      props.transcriptInParts.forEach(
+        delayLoop((transcriptPart) => {
+          setInterimResults(transcriptPart);
+        }, 3000)
+      );
+  }, []);
+
   return (
-    <>
-      <SlateTranscriptEditor
-        mediaUrl={text('mediaUrl', DEMO_MEDIA_URL_SOLEIO)}
-        handleSaveEditor={action('handleSaveEditor')}
-        handleAutoSaveChanges={action('handleAutoSaveChanges')}
-        // https://www.npmjs.com/package/@storybook/addon-knobs#select
-        autoSaveContentType={select('autoSaveContentType', ['digitalpaperedit', 'slate'], 'digitalpaperedit')} // digitalpaperedit or slate - digitalpaperedit, runs alignement before exporting, slate, is just the raw data.
-        transcriptData={jsonData}
-        transcriptDataLive={interimResults}
-        isEditable={props.isEditable}
-        title={props.title}
-        showTitle={true}
-        showTimecodes={true}
-        showSpeakers={true}
-      />
-    </>
+    <SlateTranscriptEditor
+      mediaUrl={DEMO_MEDIA_URL_SOLEIO}
+      handleSaveEditor={action('handleSaveEditor')}
+      handleAutoSaveChanges={action('handleAutoSaveChanges')}
+      autoSaveContentType={'digitalpaperedit'}
+      transcriptData={jsonData}
+      transcriptDataLive={interimResults}
+      isEditable={props.isEditable}
+      title={props.title}
+      showTitle={true}
+      showTimecodes={true}
+      showSpeakers={true}
+    />
   );
 };
 
-export const NotEditable = () => {
-  return (
+export const NotEditable = {
+  render: () => (
     <Example
       isEditable={false}
       transcriptInParts={DEMO_SOLEIO_LIVE}
       title={'Simulated a live STT interim results via a timer and segmented STT json, NOT editable'}
     />
-  );
+  ),
 };
 
-export const Editable = () => {
-  return (
+export const Editable = {
+  render: () => (
     <Example
       isEditable={true}
       transcriptInParts={DEMO_SOLEIO_LIVE}
       title={'Simulated a live STT interim results via a timer and segmented STT json, editable'}
     />
-  );
+  ),
 };

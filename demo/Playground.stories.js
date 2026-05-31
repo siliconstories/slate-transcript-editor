@@ -9,8 +9,7 @@ export default {
   title: 'Playground',
 };
 
-export const UploadYourOwn = () => <Playground />;
-
-UploadYourOwn.story = {
+export const UploadYourOwn = {
   name: 'Upload your own',
+  render: () => <Playground />,
 };
