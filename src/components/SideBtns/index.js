@@ -54,7 +54,7 @@ function SideBtns({
   };
 
   return (
-    <Grid container direction="column" sx={{ justifyContent: 'flex-start', alignItems: 'stretch' }}>
+    <Grid container sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
       <Grid>
         <Tooltip title={<Typography variant="body1">Export options</Typography>}>
           <Button aria-controls="simple-menu" aria-haspopup="true" onClick={handleMenuClick}>

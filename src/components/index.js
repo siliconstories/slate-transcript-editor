@@ -960,10 +960,9 @@ function SlateTranscriptEditor(props) {
           <Grid
             size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
             container
-            direction="column"
-            sx={{ justifyContent: 'space-between', alignItems: 'stretch' }}
+            sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
           >
-            <Grid container direction="column" spacing={2} sx={{ justifyContent: 'flex-start', alignItems: 'stretch' }}>
+            <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
               <Grid container>
                 <video
                   style={{ backgroundColor: 'black' }}
