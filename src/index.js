@@ -6,6 +6,8 @@ import slateToText from './util/export-adapters/txt';
 import { registerProfile, getProfile, detectProfile, resolveProfile } from './transcript-model/profile';
 import { createRigidProfile } from './transcript-model/rigid-profile';
 import { createClassicProfile } from './transcript-model/classic-profile';
+import buildSentenceModel from './util/rev-to-sentences/index.js';
+import splitSentences from './util/rev-to-sentences/split-sentences.js';
 
 export default SlateTranscriptEditor;
 
@@ -23,4 +25,6 @@ export {
   resolveProfile,
   createRigidProfile,
   createClassicProfile,
+  buildSentenceModel,
+  splitSentences,
 };

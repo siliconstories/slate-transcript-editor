@@ -90,6 +90,8 @@ function Playground() {
 
   // raw-source editor (CodeMirror lightbox) — edits the current document JSON
   const [liveValue, setLiveValue] = useState(null);
+  // latest sentence-level "shadow" emitted by the editor (rigid only), debounced
+  const [sentenceModel, setSentenceModel] = useState(null);
   const [rawOpen, setRawOpen] = useState(false);
   const [rawText, setRawText] = useState('');
   const [rawLocator, setRawLocator] = useState(null);
@@ -130,6 +132,20 @@ function Playground() {
     setRawText(JSON.stringify(obj, null, 2));
     setRawLocator(locator && (locator.key != null || typeof locator.start === 'number') ? locator : null);
     setRawOpen(true);
+  };
+
+  // Download the derived sentence-level shadow as <name>.sentences.json.
+  const downloadSentences = () => {
+    if (!sentenceModel) return;
+    const blob = new Blob([JSON.stringify(sentenceModel, null, 2) + '\n'], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(transcriptName || 'transcript').replace(/\.json$/i, '')}.sentences.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // Save in the raw editor: re-import the edited document as a fresh transcript
@@ -326,6 +342,16 @@ function Playground() {
             <button style={styles.btn} onClick={() => openRaw()} title="Edit the raw source document (JSON)">
               Raw…
             </button>
+            {isRigid && (
+              <button
+                style={styles.btn}
+                onClick={downloadSentences}
+                disabled={!sentenceModel}
+                title="Download the derived sentence-level shadow JSON (updates live as you edit words)"
+              >
+                Sentences{sentenceModel ? ` (${sentenceModel.sentence_count})` : ''}…
+              </button>
+            )}
           </div>
         )}
 
@@ -348,6 +374,10 @@ function Playground() {
           onShowRawSource={openRaw}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
           handleAutoSaveChanges={(content) => setLiveValue(content)}
+          onSentenceModel={(model) => {
+            setSentenceModel(model);
+            console.log('onSentenceModel', model);
+          }}
           handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
         />
       )}

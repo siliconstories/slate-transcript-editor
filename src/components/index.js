@@ -87,6 +87,36 @@ function SlateTranscriptEditor(props) {
   // No `profile` prop => classic free-text DPE tier => the editor's original behavior.
   const profile = useMemo(() => resolveProfile(props.profile), [props.profile]);
   const editPolicy = profile.editPolicy;
+
+  // Latest onSentenceModel callback, read at debounce-fire time so an inline host
+  // callback (a new function identity every render) does NOT re-create the emitter
+  // and retrigger the effect below — which would loop emits forever.
+  const onSentenceModelRef = useRef(props.onSentenceModel);
+  useEffect(() => {
+    onSentenceModelRef.current = props.onSentenceModel;
+  });
+
+  // Sentence-level "shadow" emit (rigid only): debounced so rapid word edits
+  // coalesce into one onSentenceModel call. Null when the host doesn't request
+  // it or the active profile has no sentence exporter (e.g. classic free-text).
+  const wantsSentenceModel = Boolean(props.onSentenceModel);
+  const emitSentenceModel = useMemo(() => {
+    const sentenceExporter = (profile.exporters || []).find((e) => e.id === 'json-rev-sentences');
+    if (!wantsSentenceModel || !sentenceExporter) return null;
+    return debounce(() => {
+      const model = sentenceExporter.run();
+      const onSentenceModel = onSentenceModelRef.current;
+      if (model && onSentenceModel) onSentenceModel(model);
+    }, 300);
+  }, [profile, wantsSentenceModel]);
+
+  // One-shot initial emit; cancel any pending debounce on unmount / profile swap.
+  useEffect(() => {
+    if (emitSentenceModel) emitSentenceModel();
+    return () => {
+      if (emitSentenceModel) emitSentenceModel.cancel();
+    };
+  }, [emitSentenceModel]);
   const [value, setValue] = useState([]);
   // slate-react 0.95+ reads `<Slate initialValue>` once at mount; it is no longer a
   // controlled `value`. Programmatic whole-document replacements (replace-text,
@@ -360,6 +390,10 @@ function SlateTranscriptEditor(props) {
     // so a host can observe mutes/rewrites — e.g. for a faithful rev.ai round-trip
     if (props.handleAutoSaveChanges) {
       props.handleAutoSaveChanges(newValue);
+    }
+    // keep the derived sentence-level shadow in sync (debounced, rigid only)
+    if (emitSentenceModel) {
+      emitSentenceModel();
     }
   };
 
@@ -666,7 +700,9 @@ function SlateTranscriptEditor(props) {
     const profileExporter = (profile.exporters || []).find((e) => e.id === type);
     if (profileExporter) {
       let out = profileExporter.run(getSlateContent());
-      if (ext === 'json') out = JSON.stringify(out, null, 2);
+      // stringify any object result (covers ext 'json' and 'sentences.json');
+      // a pre-formatted string exporter passes through untouched.
+      if (out && typeof out === 'object') out = JSON.stringify(out, null, 2);
       if (isDownload) download(out, `${getFileTitle()}.${ext}`);
       return out;
     }
@@ -1242,6 +1278,7 @@ SlateTranscriptEditor.propTypes = {
   wordLevelEditing: PropTypes.bool,
   profile: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
   onShowRawSource: PropTypes.func,
+  onSentenceModel: PropTypes.func,
 };
 
 // defaults are applied via DEFAULT_PROPS at the top of the component (React 19

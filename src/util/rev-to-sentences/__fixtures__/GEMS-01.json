@@ -1,0 +1,3047 @@
+{
+  "monologues": [
+    {
+      "speaker": 0,
+      "elements": [
+        {
+          "type": "text",
+          "value": "Ich",
+          "ts": 1.46,
+          "end_ts": 1.86,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wollte",
+          "ts": 1.86,
+          "end_ts": 2.16,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ursprünglich",
+          "ts": 2.16,
+          "end_ts": 2.96,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Opernsängerin",
+          "ts": 2.96,
+          "end_ts": 4.56,
+          "confidence": 0.88
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "werden",
+          "ts": 4.56,
+          "end_ts": 5.34,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Das",
+          "ts": 5.34,
+          "end_ts": 5.54,
+          "confidence": 0.75
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "scheniert",
+          "ts": 5.54,
+          "end_ts": 7.46,
+          "confidence": 0.67
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mich",
+          "ts": 7.46,
+          "end_ts": 7.66,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ein",
+          "ts": 7.66,
+          "end_ts": 7.88,
+          "confidence": 0.63
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wenig",
+          "ts": 7.88,
+          "end_ts": 8.2,
+          "confidence": 0.65
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "aber",
+          "ts": 8.2,
+          "end_ts": 8.4,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "es",
+          "ts": 8.4,
+          "end_ts": 8.54,
+          "confidence": 0.82
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ist",
+          "ts": 8.54,
+          "end_ts": 8.66,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "tatsächlich",
+          "ts": 8.66,
+          "end_ts": 9.12,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "so",
+          "ts": 9.12,
+          "end_ts": 9.68,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Mein",
+          "ts": 9.78,
+          "end_ts": 10.26,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Vater",
+          "ts": 10.26,
+          "end_ts": 10.64,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "hat",
+          "ts": 10.64,
+          "end_ts": 10.8,
+          "confidence": 0.88
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "immer",
+          "ts": 10.8,
+          "end_ts": 11.0,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Opern",
+          "ts": 11.0,
+          "end_ts": 11.6,
+          "confidence": 0.56
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gehört",
+          "ts": 11.6,
+          "end_ts": 11.76,
+          "confidence": 0.78
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zu",
+          "ts": 11.76,
+          "end_ts": 12.06,
+          "confidence": 0.42
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Hause",
+          "ts": 12.06,
+          "end_ts": 12.44,
+          "confidence": 0.62
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Er",
+          "ts": 12.44,
+          "end_ts": 12.58,
+          "confidence": 0.89
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "war",
+          "ts": 12.58,
+          "end_ts": 12.68,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ein",
+          "ts": 12.68,
+          "end_ts": 12.74,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "grosser",
+          "ts": 12.74,
+          "end_ts": 13.12,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Fan",
+          "ts": 13.12,
+          "end_ts": 13.34,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "von",
+          "ts": 13.34,
+          "end_ts": 13.66,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Maria",
+          "ts": 13.66,
+          "end_ts": 14.0,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Callas",
+          "ts": 14.0,
+          "end_ts": 14.8,
+          "confidence": 0.82
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Ich",
+          "ts": 14.8,
+          "end_ts": 15.26,
+          "confidence": 0.72
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wäre",
+          "ts": 15.26,
+          "end_ts": 15.42,
+          "confidence": 0.39
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "auch",
+          "ts": 15.42,
+          "end_ts": 15.68,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gerne",
+          "ts": 15.68,
+          "end_ts": 16.06,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "so",
+          "ts": 16.06,
+          "end_ts": 16.32,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "eine",
+          "ts": 16.32,
+          "end_ts": 16.5,
+          "confidence": 0.91
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "geworden",
+          "ts": 16.5,
+          "end_ts": 17.34,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Aber",
+          "ts": 17.42,
+          "end_ts": 17.84,
+          "confidence": 0.92
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 17.84,
+          "end_ts": 17.96,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 17.96,
+          "end_ts": 18.06,
+          "confidence": 0.72
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mir",
+          "ts": 18.06,
+          "end_ts": 18.22,
+          "confidence": 0.59
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "nie",
+          "ts": 18.22,
+          "end_ts": 18.46,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gewagt",
+          "ts": 18.46,
+          "end_ts": 19.42,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "diesen",
+          "ts": 19.42,
+          "end_ts": 19.82,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Wunsch",
+          "ts": 19.82,
+          "end_ts": 20.18,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zu",
+          "ts": 20.18,
+          "end_ts": 20.36,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "äussern",
+          "ts": 20.36,
+          "end_ts": 20.86,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "und",
+          "ts": 20.86,
+          "end_ts": 21.0,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zu",
+          "ts": 21.0,
+          "end_ts": 21.08,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sagen",
+          "ts": 21.08,
+          "end_ts": 21.4,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "dass",
+          "ts": 21.4,
+          "end_ts": 21.62,
+          "confidence": 0.56
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 21.62,
+          "end_ts": 21.92,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "das",
+          "ts": 21.92,
+          "end_ts": 22.34,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gerne",
+          "ts": 22.34,
+          "end_ts": 22.36,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "möchte",
+          "ts": 22.36,
+          "end_ts": 23.18,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Darum",
+          "ts": 23.28,
+          "end_ts": 23.74,
+          "confidence": 0.86
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 23.74,
+          "end_ts": 23.84,
+          "confidence": 0.69
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 23.84,
+          "end_ts": 23.96,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "jetzt",
+          "ts": 23.96,
+          "end_ts": 24.24,
+          "confidence": 0.24
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "in",
+          "ts": 24.24,
+          "end_ts": 24.34,
+          "confidence": 0.45
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "die",
+          "ts": 24.34,
+          "end_ts": 24.42,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Gymnasium",
+          "ts": 24.42,
+          "end_ts": 24.7,
+          "confidence": 0.54
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gegangen",
+          "ts": 24.7,
+          "end_ts": 24.82,
+          "confidence": 0.38
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "und",
+          "ts": 24.82,
+          "end_ts": 24.84,
+          "confidence": 0.57
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 24.84,
+          "end_ts": 24.98,
+          "confidence": 0.45
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "dort",
+          "ts": 24.98,
+          "end_ts": 25.32,
+          "confidence": 0.6
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "weitergelaufen",
+          "ts": 25.32,
+          "end_ts": 26.84,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Eine",
+          "ts": 27.12,
+          "end_ts": 27.6,
+          "confidence": 0.69
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "lange",
+          "ts": 27.6,
+          "end_ts": 28.18,
+          "confidence": 0.81
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "lange",
+          "ts": 28.18,
+          "end_ts": 28.34,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Geschichte",
+          "ts": 28.34,
+          "end_ts": 28.88,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "aber",
+          "ts": 28.88,
+          "end_ts": 29.02,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "das",
+          "ts": 29.02,
+          "end_ts": 29.12,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ist",
+          "ts": 29.12,
+          "end_ts": 29.18,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "jetzt",
+          "ts": 29.18,
+          "end_ts": 29.32,
+          "confidence": 0.93
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gleich",
+          "ts": 29.32,
+          "end_ts": 29.82,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Ich",
+          "ts": 29.82,
+          "end_ts": 30.54,
+          "confidence": 0.3
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 30.54,
+          "end_ts": 30.6,
+          "confidence": 0.4
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "dann",
+          "ts": 30.6,
+          "end_ts": 30.74,
+          "confidence": 0.7
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mit",
+          "ts": 30.74,
+          "end_ts": 30.84,
+          "confidence": 0.72
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "18",
+          "ts": 30.84,
+          "end_ts": 31.28,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zum",
+          "ts": 31.28,
+          "end_ts": 31.64,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ersten",
+          "ts": 31.64,
+          "end_ts": 32.16,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Mal",
+          "ts": 32.16,
+          "end_ts": 32.58,
+          "confidence": 0.96
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "in",
+          "ts": 32.58,
+          "end_ts": 32.8,
+          "confidence": 0.77
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "die",
+          "ts": 32.8,
+          "end_ts": 32.9,
+          "confidence": 0.79
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Ferien",
+          "ts": 32.9,
+          "end_ts": 33.48,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ans",
+          "ts": 33.48,
+          "end_ts": 33.66,
+          "confidence": 0.09
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Meer",
+          "ts": 33.66,
+          "end_ts": 34.42,
+          "confidence": 0.63
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Auf",
+          "ts": 36.24,
+          "end_ts": 36.74,
+          "confidence": 0.58
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Tunesien",
+          "ts": 36.74,
+          "end_ts": 37.28,
+          "confidence": 0.82
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "auf",
+          "ts": 37.28,
+          "end_ts": 37.56,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Skånes",
+          "ts": 37.56,
+          "end_ts": 38.54,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 39.68,
+          "end_ts": 40.18,
+          "confidence": 0.37
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "da",
+          "ts": 40.18,
+          "end_ts": 40.68,
+          "confidence": 0.36
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "hat",
+          "ts": 40.68,
+          "end_ts": 41.14,
+          "confidence": 0.59
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "er",
+          "ts": 41.14,
+          "end_ts": 41.28,
+          "confidence": 0.93
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Französisch",
+          "ts": 41.28,
+          "end_ts": 41.96,
+          "confidence": 0.88
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesprochen",
+          "ts": 41.96,
+          "end_ts": 42.4,
+          "confidence": 0.75
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Erstens",
+          "ts": 42.44,
+          "end_ts": 42.94,
+          "confidence": 0.64
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 42.94,
+          "end_ts": 43.02,
+          "confidence": 0.67
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 43.02,
+          "end_ts": 43.14,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bei",
+          "ts": 43.14,
+          "end_ts": 43.24,
+          "confidence": 0.61
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Lange",
+          "ts": 43.24,
+          "end_ts": 43.42,
+          "confidence": 0.28
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "aufgewachsen",
+          "ts": 43.42,
+          "end_ts": 44.16,
+          "confidence": 0.69
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 44.16,
+          "end_ts": 44.22,
+          "confidence": 0.39
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zweitens",
+          "ts": 44.22,
+          "end_ts": 44.52,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "war",
+          "ts": 44.52,
+          "end_ts": 44.78,
+          "confidence": 0.77
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "der",
+          "ts": 44.78,
+          "end_ts": 44.98,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Mann",
+          "ts": 44.98,
+          "end_ts": 46.64,
+          "confidence": 0.92
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mit",
+          "ts": 46.64,
+          "end_ts": 46.78,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "dem",
+          "ts": 46.78,
+          "end_ts": 47.06,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 47.06,
+          "end_ts": 47.2,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "auf",
+          "ts": 47.2,
+          "end_ts": 47.4,
+          "confidence": 0.37
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Skånes",
+          "ts": 47.4,
+          "end_ts": 48.18,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gegangen",
+          "ts": 48.18,
+          "end_ts": 48.38,
+          "confidence": 0.16
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 48.38,
+          "end_ts": 48.64,
+          "confidence": 0.74
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ein",
+          "ts": 48.64,
+          "end_ts": 49.82,
+          "confidence": 0.91
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Weltscher",
+          "ts": 49.82,
+          "end_ts": 50.52,
+          "confidence": 0.69
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Also",
+          "ts": 50.58,
+          "end_ts": 51.14,
+          "confidence": 0.39
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "voilà",
+          "ts": 51.14,
+          "end_ts": 51.4,
+          "confidence": 0.48
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wir",
+          "ts": 51.4,
+          "end_ts": 51.66,
+          "confidence": 0.6
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "haben",
+          "ts": 51.66,
+          "end_ts": 51.76,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Französisch",
+          "ts": 51.76,
+          "end_ts": 52.2,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesprochen",
+          "ts": 52.2,
+          "end_ts": 52.88,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 52.88,
+          "end_ts": 53.36,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "dann",
+          "ts": 53.36,
+          "end_ts": 53.62,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sind",
+          "ts": 53.62,
+          "end_ts": 54.08,
+          "confidence": 0.72
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zwei",
+          "ts": 54.08,
+          "end_ts": 55.54,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Typen",
+          "ts": 55.54,
+          "end_ts": 55.92,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gekommen",
+          "ts": 55.92,
+          "end_ts": 56.36,
+          "confidence": 0.82
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "die",
+          "ts": 56.36,
+          "end_ts": 56.78,
+          "confidence": 0.33
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mir",
+          "ts": 56.78,
+          "end_ts": 56.86,
+          "confidence": 0.26
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "immer",
+          "ts": 56.86,
+          "end_ts": 57.08,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "hinterher",
+          "ts": 57.08,
+          "end_ts": 57.56,
+          "confidence": 0.62
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gelaufen",
+          "ts": 57.56,
+          "end_ts": 58.04,
+          "confidence": 0.62
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sind",
+          "ts": 58.04,
+          "end_ts": 58.18,
+          "confidence": 0.91
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 58.18,
+          "end_ts": 58.32,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "der",
+          "ts": 58.32,
+          "end_ts": 58.4,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "eine",
+          "ts": 58.4,
+          "end_ts": 58.56,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "hat",
+          "ts": 58.56,
+          "end_ts": 58.7,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sich",
+          "ts": 58.7,
+          "end_ts": 58.84,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "vorgestellt",
+          "ts": 58.84,
+          "end_ts": 59.24,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "und",
+          "ts": 59.24,
+          "end_ts": 59.32,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesagt",
+          "ts": 59.32,
+          "end_ts": 59.52,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 59.52,
+          "end_ts": 59.64,
+          "confidence": 0.89
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 59.64,
+          "end_ts": 59.72,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "in",
+          "ts": 59.72,
+          "end_ts": 59.8,
+          "confidence": 0.07
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 59.82,
+          "end_ts": 60.28,
+          "confidence": 0.05
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "der",
+          "ts": 60.28,
+          "end_ts": 60.42,
+          "confidence": 0.39
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "andere",
+          "ts": 60.42,
+          "end_ts": 60.6,
+          "confidence": 0.67
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "hat",
+          "ts": 60.6,
+          "end_ts": 60.7,
+          "confidence": 0.12
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesagt",
+          "ts": 60.7,
+          "end_ts": 60.94,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 60.94,
+          "end_ts": 61.04,
+          "confidence": 0.63
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 61.04,
+          "end_ts": 61.12,
+          "confidence": 0.11
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Produzent",
+          "ts": 61.12,
+          "end_ts": 62.06,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        }
+      ]
+    },
+    {
+      "speaker": 0,
+      "elements": [
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 62.66,
+          "end_ts": 62.98,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 62.98,
+          "end_ts": 63.14,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 63.14,
+          "end_ts": 63.2,
+          "confidence": 0.58
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesagt",
+          "ts": 63.2,
+          "end_ts": 63.5,
+          "confidence": 0.84
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "jawohl",
+          "ts": 63.5,
+          "end_ts": 64.12,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wahrscheinlich",
+          "ts": 64.12,
+          "end_ts": 64.54,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "schon",
+          "ts": 64.54,
+          "end_ts": 65.44,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Ich",
+          "ts": 66.02,
+          "end_ts": 66.34,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 66.34,
+          "end_ts": 66.48,
+          "confidence": 0.92
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "es",
+          "ts": 66.48,
+          "end_ts": 66.52,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "wirklich",
+          "ts": 66.52,
+          "end_ts": 66.66,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "nicht",
+          "ts": 66.66,
+          "end_ts": 66.92,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "geglaubt",
+          "ts": 66.92,
+          "end_ts": 67.44,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 67.44,
+          "end_ts": 67.52,
+          "confidence": 0.42
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sie",
+          "ts": 67.52,
+          "end_ts": 67.54,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mussten",
+          "ts": 67.54,
+          "end_ts": 67.92,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sich",
+          "ts": 67.92,
+          "end_ts": 69.2,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "anstrengen",
+          "ts": 69.2,
+          "end_ts": 69.9,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "mich",
+          "ts": 69.9,
+          "end_ts": 69.98,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zu",
+          "ts": 69.98,
+          "end_ts": 70.16,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "überzeugen",
+          "ts": 70.16,
+          "end_ts": 70.74,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 70.74,
+          "end_ts": 70.8,
+          "confidence": 0.35
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "so",
+          "ts": 70.8,
+          "end_ts": 70.86,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 70.86,
+          "end_ts": 71.02,
+          "confidence": 0.76
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 71.02,
+          "end_ts": 71.14,
+          "confidence": 1.0
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "aber",
+          "ts": 71.14,
+          "end_ts": 71.24,
+          "confidence": 0.63
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zu",
+          "ts": 71.24,
+          "end_ts": 71.34,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "meiner",
+          "ts": 71.34,
+          "end_ts": 71.54,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ersten",
+          "ts": 71.54,
+          "end_ts": 72.1,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Filmrolle",
+          "ts": 72.1,
+          "end_ts": 73.46,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gekommen",
+          "ts": 73.46,
+          "end_ts": 74.0,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 74.0,
+          "end_ts": 74.14,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "das",
+          "ts": 74.14,
+          "end_ts": 74.24,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "war",
+          "ts": 74.24,
+          "end_ts": 74.46,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "in",
+          "ts": 74.46,
+          "end_ts": 74.68,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Belgien",
+          "ts": 74.68,
+          "end_ts": 75.3,
+          "confidence": 0.84
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Im",
+          "ts": 76.28,
+          "end_ts": 76.6,
+          "confidence": 0.89
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Film",
+          "ts": 76.6,
+          "end_ts": 76.92,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "«Cue",
+          "ts": 76.92,
+          "end_ts": 77.16,
+          "confidence": 0.5
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Haute»",
+          "ts": 77.16,
+          "end_ts": 77.82,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Aber",
+          "ts": 77.82,
+          "end_ts": 78.26,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "den",
+          "ts": 78.26,
+          "end_ts": 78.34,
+          "confidence": 0.44
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Film",
+          "ts": 78.34,
+          "end_ts": 78.56,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 78.56,
+          "end_ts": 78.66,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 78.66,
+          "end_ts": 78.76,
+          "confidence": 1.0
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bekommen",
+          "ts": 78.76,
+          "end_ts": 78.96,
+          "confidence": 0.86
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "die",
+          "ts": 78.96,
+          "end_ts": 79.04,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Rolle",
+          "ts": 79.04,
+          "end_ts": 79.24,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 79.24,
+          "end_ts": 79.38,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 79.38,
+          "end_ts": 79.44,
+          "confidence": 1.0
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bekommen",
+          "ts": 79.44,
+          "end_ts": 79.68,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "weil",
+          "ts": 79.68,
+          "end_ts": 79.82,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich...",
+          "ts": 79.82,
+          "end_ts": 80.12,
+          "confidence": 0.62
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Also",
+          "ts": 83.14,
+          "end_ts": 83.78,
+          "confidence": 0.38
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 83.78,
+          "end_ts": 83.9,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 83.9,
+          "end_ts": 84.04,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "im",
+          "ts": 84.04,
+          "end_ts": 84.16,
+          "confidence": 0.92
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Flashback",
+          "ts": 84.16,
+          "end_ts": 84.72,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gespielt",
+          "ts": 84.72,
+          "end_ts": 85.6,
+          "confidence": 0.77
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Also",
+          "ts": 85.6,
+          "end_ts": 85.76,
+          "confidence": 0.74
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "in",
+          "ts": 85.76,
+          "end_ts": 85.86,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "der",
+          "ts": 85.86,
+          "end_ts": 85.88,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Retrospektive",
+          "ts": 85.88,
+          "end_ts": 86.86,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Ich",
+          "ts": 86.86,
+          "end_ts": 86.98,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 86.98,
+          "end_ts": 87.0,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "«Die",
+          "ts": 87.0,
+          "end_ts": 87.16,
+          "confidence": 0.68
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "junge",
+          "ts": 87.16,
+          "end_ts": 87.34,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Frau»",
+          "ts": 87.34,
+          "end_ts": 87.8,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gespielt",
+          "ts": 87.8,
+          "end_ts": 88.24,
+          "confidence": 0.78
+        },
+        {
+          "type": "punct",
+          "value": ","
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "während",
+          "ts": 88.24,
+          "end_ts": 88.4,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "des",
+          "ts": 88.4,
+          "end_ts": 88.58,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Zweiten",
+          "ts": 88.58,
+          "end_ts": 88.96,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Weltkriegs",
+          "ts": 88.96,
+          "end_ts": 89.76,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 89.82,
+          "end_ts": 90.06,
+          "confidence": 0.11
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "die",
+          "ts": 90.06,
+          "end_ts": 90.18,
+          "confidence": 0.9
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ältere",
+          "ts": 90.18,
+          "end_ts": 90.76,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Schauspielerin",
+          "ts": 90.76,
+          "end_ts": 91.7,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "war",
+          "ts": 91.7,
+          "end_ts": 91.88,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Anne",
+          "ts": 91.88,
+          "end_ts": 92.1,
+          "confidence": 0.25
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Gordy",
+          "ts": 92.1,
+          "end_ts": 93.04,
+          "confidence": 0.75
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 93.26,
+          "end_ts": 93.72,
+          "confidence": 0.41
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 93.72,
+          "end_ts": 93.88,
+          "confidence": 0.88
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 93.88,
+          "end_ts": 93.94,
+          "confidence": 0.12
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "sie",
+          "ts": 93.94,
+          "end_ts": 94.06,
+          "confidence": 0.64
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "einfach",
+          "ts": 94.06,
+          "end_ts": 94.24,
+          "confidence": 0.73
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "unglaublich",
+          "ts": 94.24,
+          "end_ts": 94.94,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ähnlich",
+          "ts": 94.94,
+          "end_ts": 95.18,
+          "confidence": 0.85
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesehen",
+          "ts": 95.18,
+          "end_ts": 95.94,
+          "confidence": 0.86
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Und",
+          "ts": 96.56,
+          "end_ts": 97.02,
+          "confidence": 0.87
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "habe",
+          "ts": 97.02,
+          "end_ts": 97.2,
+          "confidence": 0.58
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Französisch",
+          "ts": 97.2,
+          "end_ts": 97.78,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gesprochen",
+          "ts": 97.78,
+          "end_ts": 98.08,
+          "confidence": 0.8
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Das",
+          "ts": 98.08,
+          "end_ts": 98.22,
+          "confidence": 0.94
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "war",
+          "ts": 98.22,
+          "end_ts": 98.42,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "der",
+          "ts": 98.42,
+          "end_ts": 98.54,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Grund",
+          "ts": 98.54,
+          "end_ts": 99.24,
+          "confidence": 0.97
+        },
+        {
+          "type": "punct",
+          "value": "."
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "So",
+          "ts": 100.16,
+          "end_ts": 100.62,
+          "confidence": 0.95
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "bin",
+          "ts": 100.62,
+          "end_ts": 100.76,
+          "confidence": 0.29
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "ich",
+          "ts": 100.76,
+          "end_ts": 100.86,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "zur",
+          "ts": 100.86,
+          "end_ts": 100.98,
+          "confidence": 0.91
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "Schauspielerei",
+          "ts": 100.98,
+          "end_ts": 101.52,
+          "confidence": 0.99
+        },
+        {
+          "type": "punct",
+          "value": " "
+        },
+        {
+          "type": "text",
+          "value": "gekommen",
+          "ts": 101.52,
+          "end_ts": 101.94,
+          "confidence": 0.98
+        },
+        {
+          "type": "punct",
+          "value": "."
+        }
+      ]
+    }
+  ]
+}

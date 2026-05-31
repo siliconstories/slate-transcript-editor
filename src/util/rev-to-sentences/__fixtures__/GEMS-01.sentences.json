@@ -1,0 +1,298 @@
+{
+  "confidence_format": [
+    "mean",
+    "duration_weighted"
+  ],
+  "speakers": [
+    0
+  ],
+  "sentence_count": 27,
+  "word_count": 259,
+  "duration_sec": 100.48,
+  "confidence": [
+    0.798,
+    0.821
+  ],
+  "monologues": [
+    {
+      "speaker": 0,
+      "sentences": [
+        {
+          "text": "Ich wollte ursprünglich Opernsängerin werden.",
+          "ts": 1.46,
+          "end_ts": 5.34,
+          "confidence": [
+            0.934,
+            0.922
+          ],
+          "word_count": 5
+        },
+        {
+          "text": "Das scheniert mich ein wenig, aber es ist tatsächlich so.",
+          "ts": 5.34,
+          "end_ts": 9.68,
+          "confidence": [
+            0.836,
+            0.778
+          ],
+          "word_count": 10
+        },
+        {
+          "text": "Mein Vater hat immer Opern gehört zu Hause.",
+          "ts": 9.78,
+          "end_ts": 12.44,
+          "confidence": [
+            0.769,
+            0.747
+          ],
+          "word_count": 8
+        },
+        {
+          "text": "Er war ein grosser Fan von Maria Callas.",
+          "ts": 12.44,
+          "end_ts": 14.8,
+          "confidence": [
+            0.944,
+            0.919
+          ],
+          "word_count": 8
+        },
+        {
+          "text": "Ich wäre auch gerne so eine geworden.",
+          "ts": 14.8,
+          "end_ts": 17.34,
+          "confidence": [
+            0.781,
+            0.839
+          ],
+          "word_count": 7
+        },
+        {
+          "text": "Aber ich habe mir nie gewagt, diesen Wunsch zu äussern und zu sagen, dass ich das gerne möchte.",
+          "ts": 17.42,
+          "end_ts": 23.18,
+          "confidence": [
+            0.881,
+            0.896
+          ],
+          "word_count": 18
+        },
+        {
+          "text": "Darum bin ich jetzt in die Gymnasium gegangen und bin dort weitergelaufen.",
+          "ts": 23.28,
+          "end_ts": 26.84,
+          "confidence": [
+            0.608,
+            0.67
+          ],
+          "word_count": 12
+        },
+        {
+          "text": "Eine lange, lange Geschichte, aber das ist jetzt gleich.",
+          "ts": 27.12,
+          "end_ts": 29.82,
+          "confidence": [
+            0.91,
+            0.869
+          ],
+          "word_count": 9
+        },
+        {
+          "text": "Ich bin dann mit 18 zum ersten Mal in die Ferien ans Meer.",
+          "ts": 29.82,
+          "end_ts": 34.42,
+          "confidence": [
+            0.695,
+            0.723
+          ],
+          "word_count": 13
+        },
+        {
+          "text": "Auf Tunesien, auf Skånes.",
+          "ts": 36.24,
+          "end_ts": 38.54,
+          "confidence": [
+            0.758,
+            0.748
+          ],
+          "word_count": 4
+        },
+        {
+          "text": "Und da hat er Französisch gesprochen.",
+          "ts": 39.68,
+          "end_ts": 42.4,
+          "confidence": [
+            0.647,
+            0.623
+          ],
+          "word_count": 6
+        },
+        {
+          "text": "Erstens bin ich bei Lange aufgewachsen.",
+          "ts": 42.44,
+          "end_ts": 44.16,
+          "confidence": [
+            0.647,
+            0.648
+          ],
+          "word_count": 6
+        },
+        {
+          "text": "Und zweitens war der Mann, mit dem ich auf Skånes gegangen bin ein Weltscher.",
+          "ts": 44.16,
+          "end_ts": 50.52,
+          "confidence": [
+            0.753,
+            0.844
+          ],
+          "word_count": 14
+        },
+        {
+          "text": "Also, voilà, wir haben Französisch gesprochen.",
+          "ts": 50.58,
+          "end_ts": 52.88,
+          "confidence": [
+            0.703,
+            0.726
+          ],
+          "word_count": 6
+        },
+        {
+          "text": "Und dann sind zwei Typen gekommen, die mir immer hinterher gelaufen sind Und der eine hat sich vorgestellt und gesagt, ich bin in Und der andere hat gesagt, ich bin Produzent.",
+          "ts": 52.88,
+          "end_ts": 62.06,
+          "confidence": [
+            0.692,
+            0.745
+          ],
+          "word_count": 31
+        }
+      ]
+    },
+    {
+      "speaker": 0,
+      "sentences": [
+        {
+          "text": "Und ich habe gesagt, jawohl, wahrscheinlich schon.",
+          "ts": 62.66,
+          "end_ts": 65.44,
+          "confidence": [
+            0.859,
+            0.912
+          ],
+          "word_count": 7
+        },
+        {
+          "text": "Ich habe es wirklich nicht geglaubt.",
+          "ts": 66.02,
+          "end_ts": 67.44,
+          "confidence": [
+            0.923,
+            0.903
+          ],
+          "word_count": 6
+        },
+        {
+          "text": "Und sie mussten sich anstrengen, mich zu überzeugen.",
+          "ts": 67.44,
+          "end_ts": 70.74,
+          "confidence": [
+            0.909,
+            0.964
+          ],
+          "word_count": 8
+        },
+        {
+          "text": "Und so bin ich aber zu meiner ersten Filmrolle gekommen.",
+          "ts": 70.74,
+          "end_ts": 74.0,
+          "confidence": [
+            0.865,
+            0.95
+          ],
+          "word_count": 10
+        },
+        {
+          "text": "Und das war in Belgien.",
+          "ts": 74.0,
+          "end_ts": 75.3,
+          "confidence": [
+            0.96,
+            0.918
+          ],
+          "word_count": 5
+        },
+        {
+          "text": "Im Film «Cue Haute».",
+          "ts": 76.28,
+          "end_ts": 77.82,
+          "confidence": [
+            0.777,
+            0.781
+          ],
+          "word_count": 4
+        },
+        {
+          "text": "Aber den Film habe ich bekommen, die Rolle habe ich bekommen, weil ich... Also, ich habe im Flashback gespielt.",
+          "ts": 77.82,
+          "end_ts": 85.6,
+          "confidence": [
+            0.875,
+            0.821
+          ],
+          "word_count": 19
+        },
+        {
+          "text": "Also, in der Retrospektive Ich habe «Die junge Frau» gespielt, während des Zweiten Weltkriegs Und die ältere Schauspielerin war Anne Gordy.",
+          "ts": 85.6,
+          "end_ts": 93.04,
+          "confidence": [
+            0.827,
+            0.857
+          ],
+          "word_count": 21
+        },
+        {
+          "text": "Und ich habe sie einfach unglaublich ähnlich gesehen.",
+          "ts": 93.26,
+          "end_ts": 95.94,
+          "confidence": [
+            0.685,
+            0.782
+          ],
+          "word_count": 8
+        },
+        {
+          "text": "Und habe Französisch gesprochen.",
+          "ts": 96.56,
+          "end_ts": 98.08,
+          "confidence": [
+            0.8,
+            0.852
+          ],
+          "word_count": 4
+        },
+        {
+          "text": "Das war der Grund.",
+          "ts": 98.08,
+          "end_ts": 99.24,
+          "confidence": [
+            0.968,
+            0.969
+          ],
+          "word_count": 4
+        },
+        {
+          "text": "So bin ich zur Schauspielerei gekommen.",
+          "ts": 100.16,
+          "end_ts": 101.94,
+          "confidence": [
+            0.852,
+            0.917
+          ],
+          "word_count": 6
+        }
+      ]
+    }
+  ]
+}

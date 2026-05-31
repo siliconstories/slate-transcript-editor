@@ -7,6 +7,7 @@
  * import / edit-capture / versioning / faithful export through this object.
  */
 import convertDpeToSlate from '../util/dpe-to-slate';
+import buildSentenceModel from '../util/rev-to-sentences';
 import {
   isRevTranscript,
   revToModel,
@@ -49,6 +50,14 @@ export const createRigidProfile = () => {
         label: 'rev.ai (faithful)',
         ext: 'json',
         run: () => (model ? projectRev(model.original, currentOverlay(history)) : null),
+      },
+      {
+        // Sentence-level "shadow" of the current word-level state — the same
+        // adapter backs the export menu and the live onSentenceModel emit.
+        id: 'json-rev-sentences',
+        label: 'rev.ai (sentences)',
+        ext: 'sentences.json',
+        run: () => (model ? buildSentenceModel(projectRev(model.original, currentOverlay(history))) : null),
       },
     ],
 
