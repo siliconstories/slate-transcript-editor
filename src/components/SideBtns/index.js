@@ -11,7 +11,6 @@ import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined';
 import KeyboardReturnOutlinedIcon from '@material-ui/icons/KeyboardReturnOutlined';
 import MusicNoteOutlinedIcon from '@material-ui/icons/MusicNoteOutlined';
-import HelpOutlineOutlinedIcon from '@material-ui/icons/HelpOutlineOutlined';
 import ImportExportIcon from '@material-ui/icons/ImportExport';
 import CachedOutlinedIcon from '@material-ui/icons/CachedOutlined';
 import InfoOutlined from '@material-ui/icons/InfoOutlined';
@@ -55,7 +54,7 @@ function SideBtns({
   };
 
   return (
-    <Grid container direction="column" justifycontent="flex-start" alignItems="stretch">
+    <Grid container direction="column" justifyContent="flex-start" alignItems="stretch">
       <Grid item>
         <Tooltip title={<Typography variant="body1">Export options</Typography>}>
           <Button aria-controls="simple-menu" aria-haspopup="true" onClick={handleMenuClick}>

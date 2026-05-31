@@ -18,11 +18,9 @@ import Tooltip from '@material-ui/core/Tooltip';
 import KeyboardReturnOutlinedIcon from '@material-ui/icons/KeyboardReturnOutlined';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 import PeopleIcon from '@material-ui/icons/People';
-import FormLabel from '@material-ui/core/FormLabel';
 import Switch from '@material-ui/core/Switch';
 import InfoOutlinedIcon from '@material-ui/icons/InfoOutlined';
 import FormHelperText from '@material-ui/core/FormHelperText';
-import EditIcon from '@material-ui/icons/Edit';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import SaveIcon from '@material-ui/icons/Save';
 import debounce from 'lodash/debounce';
@@ -471,7 +469,7 @@ function SlateTranscriptEditor(props) {
     }
 
     return (
-      <Grid container direction="row" justifycontent="flex-start" alignItems="flex-start" {...props.attributes}>
+      <Grid container direction="row" justifyContent="flex-start" alignItems="flex-start" {...props.attributes}>
         {showTimecodes && (
           <Grid item contentEditable={false} xs={4} sm={3} md={3} lg={2} xl={2} className={'p-t-2 text-truncate'}>
             <code
@@ -958,9 +956,9 @@ function SlateTranscriptEditor(props) {
           </Tooltip>
         )}
 
-        <Grid container direction="row" justifycontent="center" alignItems="stretch" spacing={2}>
-          <Grid item xs={12} sm={4} md={4} lg={4} xl={4} container direction="column" justifycontent="space-between" alignItems="stretch">
-            <Grid container direction="column" justifycontent="flex-start" alignItems="stretch" spacing={2}>
+        <Grid container direction="row" justifyContent="center" alignItems="stretch" spacing={2}>
+          <Grid item xs={12} sm={4} md={4} lg={4} xl={4} container direction="column" justifyContent="space-between" alignItems="stretch">
+            <Grid container direction="column" justifyContent="flex-start" alignItems="stretch" spacing={2}>
               <Grid item container>
                 <video
                   style={{ backgroundColor: 'black' }}
@@ -972,7 +970,7 @@ function SlateTranscriptEditor(props) {
                   playsInline
                 ></video>
               </Grid>
-              <Grid container direction="row" justifycontent="space-between" alignItems="flex-start" spacing={1} item>
+              <Grid container direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} item>
                 <Grid item>
                   <p>
                     <code style={{ color: 'grey' }}>{shortTimecode(currentTime)}</code>
@@ -997,12 +995,12 @@ function SlateTranscriptEditor(props) {
                 </Grid>
                 <Grid item>
                   <Tooltip title={<Typography variant="body1">{` Seek back by ${SEEK_BACK_SEC} seconds`}</Typography>}>
-                    <Button color="primary" onClick={handleSeekBack} block="true">
+                    <Button color="primary" onClick={handleSeekBack}>
                       <Replay10Icon color="primary" fontSize="large" />
                     </Button>
                   </Tooltip>
                   <Tooltip title={<Typography variant="body1">{` Fast forward by ${SEEK_BACK_SEC} seconds`}</Typography>}>
-                    <Button color="primary" onClick={handleFastForward} block="true">
+                    <Button color="primary" onClick={handleFastForward}>
                       <Forward10Icon color="primary" fontSize="large" />
                     </Button>
                   </Tooltip>

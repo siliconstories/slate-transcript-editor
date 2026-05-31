@@ -219,7 +219,7 @@ function WordLevelEditor({
         const child = paragraph.children && paragraph.children[0] ? paragraph.children[0] : { words: [] };
         const words = Array.isArray(child.words) ? child.words : [];
         return (
-          <Grid container direction="row" justifycontent="flex-start" alignItems="flex-start" key={pIdx} className="stw-paragraph">
+          <Grid container direction="row" justifyContent="flex-start" alignItems="flex-start" key={pIdx} className="stw-paragraph">
             {showTimecodes && (
               <Grid item xs={4} sm={3} md={3} lg={2} xl={2} className={'p-t-2 text-truncate'}>
                 <code
