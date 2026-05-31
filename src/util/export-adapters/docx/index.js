@@ -3,7 +3,10 @@ import { shortTimecode } from '../../timecode-converter/';
 import { Node } from 'slate';
 export default slateToDocx;
 
-function slateToDocx({
+// Builds the docx Document model from a Slate value. Pure + DOM-free so it can be
+// snapshot-tested headlessly (Packer.toBuffer) — the golden baseline the docx 9
+// rewrite is diffed against. The browser download lives in downloadDocx below.
+export function buildDocxDocument({
   value,
   speakers,
   timecodes,
@@ -69,9 +72,14 @@ function slateToDocx({
     }
   });
 
+  return doc;
+}
+
+// Browser side-effect: pack the document to a blob and trigger a download.
+export function downloadDocx(doc, title = 'Transcript') {
   const packer = new Packer();
 
-  packer.toBlob(doc).then((blob) => {
+  return packer.toBlob(doc).then((blob) => {
     const filename = `${title}.docx`;
     // // const type =  'application/octet-stream';
     const a = document.createElement('a');
@@ -81,4 +89,9 @@ function slateToDocx({
 
     return blob;
   });
+}
+
+function slateToDocx(opts) {
+  const doc = buildDocxDocument(opts);
+  return downloadDocx(doc, opts.title);
 }

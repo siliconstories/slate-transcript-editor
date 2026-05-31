@@ -1,0 +1,179 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`dpe-to-slate (golden) converts a DPE transcript into the timedText Slate node shape 1`] = `
+Array [
+  Object {
+    "children": Array [
+      Object {
+        "text": "Hello world this is Alice",
+        "words": Array [
+          Object {
+            "end": 0.5,
+            "start": 0,
+            "text": "Hello",
+          },
+          Object {
+            "end": 1,
+            "start": 0.5,
+            "text": "world",
+          },
+          Object {
+            "end": 1.5,
+            "start": 1,
+            "text": "this",
+          },
+          Object {
+            "end": 2,
+            "start": 1.5,
+            "text": "is",
+          },
+          Object {
+            "end": 2.5,
+            "start": 2,
+            "text": "Alice",
+          },
+        ],
+      },
+    ],
+    "previousTimings": "",
+    "speaker": "Alice",
+    "start": 0,
+    "startTimecode": "00:00:00",
+    "type": "timedText",
+  },
+  Object {
+    "children": Array [
+      Object {
+        "text": "And now Bob speaks",
+        "words": Array [
+          Object {
+            "end": 3.5,
+            "start": 3,
+            "text": "And",
+          },
+          Object {
+            "end": 4,
+            "start": 3.5,
+            "text": "now",
+          },
+          Object {
+            "end": 4.5,
+            "start": 4,
+            "text": "Bob",
+          },
+          Object {
+            "end": 5,
+            "start": 4.5,
+            "text": "speaks",
+          },
+        ],
+      },
+    ],
+    "previousTimings": "1 2 3",
+    "speaker": "Bob",
+    "start": 3,
+    "startTimecode": "00:00:03",
+    "type": "timedText",
+  },
+]
+`;
+
+exports[`slate-to-dpe (golden) round-trips Slate back to DPE words + paragraphs 1`] = `
+Object {
+  "paragraphs": Array [
+    Object {
+      "end": 2.5,
+      "speaker": "Alice",
+      "start": 0,
+    },
+    Object {
+      "end": 5,
+      "speaker": "Bob",
+      "start": 3,
+    },
+  ],
+  "words": Array [
+    Object {
+      "end": 0.5,
+      "start": 0,
+      "text": "Hello",
+    },
+    Object {
+      "end": 1,
+      "start": 0.5,
+      "text": "world",
+    },
+    Object {
+      "end": 1.5,
+      "start": 1,
+      "text": "this",
+    },
+    Object {
+      "end": 2,
+      "start": 1.5,
+      "text": "is",
+    },
+    Object {
+      "end": 2.5,
+      "start": 2,
+      "text": "Alice",
+    },
+    Object {
+      "end": 3.5,
+      "start": 3,
+      "text": "And",
+    },
+    Object {
+      "end": 4,
+      "start": 3.5,
+      "text": "now",
+    },
+    Object {
+      "end": 4.5,
+      "start": 4,
+      "text": "Bob",
+    },
+    Object {
+      "end": 5,
+      "start": 4.5,
+      "text": "speaks",
+    },
+  ],
+}
+`;
+
+exports[`slate-to-text (golden) renders text for the atlasFormat option set 1`] = `
+"Alice	[00:00:00]		Hello world this is Alice
+
+Bob	[00:00:03]		And now Bob speaks"
+`;
+
+exports[`slate-to-text (golden) renders text for the plain option set 1`] = `
+"Hello world this is Alice
+
+And now Bob speaks"
+`;
+
+exports[`slate-to-text (golden) renders text for the speakers option set 1`] = `
+"ALICE
+Hello world this is Alice
+
+BOB
+And now Bob speaks"
+`;
+
+exports[`slate-to-text (golden) renders text for the speakers+timecodes option set 1`] = `
+"00:00:00	ALICE
+Hello world this is Alice
+
+00:00:03	BOB
+And now Bob speaks"
+`;
+
+exports[`slate-to-text (golden) renders text for the timecodes option set 1`] = `
+"00:00:00	
+Hello world this is Alice
+
+00:00:03	
+And now Bob speaks"
+`;
