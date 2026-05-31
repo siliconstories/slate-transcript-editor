@@ -1,33 +1,33 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`dpe-to-slate (golden) converts a DPE transcript into the timedText Slate node shape 1`] = `
-Array [
-  Object {
-    "children": Array [
-      Object {
+[
+  {
+    "children": [
+      {
         "text": "Hello world this is Alice",
-        "words": Array [
-          Object {
+        "words": [
+          {
             "end": 0.5,
             "start": 0,
             "text": "Hello",
           },
-          Object {
+          {
             "end": 1,
             "start": 0.5,
             "text": "world",
           },
-          Object {
+          {
             "end": 1.5,
             "start": 1,
             "text": "this",
           },
-          Object {
+          {
             "end": 2,
             "start": 1.5,
             "text": "is",
           },
-          Object {
+          {
             "end": 2.5,
             "start": 2,
             "text": "Alice",
@@ -41,27 +41,27 @@ Array [
     "startTimecode": "00:00:00",
     "type": "timedText",
   },
-  Object {
-    "children": Array [
-      Object {
+  {
+    "children": [
+      {
         "text": "And now Bob speaks",
-        "words": Array [
-          Object {
+        "words": [
+          {
             "end": 3.5,
             "start": 3,
             "text": "And",
           },
-          Object {
+          {
             "end": 4,
             "start": 3.5,
             "text": "now",
           },
-          Object {
+          {
             "end": 4.5,
             "start": 4,
             "text": "Bob",
           },
-          Object {
+          {
             "end": 5,
             "start": 4.5,
             "text": "speaks",
@@ -79,61 +79,61 @@ Array [
 `;
 
 exports[`slate-to-dpe (golden) round-trips Slate back to DPE words + paragraphs 1`] = `
-Object {
-  "paragraphs": Array [
-    Object {
+{
+  "paragraphs": [
+    {
       "end": 2.5,
       "speaker": "Alice",
       "start": 0,
     },
-    Object {
+    {
       "end": 5,
       "speaker": "Bob",
       "start": 3,
     },
   ],
-  "words": Array [
-    Object {
+  "words": [
+    {
       "end": 0.5,
       "start": 0,
       "text": "Hello",
     },
-    Object {
+    {
       "end": 1,
       "start": 0.5,
       "text": "world",
     },
-    Object {
+    {
       "end": 1.5,
       "start": 1,
       "text": "this",
     },
-    Object {
+    {
       "end": 2,
       "start": 1.5,
       "text": "is",
     },
-    Object {
+    {
       "end": 2.5,
       "start": 2,
       "text": "Alice",
     },
-    Object {
+    {
       "end": 3.5,
       "start": 3,
       "text": "And",
     },
-    Object {
+    {
       "end": 4,
       "start": 3.5,
       "text": "now",
     },
-    Object {
+    {
       "end": 4.5,
       "start": 4,
       "text": "Bob",
     },
-    Object {
+    {
       "end": 5,
       "start": 4.5,
       "text": "speaks",

@@ -4,8 +4,8 @@
   "description": "A React component to make correcting automated transcriptions of audio and video easier and faster. Using the Slate Editor",
   "main": "index.js",
   "scripts": {
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:related": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --findRelatedTests ./src/util/export-adapters/subtitles-generator/compose-subtitles/csv/index.js",
+    "test": "jest",
+    "test:related": "jest --findRelatedTests ./src/util/export-adapters/subtitles-generator/compose-subtitles/csv/index.js",
     "start": "npm run storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o .out",
@@ -62,13 +62,14 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.7.0",
+    "babel-jest": "^30.4.1",
     "babel-loader": "^8.1.0",
     "codemirror": "^6.0.2",
     "cross-env": "^7.0.2",
     "gh-pages": "^6.3.0",
     "husky": "^9.1.7",
-    "jest": "^27.0.5",
-    "jest-environment-jsdom": "^27.5.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "path-browserify": "^1.0.1",
     "prettier": "^3.8.3",
     "pretty-quick": "^4.2.2",
@@ -94,6 +95,7 @@
     "stt-align-node": "^2.0.1"
   },
   "jest": {
+    "testEnvironment": "node",
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/dist/"
