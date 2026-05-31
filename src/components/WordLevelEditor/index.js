@@ -278,7 +278,16 @@ function WordLevelEditor({
                 </Typography>
               </Grid>
             )}
-            <Grid size={{ xs: 12, sm: 12, md: 12, lg: showSpeakers || showTimecodes ? 7 : 12, xl: 7 }} className={'p-b-1'}>
+            <Grid
+              size={{
+                xs: 12,
+                sm: 12,
+                md: 12,
+                lg: 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0),
+                xl: 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0),
+              }}
+              className={'p-b-1'}
+            >
               {words.map((word, wIdx) => renderWord(paragraph, pIdx, word, wIdx))}
             </Grid>
           </Grid>

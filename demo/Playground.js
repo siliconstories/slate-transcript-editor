@@ -3,7 +3,6 @@ import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
-import REV_SAMPLE from './sample-data/rev-ai-sample.json';
 import GEMS_STRICT from '../src/util/rev-to-sentences/__fixtures__/GEMS-01.json';
 import { detectProfile } from '../src/transcript-model/profile';
 import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
@@ -79,6 +78,7 @@ function Playground() {
   const [showTitle, setShowTitle] = useState(true);
   const [wordLevelEditing, setWordLevelEditing] = useState(true);
   const [confidenceOverlay, setConfidenceOverlay] = useState(true);
+  const [confidenceLevel, setConfidenceLevel] = useState('word');
 
   // The active transcript profile instance (classic for DPE, rigid for rev.ai).
   // The editor now owns import / edit-capture / versioning / faithful export;
@@ -231,18 +231,6 @@ function Playground() {
     remount();
   };
 
-  const loadRevSample = () => {
-    setError('');
-    setMediaUrl('https://download.ted.com/talks/KateDarling_2018S-950k.mp4');
-    setMediaName('KateDarling_2018S-950k.mp4');
-    setUrlField('');
-    setTitle('rev.ai sample (rigid / faithful)');
-    setProfileInst(detectProfile(REV_SAMPLE));
-    setTranscriptData(REV_SAMPLE);
-    setTranscriptName(`rev.ai sample — rigid (${revWordCount(REV_SAMPLE)} words, faithful round-trip)`);
-    remount();
-  };
-
   // Local strict-testing pair: GEMS-01.json transcript + GEMS-01.mp4 streamed from
   // ~/cineminds-test via demo/serve.js (the 40MB media is not committed).
   const loadRevStrict = () => {
@@ -308,9 +296,6 @@ function Playground() {
                 {SAMPLES[k].label}
               </button>
             ))}
-            <button style={{ ...styles.btn, borderColor: '#1565c0', color: '#1565c0', fontWeight: 600 }} onClick={loadRevSample}>
-              rev.ai sample (rigid)
-            </button>
             <button style={{ ...styles.btn, borderColor: '#6a1b9a', color: '#6a1b9a', fontWeight: 600 }} onClick={loadRevStrict}>
               rev.ai strict testing
             </button>
@@ -333,6 +318,16 @@ function Playground() {
           <label title="Highlight low-confidence words/sentences (rev.ai transcripts)">
             <input type="checkbox" checked={confidenceOverlay} onChange={(e) => setConfidenceOverlay(e.target.checked)} /> Confidence
           </label>
+          <select
+            value={confidenceLevel}
+            disabled={!confidenceOverlay}
+            onChange={(e) => setConfidenceLevel(e.target.value)}
+            title="Confidence overlay level (word or sentence)"
+            style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #bbb', fontSize: 13, opacity: confidenceOverlay ? 1 : 0.45 }}
+          >
+            <option value="word">Word</option>
+            <option value="sentence">Sentence</option>
+          </select>
           {!isRigid && (
             <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
               <input
@@ -386,7 +381,7 @@ function Playground() {
           key={mountKey}
           transcriptData={transcriptData}
           profile={profileInst}
-          defaultPreferences={{ confidence: { overlay: confidenceOverlay } }}
+          defaultPreferences={{ confidence: { overlay: confidenceOverlay, level: confidenceLevel } }}
           mediaUrl={mediaUrl}
           title={title}
           showTitle={showTitle}

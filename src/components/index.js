@@ -51,7 +51,6 @@ import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
 import PreferencesDialog from './PreferencesDialog';
-import ConfidenceToolbarControl from './ConfidenceToolbarControl';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
 const PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS = 1500;
@@ -98,6 +97,7 @@ function SlateTranscriptEditorInner(props) {
     'editing.wordLevelEditing': typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : undefined,
     'editing.autoSaveContentType': typeof props.autoSaveContentType === 'string' ? props.autoSaveContentType : undefined,
     'confidence.overlay': dp.confidence && typeof dp.confidence.overlay === 'boolean' ? dp.confidence.overlay : undefined,
+    'confidence.level': dp.confidence && (dp.confidence.level === 'word' || dp.confidence.level === 'sentence') ? dp.confidence.level : undefined,
   };
   const prevControlledRef = useRef(hostControlled);
   useEffect(() => {
@@ -582,21 +582,9 @@ function SlateTranscriptEditorInner(props) {
   };
 
   const TimedTextElement = (props) => {
-    let textLg = 12;
-    let textXl = 12;
-    if (!showSpeakers && !showTimecodes) {
-      textLg = 12;
-      textXl = 12;
-    } else if (showSpeakers && !showTimecodes) {
-      textLg = 9;
-      textXl = 9;
-    } else if (!showSpeakers && showTimecodes) {
-      textLg = 9;
-      textXl = 10;
-    } else if (showSpeakers && showTimecodes) {
-      textLg = 6;
-      textXl = 7;
-    }
+    // Reflow: text fills whatever width the hidden speaker/timecode columns free up.
+    const textLg = 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0);
+    const textXl = textLg;
 
     return (
       <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'flex-start' }} {...props.attributes}>
@@ -1142,9 +1130,6 @@ function SlateTranscriptEditorInner(props) {
                   </Tooltip>
                 </Grid>
 
-                <Grid>
-                  <ConfidenceToolbarControl />
-                </Grid>
                 <Grid>
                   {props.isEditable && (
                     <Tooltip
