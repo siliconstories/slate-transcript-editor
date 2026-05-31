@@ -4,7 +4,7 @@ import { withKnobs, text, boolean, number, object, select } from '@storybook/add
 import { withInfo } from '@storybook/addon-info';
 import { version } from '../../package.json';
 
-import Button from '@material-ui/core/Button';
+import Button from '@mui/material/Button';
 import SlateTranscriptEditor from './index.js';
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';

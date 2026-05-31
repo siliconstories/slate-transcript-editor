@@ -4,9 +4,9 @@ import { withKnobs, text, boolean, number, object, select } from '@storybook/add
 import { withInfo } from '@storybook/addon-info';
 import { version } from '../../package.json';
 
-import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
-import { lightBlue, red, orange, deepOrange } from '@material-ui/core/colors';
-// import purple from '@material-ui/core/colors/purple';
+import { createTheme, ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import { lightBlue, red, orange, deepOrange } from '@mui/material/colors';
+// import purple from '@mui/material/colors/purple';
 
 import SlateTranscriptEditor from './index.js';
 import '@fontsource/roboto/300.css';
@@ -35,7 +35,7 @@ const DEMO_TITLE_SOLEIO = 'Soleio Interview, PBS Frontline';
 import DEMO_SOLEIO from '../sample-data/soleio-dpe.json';
 
 export const CustomTheme = () => {
-  const theme = createMuiTheme({
+  const theme = createTheme({
     palette: {
       background: {
         // paper: '#424242',
@@ -54,24 +54,26 @@ export const CustomTheme = () => {
       <p>
         Slate Transcript Editor version: <code>{version}</code>
       </p>
-      <ThemeProvider theme={theme}>
-        <SlateTranscriptEditor
-          title={DEMO_TITLE_SOLEIO}
-          mediaUrl={text('mediaUrl', DEMO_MEDIA_URL_SOLEIO)}
-          handleSaveEditor={action('handleSaveEditor')}
-          // handleAutoSaveChanges={action('handleAutoSaveChanges')}
-          // https://www.npmjs.com/package/@storybook/addon-knobs#select
-          autoSaveContentType={select('autoSaveContentType', ['digitalpaperedit', 'slate'], 'digitalpaperedit')} // digitalpaperedit or slate - digitalpaperedit, runs alignement before exporting, slate, is just the raw data.
-          // transcriptData={object('transcriptData', DEMO_SOLEIO)}
-          transcriptData={DEMO_SOLEIO}
-        />
-      </ThemeProvider>
+      <StyledEngineProvider injectFirst>
+        <ThemeProvider theme={theme}>
+          <SlateTranscriptEditor
+            title={DEMO_TITLE_SOLEIO}
+            mediaUrl={text('mediaUrl', DEMO_MEDIA_URL_SOLEIO)}
+            handleSaveEditor={action('handleSaveEditor')}
+            // handleAutoSaveChanges={action('handleAutoSaveChanges')}
+            // https://www.npmjs.com/package/@storybook/addon-knobs#select
+            autoSaveContentType={select('autoSaveContentType', ['digitalpaperedit', 'slate'], 'digitalpaperedit')} // digitalpaperedit or slate - digitalpaperedit, runs alignement before exporting, slate, is just the raw data.
+            // transcriptData={object('transcriptData', DEMO_SOLEIO)}
+            transcriptData={DEMO_SOLEIO}
+          />
+        </ThemeProvider>
+      </StyledEngineProvider>
     </>
   );
 };
 
 export const CustomThemeExampleTwo = () => {
-  const theme = createMuiTheme({
+  const theme = createTheme({
     palette: {
       background: {
         // paper: '#424242',
@@ -90,18 +92,20 @@ export const CustomThemeExampleTwo = () => {
       <p>
         Slate Transcript Editor version: <code>{version}</code>
       </p>
-      <ThemeProvider theme={theme}>
-        <SlateTranscriptEditor
-          title={DEMO_TITLE_SOLEIO}
-          mediaUrl={text('mediaUrl', DEMO_MEDIA_URL_SOLEIO)}
-          handleSaveEditor={action('handleSaveEditor')}
-          // handleAutoSaveChanges={action('handleAutoSaveChanges')}
-          // https://www.npmjs.com/package/@storybook/addon-knobs#select
-          autoSaveContentType={select('autoSaveContentType', ['digitalpaperedit', 'slate'], 'digitalpaperedit')} // digitalpaperedit or slate - digitalpaperedit, runs alignement before exporting, slate, is just the raw data.
-          // transcriptData={object('transcriptData', DEMO_SOLEIO)}
-          transcriptData={DEMO_SOLEIO}
-        />
-      </ThemeProvider>
+      <StyledEngineProvider injectFirst>
+        <ThemeProvider theme={theme}>
+          <SlateTranscriptEditor
+            title={DEMO_TITLE_SOLEIO}
+            mediaUrl={text('mediaUrl', DEMO_MEDIA_URL_SOLEIO)}
+            handleSaveEditor={action('handleSaveEditor')}
+            // handleAutoSaveChanges={action('handleAutoSaveChanges')}
+            // https://www.npmjs.com/package/@storybook/addon-knobs#select
+            autoSaveContentType={select('autoSaveContentType', ['digitalpaperedit', 'slate'], 'digitalpaperedit')} // digitalpaperedit or slate - digitalpaperedit, runs alignement before exporting, slate, is just the raw data.
+            // transcriptData={object('transcriptData', DEMO_SOLEIO)}
+            transcriptData={DEMO_SOLEIO}
+          />
+        </ThemeProvider>
+      </StyledEngineProvider>
     </>
   );
 };

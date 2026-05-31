@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
+import Grid from '@mui/material/Grid';
+import Typography from '@mui/material/Typography';
 import findActiveWord from '../../util/find-active-word';
 
 // window after the last click in which further clicks are collected, so we can
