@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS = {
   display: { showSpeakers: true, showTimecodes: true, showTitle: false },
   appearance: { fontSize: 15, lineSpacing: 1.5, highlightOpacity: 0.5 },
   confidence: { overlay: true, level: 'word', cutoff: 0.85, floor: 0.55, sentenceMetric: 'mean' },
-  playback: { followPlayback: true, playbackSpeed: 1, seekStepSeconds: 10 },
+  playback: { followPlayback: true, playbackSpeed: 1, seekStepSeconds: 10, forwardStepSeconds: 30 },
   editing: { wordLevelEditing: false, autoSaveContentType: 'digitalpaperedit', pauseWhileTyping: false },
 };
 

@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -36,7 +37,9 @@ const stripDifflibNameAssign = {
 export default defineConfig({
   root: here,
   base: './',
-  plugins: [stripDifflibNameAssign],
+  // tailwindcss() only emits CSS where a Tailwind stylesheet is imported (demo/lab.css,
+  // loaded solely by lab.html) — the MUI Playground (index.html) stays Tailwind-free.
+  plugins: [stripDifflibNameAssign, tailwindcss()],
   // The library uses Node's `path` (extname/basename) in browser code; webpack 4
   // auto-polyfilled it, Vite does not — alias to the browser implementation.
   resolve: { alias: { path: 'path-browserify' } },
@@ -47,5 +50,10 @@ export default defineConfig({
   build: {
     outDir: resolve(here, '..', 'demo-dist'),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(here, 'index.html'),
+      },
+    },
   },
 });

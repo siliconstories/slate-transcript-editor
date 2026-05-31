@@ -44,7 +44,6 @@ function WordLevelEditor({
   const [editing, setEditing] = useState(null); // { pIdx, wIdx }
   const [draft, setDraft] = useState('');
   const clickTimer = useRef(null);
-  const clickCount = useRef(0);
 
   // active word for the "follow the speech" highlight, computed over a flat,
   // time-sorted list that points back to (pIdx, wIdx).
@@ -132,7 +131,6 @@ function WordLevelEditor({
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
       }
-      clickCount.current = 0;
       if (isEditable !== false) updateWord(pIdx, wIdx, { muted: !word.muted });
       return;
     }
@@ -141,22 +139,27 @@ function WordLevelEditor({
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
       }
-      clickCount.current = 0;
       if (onSeekAndTogglePlay && typeof word.start === 'number') onSeekAndTogglePlay(word.start);
       return;
     }
-    clickCount.current += 1;
+    // Plain click → seek, but wait out the OS double-click window so a genuine
+    // double-click (handled by onDoubleClick → edit) cancels this seek first.
     if (clickTimer.current) clearTimeout(clickTimer.current);
     clickTimer.current = setTimeout(() => {
-      const count = clickCount.current;
-      clickCount.current = 0;
       clickTimer.current = null;
-      if (count >= 2) {
-        beginEdit(pIdx, wIdx, word);
-      } else {
-        if (onSeek && typeof word.start === 'number') onSeek(word.start);
-      }
+      if (onSeek && typeof word.start === 'number') onSeek(word.start);
     }, MULTI_CLICK_DELAY_MS);
+  };
+
+  // Native double-click respects the OS threshold (~500ms), so it's reliable where
+  // the old custom click-counter (260ms) missed real, slightly-slow double-clicks.
+  const handleWordDoubleClick = (e, pIdx, wIdx, word) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    beginEdit(pIdx, wIdx, word);
   };
 
   const renderWord = (paragraph, pIdx, word, wIdx) => {
@@ -167,7 +170,12 @@ function WordLevelEditor({
       return (
         <React.Fragment key={wIdx}>
           <span className="stw-edit-wrap">
-            <span className="stw-edit-tools" contentEditable={false}>
+            {/* top row: place the tools BELOW the word so the scroll container's top edge doesn't clip them */}
+            <span
+              className="stw-edit-tools"
+              contentEditable={false}
+              style={pIdx === 0 ? { bottom: 'auto', top: '100%', marginTop: 3, marginBottom: 0 } : undefined}
+            >
               <button
                 type="button"
                 className="stw-mute-btn"
@@ -244,6 +252,7 @@ function WordLevelEditor({
           tabIndex={0}
           title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Alt/Opt-click: play/pause · Ctrl/Cmd-click: mute'}
           onClick={(e) => handleWordClick(e, pIdx, wIdx, word)}
+          onDoubleClick={(e) => handleWordDoubleClick(e, pIdx, wIdx, word)}
         >
           {text}
         </span>
@@ -263,12 +272,12 @@ function WordLevelEditor({
         const child = paragraph.children && paragraph.children[0] ? paragraph.children[0] : { words: [] };
         const words = Array.isArray(child.words) ? child.words : [];
         return (
-          <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'flex-start' }} key={pIdx} className="stw-paragraph">
+          <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'baseline' }} key={pIdx} className="stw-paragraph">
             {showTimecodes && (
-              <Grid size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'p-t-2 text-truncate'}>
+              <Grid size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'text-truncate'}>
                 <code
-                  className={'timecode text-muted unselectable'}
-                  style={{ cursor: 'pointer' }}
+                  className={'timecode unselectable'}
+                  style={{ cursor: 'pointer', fontSize: 'inherit', color: '#9e9e9e' }}
                   title={paragraph.startTimecode}
                   onClick={() => onSeekAndPlay && onSeekAndPlay(paragraph.start)}
                 >
@@ -277,11 +286,11 @@ function WordLevelEditor({
               </Grid>
             )}
             {showSpeakers && (
-              <Grid size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'p-t-2 text-truncate'}>
+              <Grid size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'text-truncate'}>
                 <Typography
                   noWrap
-                  className={'text-truncate text-muted unselectable'}
-                  style={{ cursor: 'pointer', width: '100%', textTransform: 'uppercase' }}
+                  className={'text-truncate unselectable'}
+                  style={{ cursor: 'pointer', width: '100%', fontSize: 'inherit', color: '#9e9e9e' }}
                   title={paragraph.speaker}
                   onClick={() => onSetSpeakerName && onSetSpeakerName(paragraph)}
                 >
