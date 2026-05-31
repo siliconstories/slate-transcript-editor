@@ -9,7 +9,10 @@ import { lightBlue, red, orange, deepOrange } from '@material-ui/core/colors';
 // import purple from '@material-ui/core/colors/purple';
 
 import SlateTranscriptEditor from './index.js';
-import 'fontsource-roboto';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
 
 export default {
   title: 'Custom Theme',

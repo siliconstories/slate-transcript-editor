@@ -5,7 +5,10 @@ import { withInfo } from '@storybook/addon-info';
 import { version } from '../../package.json';
 
 import SlateTranscriptEditor from './index.js';
-import 'fontsource-roboto';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
 
 export default {
   title: 'Saving indicator',
