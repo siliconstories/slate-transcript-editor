@@ -65,6 +65,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // dev demo: never serve a stale index.html / bundle after a rebuild
+  res.setHeader('Cache-Control', 'no-cache');
   let filePath = path.join(ROOT, urlPath === '/' ? 'index.html' : urlPath);
   if (!filePath.startsWith(ROOT)) {
     res.writeHead(403);

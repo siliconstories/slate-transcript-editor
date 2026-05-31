@@ -50,6 +50,7 @@ import { resolveProfile } from '../transcript-model/profile';
 import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
+import { confidenceOf, round } from '../util/rev-to-sentences';
 import PreferencesDialog from './PreferencesDialog';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
@@ -62,6 +63,12 @@ const pauseWhileTypeing = (current) => {
   current.play();
 };
 const debouncePauseWhileTyping = debounce(pauseWhileTypeing, PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS);
+
+// "01m:53s"-style duration for the title stats.
+const formatMinSec = (sec) => {
+  const s = Math.max(0, Math.round(sec || 0));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}m:${String(s % 60).padStart(2, '0')}s`;
+};
 
 // React 19 ignores `Component.defaultProps` on function components, so the defaults
 // are merged here instead. Matters most for `isEditable`, which several reads consume
@@ -98,6 +105,7 @@ function SlateTranscriptEditorInner(props) {
     'editing.autoSaveContentType': typeof props.autoSaveContentType === 'string' ? props.autoSaveContentType : undefined,
     'confidence.overlay': dp.confidence && typeof dp.confidence.overlay === 'boolean' ? dp.confidence.overlay : undefined,
     'confidence.level': dp.confidence && (dp.confidence.level === 'word' || dp.confidence.level === 'sentence') ? dp.confidence.level : undefined,
+    'confidence.cutoff': dp.confidence && typeof dp.confidence.cutoff === 'number' ? dp.confidence.cutoff : undefined,
   };
   const prevControlledRef = useRef(hostControlled);
   useEffect(() => {
@@ -443,6 +451,26 @@ function SlateTranscriptEditorInner(props) {
     [settings.confidence, settings.appearance.highlightOpacity]
   );
   const confidenceDecos = useMemo(() => buildConfidenceDecorations(value, confidenceSettings), [value, confidenceSettings]);
+
+  // Corpus stats shown below the title (word count, length, mean/dur-weighted confidence).
+  const transcriptStats = useMemo(() => {
+    const words = [];
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    (value || []).forEach((p) => {
+      const ws = p && p.children && p.children[0] && p.children[0].words;
+      if (!Array.isArray(ws)) return;
+      ws.forEach((w) => {
+        if (typeof w.text !== 'string' || w.text.length === 0) return;
+        words.push(w);
+        if (typeof w.start === 'number' && w.start < minStart) minStart = w.start;
+        if (typeof w.end === 'number' && w.end > maxEnd) maxEnd = w.end;
+      });
+    });
+    if (words.length === 0) return null;
+    const [mean, weighted] = confidenceOf(words);
+    return { wordCount: words.length, duration: minStart < maxEnd ? round(maxEnd - minStart, 2) : 0, mean, weighted };
+  }, [value]);
 
   const decorate = useCallback(
     ([node, path]) => {
@@ -1069,11 +1097,24 @@ function SlateTranscriptEditorInner(props) {
           `}
         </style>
         {settings.display.showTitle && (
-          <Tooltip title={<Typography variant="body1">{props.title}</Typography>}>
-            <Typography variant="h5" noWrap>
-              {props.title}
-            </Typography>
-          </Tooltip>
+          <>
+            <Tooltip title={<Typography variant="body1">{props.title}</Typography>}>
+              <Typography variant="h5" noWrap>
+                {props.title}
+              </Typography>
+            </Tooltip>
+            {transcriptStats && (
+              <div style={{ marginBottom: '0.5em', lineHeight: 1.25 }}>
+                <Typography variant="subtitle1" color="textSecondary" component="div">
+                  {formatMinSec(duration > 0 ? duration : transcriptStats.duration)}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" component="div">
+                  {transcriptStats.wordCount} words
+                  {transcriptStats.mean != null ? ` · confidence ${transcriptStats.mean} mean / ${transcriptStats.weighted} dur-weighted` : ''}
+                </Typography>
+              </div>
+            )}
+          </>
         )}
 
         <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>

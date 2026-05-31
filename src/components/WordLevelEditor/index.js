@@ -73,16 +73,22 @@ function WordLevelEditor({
   const overlayOn = ov.overlay === true;
   const styleOpts = { cutoff: ov.cutoff, floor: ov.floor, highlightOpacity: ov.highlightOpacity };
   const metricIdx = ov.sentenceMetric === 'duration_weighted' ? 1 : 0;
-  const sentenceWash = useMemo(() => {
-    if (!overlayOn || ov.level !== 'sentence') return null;
+  // Per-word confidence colors (both modes). Used to paint each word AND the
+  // connector (punct + trailing space) between adjacent same-color words, so a run
+  // reads as one continuous highlighter stroke instead of dashes.
+  const wordColors = useMemo(() => {
+    if (!overlayOn) return null;
     return value.map((paragraph) => {
       const words = paragraph && paragraph.children && Array.isArray(paragraph.children[0].words) ? paragraph.children[0].words : [];
-      const colors = new Array(words.length).fill(null);
-      groupSlateWordsIntoSentences(words).forEach(({ wIdxStart, wIdxEnd, words: sWords }) => {
-        const color = confidenceToStyle(confidenceOf(sWords)[metricIdx], styleOpts);
-        for (let i = wIdxStart; i <= wIdxEnd; i += 1) colors[i] = color;
-      });
-      return colors;
+      if (ov.level === 'sentence') {
+        const colors = new Array(words.length).fill(null);
+        groupSlateWordsIntoSentences(words).forEach(({ wIdxStart, wIdxEnd, words: sWords }) => {
+          const color = confidenceToStyle(confidenceOf(sWords)[metricIdx], styleOpts);
+          for (let i = wIdxStart; i <= wIdxEnd; i += 1) colors[i] = color;
+        });
+        return colors;
+      }
+      return words.map((w) => confidenceToStyle(w.confidence, styleOpts));
     });
   }, [value, overlayOn, ov.level, ov.cutoff, ov.floor, ov.highlightOpacity, metricIdx]);
 
@@ -218,17 +224,17 @@ function WordLevelEditor({
     let className = 'stw-word';
     if (word.muted) className += ' stw-muted';
     if (isActive) className += ' current-word';
-    // active (karaoke) word keeps its highlight; otherwise paint the confidence wash
-    let confBg = null;
-    if (overlayOn && !isActive) {
-      confBg =
-        ov.level === 'sentence'
-          ? sentenceWash && sentenceWash[pIdx]
-            ? sentenceWash[pIdx][wIdx]
-            : null
-          : confidenceToStyle(word.confidence, styleOpts);
-    }
-    const wordStyle = confBg ? { backgroundColor: confBg, borderRadius: '2px' } : undefined;
+    // confidence colors for this word + the next, to paint a continuous run
+    const paraColors = wordColors ? wordColors[pIdx] : null;
+    const myColor = paraColors ? paraColors[wIdx] : null;
+    const nextColor = paraColors ? paraColors[wIdx + 1] : null;
+    // active (karaoke) word keeps its own highlight; otherwise paint the wash flat
+    // (no radius) so adjacent same-color words merge into one highlighter stroke
+    const wordStyle = !isActive && myColor ? { backgroundColor: myColor } : undefined;
+    const punctStyle = myColor ? { backgroundColor: myColor } : undefined;
+    // fill the gap between any two consecutive highlighted words with a gradient of
+    // their two shades, so a run reads as one continuous highlighter stroke
+    const spaceStyle = myColor && nextColor ? { background: `linear-gradient(to right, ${myColor}, ${nextColor})` } : undefined;
     return (
       <React.Fragment key={wIdx}>
         <span
@@ -241,7 +247,12 @@ function WordLevelEditor({
         >
           {text}
         </span>
-        {word.punctAfter ? <span className="stw-punct">{word.punctAfter}</span> : null}{' '}
+        {word.punctAfter ? (
+          <span className="stw-punct" style={punctStyle}>
+            {word.punctAfter}
+          </span>
+        ) : null}
+        <span style={spaceStyle}> </span>
       </React.Fragment>
     );
   };

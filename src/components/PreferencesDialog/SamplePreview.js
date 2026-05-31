@@ -26,16 +26,24 @@ const SamplePreview = () => {
     // eslint-disable-next-line
   }, [c.level, c.cutoff, c.floor, settings.appearance.highlightOpacity, metricIdx]);
 
+  const colors = PREVIEW_WORDS.map((w, i) =>
+    !c.overlay ? null : c.level === 'sentence' ? (sentenceColors ? sentenceColors[i] : null) : confidenceToStyle(w.confidence, opts)
+  );
+
   return (
     <div style={{ padding: '12px 14px', border: '1px solid #e0e0e0', borderRadius: 6, background: '#fff', lineHeight: 2, fontSize: 16 }}>
       {PREVIEW_WORDS.map((w, i) => {
-        const bg = c.overlay ? (c.level === 'sentence' ? sentenceColors[i] : confidenceToStyle(w.confidence, opts)) : null;
+        const myColor = colors[i];
+        const nextColor = colors[i + 1];
+        // fill the inter-word space with a gradient so a run reads as one stroke
+        const spaceBg = myColor && nextColor ? `linear-gradient(to right, ${myColor}, ${nextColor})` : null;
         return (
           <React.Fragment key={i}>
-            <span title={`confidence ${w.confidence}`} style={bg ? { backgroundColor: bg, borderRadius: 2, padding: '1px 1px' } : undefined}>
+            <span title={`confidence ${w.confidence}`} style={myColor ? { backgroundColor: myColor } : undefined}>
               {w.text}
             </span>
-            {w.punctAfter || ''}{' '}
+            {w.punctAfter ? <span style={myColor ? { backgroundColor: myColor } : undefined}>{w.punctAfter}</span> : null}
+            <span style={spaceBg ? { background: spaceBg } : undefined}> </span>
           </React.Fragment>
         );
       })}

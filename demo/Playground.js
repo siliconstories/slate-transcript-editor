@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 import GEMS_STRICT from '../src/util/rev-to-sentences/__fixtures__/GEMS-01.json';
+import buildSentenceModel from '../src/util/rev-to-sentences';
 import { detectProfile } from '../src/transcript-model/profile';
 import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
 import converSlateToDpe from '../src/util/export-adapters/slate-to-dpe';
@@ -79,6 +80,7 @@ function Playground() {
   const [wordLevelEditing, setWordLevelEditing] = useState(true);
   const [confidenceOverlay, setConfidenceOverlay] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState('word');
+  const [confidenceCutoff, setConfidenceCutoff] = useState(0.85);
 
   // The active transcript profile instance (classic for DPE, rigid for rev.ai).
   // The editor now owns import / edit-capture / versioning / faithful export;
@@ -86,14 +88,20 @@ function Playground() {
   const [profileInst, setProfileInst] = useState(null);
   const isRigid = profileInst ? profileInst.id === 'rigid' : false;
 
+  // Corpus-level confidence (mean + duration-weighted) of the loaded transcript,
+  // to help pick a threshold. null for non-rev (DPE) transcripts.
+  const corpus = useMemo(() => {
+    if (!transcriptData) return null;
+    const model = buildSentenceModel(transcriptData);
+    return model && Array.isArray(model.confidence) && model.confidence[0] != null ? model : null;
+  }, [transcriptData]);
+
   const remount = () => setMountKey((k) => k + 1);
 
   const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
 
   // raw-source editor (CodeMirror lightbox) — edits the current document JSON
   const [liveValue, setLiveValue] = useState(null);
-  // latest sentence-level "shadow" emitted by the editor (rigid only), debounced
-  const [sentenceModel, setSentenceModel] = useState(null);
   const [rawOpen, setRawOpen] = useState(false);
   const [rawText, setRawText] = useState('');
   const [rawLocator, setRawLocator] = useState(null);
@@ -134,20 +142,6 @@ function Playground() {
     setRawText(JSON.stringify(obj, null, 2));
     setRawLocator(locator && (locator.key != null || typeof locator.start === 'number') ? locator : null);
     setRawOpen(true);
-  };
-
-  // Download the derived sentence-level shadow as <name>.sentences.json.
-  const downloadSentences = () => {
-    if (!sentenceModel) return;
-    const blob = new Blob([JSON.stringify(sentenceModel, null, 2) + '\n'], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${(transcriptName || 'transcript').replace(/\.json$/i, '')}.sentences.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   // Save in the raw editor: re-import the edited document as a fresh transcript
@@ -328,6 +322,25 @@ function Playground() {
             <option value="word">Word</option>
             <option value="sentence">Sentence</option>
           </select>
+          <select
+            value={confidenceCutoff}
+            disabled={!confidenceOverlay}
+            onChange={(e) => setConfidenceCutoff(Number(e.target.value))}
+            title="Confidence threshold — words at or below this value are highlighted"
+            style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #bbb', fontSize: 13, opacity: confidenceOverlay ? 1 : 0.45 }}
+          >
+            <option value={0.75}>≤ 0.75 · loose</option>
+            <option value={0.8}>≤ 0.80 · balanced</option>
+            <option value={0.85}>≤ 0.85 · strict</option>
+          </select>
+          {corpus && (
+            <span
+              style={{ fontSize: 11, color: '#777' }}
+              title="Average confidence across the whole transcript — choose a threshold relative to these"
+            >
+              corpus: mean {corpus.confidence[0]} · dur-weighted {corpus.confidence[1]}
+            </span>
+          )}
           {!isRigid && (
             <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
               <input
@@ -359,16 +372,6 @@ function Playground() {
             <button style={styles.btn} onClick={() => openRaw()} title="Edit the raw source document (JSON)">
               Raw…
             </button>
-            {isRigid && (
-              <button
-                style={styles.btn}
-                onClick={downloadSentences}
-                disabled={!sentenceModel}
-                title="Download the derived sentence-level shadow JSON (updates live as you edit words)"
-              >
-                Sentences{sentenceModel ? ` (${sentenceModel.sentence_count})` : ''}…
-              </button>
-            )}
           </div>
         )}
 
@@ -381,7 +384,7 @@ function Playground() {
           key={mountKey}
           transcriptData={transcriptData}
           profile={profileInst}
-          defaultPreferences={{ confidence: { overlay: confidenceOverlay, level: confidenceLevel } }}
+          defaultPreferences={{ confidence: { overlay: confidenceOverlay, level: confidenceLevel, cutoff: confidenceCutoff } }}
           mediaUrl={mediaUrl}
           title={title}
           showTitle={showTitle}
@@ -392,10 +395,7 @@ function Playground() {
           onShowRawSource={openRaw}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
           handleAutoSaveChanges={(content) => setLiveValue(content)}
-          onSentenceModel={(model) => {
-            setSentenceModel(model);
-            console.log('onSentenceModel', model);
-          }}
+          onSentenceModel={(model) => console.log('onSentenceModel', model)}
           handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
         />
       )}
