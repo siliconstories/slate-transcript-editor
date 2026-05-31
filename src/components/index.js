@@ -1,28 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import PropTypes, { string } from 'prop-types';
+import PropTypes from 'prop-types';
 import path from 'path';
 import CssBaseline from '@mui/material/CssBaseline';
-import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import Link from '@mui/material/Link';
-import Replay10Icon from '@mui/icons-material/Replay10';
-import Forward10Icon from '@mui/icons-material/Forward10';
-import Collapse from '@mui/material/Collapse';
 import Tooltip from '@mui/material/Tooltip';
-import KeyboardReturnOutlinedIcon from '@mui/icons-material/KeyboardReturnOutlined';
-import KeyboardIcon from '@mui/icons-material/Keyboard';
-import PeopleIcon from '@mui/icons-material/People';
-import Switch from '@mui/material/Switch';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import FormHelperText from '@mui/material/FormHelperText';
-import SaveAltIcon from '@mui/icons-material/SaveAlt';
-import SaveIcon from '@mui/icons-material/Save';
 import debounce from 'lodash/debounce';
 import { createEditor, Editor, Transforms, Text } from 'slate';
 // https://docs.slatejs.org/walkthroughs/01-installing-slate
@@ -30,7 +14,7 @@ import { createEditor, Editor, Transforms, Text } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 
-import SideBtns from './SideBtns';
+import EditorToolbar from './EditorToolbar';
 import { shortTimecode } from '../util/timecode-converter';
 import download from '../util/downlaod/index.js';
 import convertDpeToSlate from '../util/dpe-to-slate';
@@ -52,8 +36,40 @@ import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
 import { confidenceOf, round } from '../util/rev-to-sentences';
 import PreferencesDialog from './PreferencesDialog';
+import '../styles/toolbar.css';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
+const CIRCLE_BTN_STYLE = {
+  width: 30,
+  height: 30,
+  borderRadius: '50%',
+  border: '1px solid #d4d4d8',
+  background: '#fff',
+  color: '#18181b',
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  fontWeight: 700,
+  fontSize: 11,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: '0 0 auto',
+};
+const PLAY_BTN_STYLE = {
+  width: 34,
+  height: 34,
+  borderRadius: '50%',
+  border: 'none',
+  background: '#18181b',
+  color: '#fff',
+  fontSize: 13,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingLeft: 1,
+  flex: '0 0 auto',
+};
 const PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS = 1500;
 // const MAX_DURATION_FOR_PERFORMANCE_OPTIMIZATION_IN_SECONDS = 3600;
 const REPLACE_WHOLE_TEXT_INSTRUCTION =
@@ -86,9 +102,22 @@ const DEFAULT_PROPS = {
 
 function SlateTranscriptEditorInner(props) {
   props = { ...DEFAULT_PROPS, ...props };
-  const { settings, actions } = usePreferences();
+  const { settings, actions, presets, activePresetId } = usePreferences();
   const seekStepSeconds = settings.playback.seekStepSeconds;
+  const forwardStepSeconds = settings.playback.forwardStepSeconds;
   const [prefsOpen, setPrefsOpen] = useState(false);
+
+  // Editing is prop-seeded but toggled in-UI via the toolbar's Edit-Lock. Seed from
+  // props.isEditable, then sync through when the host changes that prop (mirrors the
+  // controlled-prop pattern used for display/confidence prefs just below).
+  const [editable, setEditable] = useState(props.isEditable !== false);
+  const prevIsEditableRef = useRef(props.isEditable);
+  useEffect(() => {
+    if (props.isEditable !== prevIsEditableRef.current) {
+      setEditable(props.isEditable !== false);
+      prevIsEditableRef.current = props.isEditable;
+    }
+  });
 
   // Host props are controlled inputs: when one CHANGES, write it through to prefs
   // (the single source the UI renders from), so a host toggling showSpeakers/etc.
@@ -121,6 +150,7 @@ function SlateTranscriptEditorInner(props) {
   });
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(settings.playback.playbackSpeed);
   const editor = useMemo(() => withReact(withHistory(createEditor())), []);
   // Per-instance media element ref (was a module-scope React.createRef(), which is
@@ -172,7 +202,6 @@ function SlateTranscriptEditorInner(props) {
   const showSpeakers = settings.display.showSpeakers;
   const showTimecodes = settings.display.showTimecodes;
   const [speakerOptions, setSpeakerOptions] = useState([]);
-  const [showSpeakersCheatShet, setShowSpeakersCheatShet] = useState(true);
   const [saveTimer, setSaveTimer] = useState(null);
   const [isPauseWhiletyping, setIsPauseWhiletyping] = useState(settings.editing.pauseWhileTyping);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -180,6 +209,12 @@ function SlateTranscriptEditorInner(props) {
   // last save or alignment
   const [isContentModified, setIsContentIsModified] = useState(false);
   const [isContentSaved, setIsContentSaved] = useState(true);
+
+  // Revert restore points: the originally-imported doc (snapshot on mount) and the
+  // last-saved doc (snapshot in handleSave). Cloned on use so Slate never shares refs.
+  const importedValueRef = useRef(null);
+  const lastSavedValueRef = useRef(null);
+  const cloneValue = (v) => (v ? JSON.parse(JSON.stringify(v)) : v);
 
   // Replace the whole Slate document programmatically. Under slate-react 0.124
   // setting `value` state no longer drives the mounted editor (initialValue is read
@@ -206,8 +241,29 @@ function SlateTranscriptEditorInner(props) {
     if (props.transcriptData) {
       const { value: importedValue } = profile.import(props.transcriptData);
       setValue(importedValue);
+      importedValueRef.current = cloneValue(importedValue);
+      lastSavedValueRef.current = cloneValue(importedValue);
     }
   }, []);
+
+  const handleRevertToSaved = () => {
+    if (!lastSavedValueRef.current) return;
+    replaceSlateValue(cloneValue(lastSavedValueRef.current));
+    setIsContentIsModified(false);
+    setIsContentSaved(true);
+  };
+
+  const handleRevertToImported = () => {
+    if (profile.versioning && profile.versioning.revertAll && profile.reproject) {
+      profile.versioning.revertAll();
+      replaceSlateValue(profile.reproject());
+    } else if (importedValueRef.current) {
+      replaceSlateValue(cloneValue(importedValueRef.current));
+    }
+    lastSavedValueRef.current = cloneValue(importedValueRef.current);
+    setIsContentIsModified(false);
+    setIsContentSaved(true);
+  };
 
   // handles interim results for worrking with a Live STT
   useEffect(() => {
@@ -340,6 +396,16 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
+  const handlePlayPause = () => {
+    if (mediaRef && mediaRef.current) {
+      if (mediaRef.current.paused) {
+        mediaRef.current.play();
+      } else {
+        mediaRef.current.pause();
+      }
+    }
+  };
+
   const handleSeekBack = () => {
     if (mediaRef && mediaRef.current) {
       const newCurrentTime = mediaRef.current.currentTime - seekStepSeconds;
@@ -357,14 +423,14 @@ function SlateTranscriptEditorInner(props) {
 
   const handleFastForward = () => {
     if (mediaRef && mediaRef.current) {
-      const newCurrentTime = mediaRef.current.currentTime + seekStepSeconds;
+      const newCurrentTime = mediaRef.current.currentTime + forwardStepSeconds;
       mediaRef.current.currentTime = newCurrentTime;
 
       if (props.handleAnalyticsEvents) {
         props.handleAnalyticsEvents('ste_handle_fast_forward', {
           fn: 'handleFastForward',
           newCurrentTimeInSeconds: newCurrentTime,
-          seekBackValue: seekStepSeconds,
+          seekBackValue: forwardStepSeconds,
         });
       }
     }
@@ -567,7 +633,7 @@ function SlateTranscriptEditorInner(props) {
    * @param {*} element - props.element, from `renderElement` function
    */
   const handleSetSpeakerName = (element) => {
-    if (props.isEditable) {
+    if (editable) {
       const pathToCurrentNode = ReactEditor.findPath(editor, element);
       const oldSpeakerName = element.speaker;
       const newSpeakerName = prompt('Change speaker name', oldSpeakerName);
@@ -615,17 +681,14 @@ function SlateTranscriptEditorInner(props) {
     const textXl = textLg;
 
     return (
-      <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'flex-start' }} {...props.attributes}>
+      <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'baseline' }} {...props.attributes}>
         {showTimecodes && (
-          <Grid contentEditable={false} size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'p-t-2 text-truncate'}>
+          <Grid contentEditable={false} size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'text-truncate'}>
             <code
               contentEditable={false}
-              style={{ cursor: 'pointer' }}
-              className={'timecode text-muted unselectable'}
+              style={{ cursor: 'pointer', fontSize: 'inherit', color: '#9e9e9e' }}
+              className={'timecode unselectable'}
               onClick={handleTimedTextClick}
-              // onClick={(e) => {
-              //   e.preventDefault();
-              // }}
               onDoubleClick={handleTimedTextClick}
               title={props.element.startTimecode}
               data-start={props.element.start}
@@ -635,17 +698,17 @@ function SlateTranscriptEditorInner(props) {
           </Grid>
         )}
         {showSpeakers && (
-          <Grid contentEditable={false} size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'p-t-2 text-truncate'}>
+          <Grid contentEditable={false} size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'text-truncate'}>
             <Typography
               noWrap
               contentEditable={false}
-              className={'text-truncate text-muted unselectable'}
+              className={'text-truncate unselectable'}
               style={{
                 cursor: 'pointer',
                 width: '100%',
-                textTransform: 'uppercase',
+                fontSize: 'inherit',
+                color: '#9e9e9e',
               }}
-              // title={props.element.speaker.toUpperCase()}
               title={props.element.speaker}
               onClick={handleSetSpeakerName.bind(this, props.element)}
             >
@@ -849,9 +912,10 @@ function SlateTranscriptEditorInner(props) {
         });
       }
 
-      if (props.handleSaveEditor && props.isEditable) {
+      if (props.handleSaveEditor && editable) {
         props.handleSaveEditor(editorContnet);
       }
+      lastSavedValueRef.current = cloneValue(editor.children);
       setIsContentIsModified(false);
       setIsContentSaved(true);
     } finally {
@@ -1097,14 +1161,10 @@ function SlateTranscriptEditorInner(props) {
           `}
         </style>
         {settings.display.showTitle && (
-          <>
-            <Tooltip title={<Typography variant="body1">{props.title}</Typography>}>
-              <Typography variant="h5" noWrap>
-                {props.title}
-              </Typography>
-            </Tooltip>
+          <div style={{ marginBottom: '0.6em' }}>
+            <Typography variant="h5">{props.title}</Typography>
             {transcriptStats && (
-              <div style={{ marginBottom: '0.5em', lineHeight: 1.25 }}>
+              <div style={{ lineHeight: 1.25 }}>
                 <Typography variant="subtitle1" color="textSecondary" component="div">
                   {formatMinSec(duration > 0 ? duration : transcriptStats.duration)}
                 </Typography>
@@ -1114,8 +1174,33 @@ function SlateTranscriptEditorInner(props) {
                 </Typography>
               </div>
             )}
-          </>
+          </div>
         )}
+        <div style={{ marginBottom: '0.75em' }}>
+          <EditorToolbar
+            editable={editable}
+            setEditable={setEditable}
+            settings={settings}
+            actions={actions}
+            presets={presets}
+            activePresetId={activePresetId}
+            canStructuralEdit={editPolicy.allowsStructuralEdits}
+            isProcessing={isProcessing}
+            isContentSaved={isContentSaved}
+            handleSave={handleSave}
+            handleUndo={handleUndo}
+            handleRedo={handleRedo}
+            handleExport={handleExport}
+            exporters={profile.exporters}
+            onRevertToSaved={handleRevertToSaved}
+            onRevertToImported={handleRevertToImported}
+            handleReplaceText={handleReplaceText}
+            insertTextInaudible={insertTextInaudible}
+            handleInsertMusicNote={handleInsertMusicNote}
+            onOpenPreferences={() => setPrefsOpen(true)}
+            onShowRawSource={props.onShowRawSource}
+          />
+        </div>
 
         <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
           <Grid
@@ -1133,141 +1218,71 @@ function SlateTranscriptEditorInner(props) {
                   // height="auto"
                   controls
                   playsInline
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                 ></video>
               </Grid>
-              <Grid container direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Grid>
-                  <p>
-                    <code style={{ color: 'grey' }}>{shortTimecode(currentTime)}</code>
-                    <span style={{ color: 'grey' }}> {` | `}</span>
-                    <code style={{ color: 'grey' }}>{duration ? `${shortTimecode(duration)}` : '00:00:00'}</code>
-                  </p>
-                </Grid>
-                <Grid>
-                  <FormControl>
-                    <Select labelId="demo-simple-select-label" id="demo-simple-select" value={playbackRate} onChange={handleSetPlaybackRate}>
-                      {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => {
-                        return (
-                          <MenuItem key={index + playbackRateValue} value={playbackRateValue}>
-                            {' '}
-                            x {playbackRateValue}
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
-                    <FormHelperText>Speed</FormHelperText>
-                  </FormControl>
-                </Grid>
-                <Grid>
-                  <Tooltip title={<Typography variant="body1">{` Seek back by ${seekStepSeconds} seconds`}</Typography>}>
-                    <Button color="primary" onClick={handleSeekBack}>
-                      <Replay10Icon color="primary" fontSize="large" />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip title={<Typography variant="body1">{` Fast forward by ${seekStepSeconds} seconds`}</Typography>}>
-                    <Button color="primary" onClick={handleFastForward}>
-                      <Forward10Icon color="primary" fontSize="large" />
-                    </Button>
-                  </Tooltip>
-                </Grid>
-
-                <Grid>
-                  {props.isEditable && (
-                    <Tooltip
-                      enterDelay={3000}
-                      title={
-                        <Typography variant="body1">
-                          {`Turn ${isPauseWhiletyping ? 'off' : 'on'} pause while typing functionality. As
-                      you start typing the media while pause playback until you stop. Not
-                      reccomended on longer transcript as it might present performance issues.`}
-                        </Typography>
-                      }
-                    >
-                      <Typography variant="subtitle2" gutterBottom>
-                        <Switch color="primary" checked={isPauseWhiletyping} onChange={handleSetPauseWhileTyping} />
-                        Pause media while typing
-                      </Typography>
-                    </Tooltip>
-                  )}
-                </Grid>
-              </Grid>
-
-              <Grid>
-                <Tooltip
-                  enterDelay={100}
-                  title={
-                    <Typography variant="body1">
-                      {!props.isEditable && (
-                        <>
-                          You are in read only mode. <br />
-                        </>
-                      )}
-                      Double click on a word or time stamp to jump to the corresponding point in the media. <br />
-                      {props.isEditable && (
-                        <>
-                          <KeyboardIcon /> Start typing to edit text.
-                          <br />
-                          <PeopleIcon /> You can add and change names of speakers in your transcript.
-                          <br />
-                          <KeyboardReturnOutlinedIcon /> Hit enter in between words to split a paragraph.
-                          <br />
-                          <SaveIcon />
-                          Remember to save regularly.
-                          <br />
-                        </>
-                      )}
-                      <SaveAltIcon /> Export to get a copy.
-                    </Typography>
-                  }
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <InfoOutlinedIcon fontSize="small" color="primary" />
-                    <Typography color="primary" variant="body1">
-                      How Does this work?
-                    </Typography>
-                  </div>
+              {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
+              <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
+                <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
+                  <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
+                    −{seekStepSeconds}
+                  </button>
                 </Tooltip>
-              </Grid>
-              <Grid>
-                <Link
-                  color="inherit"
-                  onClick={() => {
-                    setShowSpeakersCheatShet(!showSpeakersCheatShet);
+                <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
+                  <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
+                    {isPlaying ? '❚❚' : '▶'}
+                  </button>
+                </Tooltip>
+                <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
+                  <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
+                    +{forwardStepSeconds}
+                  </button>
+                </Tooltip>
+                <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
+                <span
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    fontVariantNumeric: 'tabular-nums',
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: '#18181b',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <Typography variant="subtitle2" gutterBottom>
-                    <b>Speakers</b>
-                  </Typography>
-                </Link>
-
-                <Collapse in={showSpeakersCheatShet}>
-                  {speakerOptions.map((speakerName, index) => {
-                    return (
-                      <Typography
-                        variant="body2"
-                        gutterBottom
-                        key={index + speakerName}
-                        className={'text-truncate'}
-                        title={speakerName.toUpperCase()}
-                      >
-                        {speakerName}
-                      </Typography>
-                    );
-                  })}
-                </Collapse>
+                  {shortTimecode(currentTime)}
+                  <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
+                    {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                  </span>
+                </span>
+                <select
+                  value={playbackRate}
+                  onChange={handleSetPlaybackRate}
+                  title="Playback speed"
+                  style={{
+                    marginLeft: 'auto',
+                    border: '1px solid #d4d4d8',
+                    borderRadius: 6,
+                    padding: '3px 6px',
+                    fontSize: 12,
+                    color: '#71717a',
+                    background: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
+                    <option key={index + playbackRateValue} value={playbackRateValue}>
+                      {playbackRateValue}×
+                    </option>
+                  ))}
+                </select>
               </Grid>
               {/* <Grid>{props.children}</Grid> */}
             </Grid>
             <Grid>{props.children}</Grid>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 7, md: 7, lg: 7, xl: 7 }}>
+          <Grid size={{ xs: 12, sm: 8, md: 8, lg: 8, xl: 8 }}>
             {value.length !== 0 ? (
               <>
                 <Paper elevation={3}>
@@ -1280,7 +1295,7 @@ function SlateTranscriptEditorInner(props) {
                         value={value}
                         setValue={setValue}
                         confidenceOverlay={confidenceSettings}
-                        isEditable={typeof props.isEditable === 'boolean' ? props.isEditable : true}
+                        isEditable={editable}
                         showSpeakers={showSpeakers}
                         showTimecodes={showTimecodes}
                         currentTime={currentTime}
@@ -1306,7 +1321,7 @@ function SlateTranscriptEditorInner(props) {
                         }}
                       >
                         <Editable
-                          readOnly={typeof props.isEditable === 'boolean' ? !props.isEditable : false}
+                          readOnly={!editable}
                           renderElement={renderElement}
                           renderLeaf={renderLeaf}
                           decorate={decorate}
@@ -1322,33 +1337,6 @@ function SlateTranscriptEditorInner(props) {
                 <i className="text-center">Loading...</i>
               </section>
             )}
-          </Grid>
-
-          <Grid container size={{ xs: 12, sm: 1, md: 1, lg: 1, xl: 1 }}>
-            <SideBtns
-              handleExport={handleExport}
-              isProcessing={isProcessing}
-              isContentModified={isContentModified}
-              isContentSaved={isContentSaved}
-              setIsProcessing={setIsProcessing}
-              insertTextInaudible={insertTextInaudible}
-              handleInsertMusicNote={handleInsertMusicNote}
-              handleSplitParagraph={handleSplitParagraph}
-              isPauseWhiletyping={isPauseWhiletyping}
-              handleSetPauseWhileTyping={handleSetPauseWhileTyping}
-              handleRestoreTimecodes={handleRestoreTimecodes}
-              handleReplaceText={handleReplaceText}
-              handleSave={handleSave}
-              REPLACE_WHOLE_TEXT_INSTRUCTION={REPLACE_WHOLE_TEXT_INSTRUCTION}
-              handleAnalyticsEvents={props.handleAnalyticsEvents}
-              optionalBtns={props.optionalBtns}
-              handleUndo={handleUndo}
-              handleRedo={handleRedo}
-              isEditable={props.isEditable}
-              exporters={profile.exporters}
-              onOpenPreferences={() => setPrefsOpen(true)}
-              allowReplaceText={editPolicy.allowsStructuralEdits}
-            />
           </Grid>
         </Grid>
         <PreferencesDialog open={prefsOpen} onClose={() => setPrefsOpen(false)} profileId={profile.id} />

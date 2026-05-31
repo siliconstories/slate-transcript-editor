@@ -46,15 +46,34 @@ const validateDpe = (data) => {
 
 const styles = {
   wrap: { fontFamily: 'Roboto, system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1em' },
-  panel: { background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 8, padding: '1em', marginBottom: '1em' },
-  row: { display: 'flex', flexWrap: 'wrap', gap: '1.5em', alignItems: 'flex-start' },
-  col: { display: 'flex', flexDirection: 'column', gap: '0.4em', minWidth: 240 },
-  label: { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: '#555', letterSpacing: 0.4 },
-  btn: { cursor: 'pointer', border: '1px solid #1976d2', background: '#fff', color: '#1976d2', borderRadius: 4, padding: '6px 12px', fontSize: 14 },
-  urlInput: { padding: '6px 8px', border: '1px solid #bbb', borderRadius: 4, minWidth: 320, fontSize: 14 },
-  error: { color: '#c62828', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 4, padding: '8px 12px', marginTop: '0.5em' },
-  ok: { color: '#2e7d32', fontSize: 13 },
-  toggles: { display: 'flex', gap: '1.2em', flexWrap: 'wrap', marginTop: '0.5em' },
+  panel: { background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 10, padding: '1.4em 1.5em', marginBottom: '1.25em' },
+  loadHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: 17,
+    fontWeight: 700,
+    color: '#37474f',
+  },
+  row: { display: 'flex', flexWrap: 'wrap', gap: '2.5em', alignItems: 'flex-start', marginTop: '1em' },
+  col: { display: 'flex', flexDirection: 'column', gap: '0.6em', minWidth: 280 },
+  label: { fontSize: 14, fontWeight: 700, textTransform: 'uppercase', color: '#455a64', letterSpacing: 0.5 },
+  btn: {
+    cursor: 'pointer',
+    border: '1px solid #1976d2',
+    background: '#fff',
+    color: '#1976d2',
+    borderRadius: 6,
+    padding: '9px 16px',
+    fontSize: 15,
+    fontWeight: 600,
+  },
+  urlInput: { padding: '9px 11px', border: '1px solid #bbb', borderRadius: 6, minWidth: 340, fontSize: 15 },
+  error: { color: '#c62828', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 4, padding: '8px 12px', marginTop: '0.75em' },
+  ok: { color: '#2e7d32', fontSize: 14 },
+  toggles: { display: 'flex', gap: '1.4em', flexWrap: 'wrap', marginTop: '1.25em', fontSize: 15 },
   hint: { fontSize: 12, color: '#777' },
   tier: { display: 'flex', gap: '0.6em', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.8em' },
   badgeRigid: { background: '#1565c0', color: '#fff', borderRadius: 4, padding: '3px 8px', fontSize: 12, fontWeight: 600 },
@@ -72,6 +91,7 @@ function Playground() {
   // bumped every time inputs change, to force a fresh mount of the editor
   // (SlateTranscriptEditor reads transcriptData only once, on mount)
   const [mountKey, setMountKey] = useState(0);
+  const [loadOpen, setLoadOpen] = useState(true);
 
   const [isEditable, setIsEditable] = useState(true);
   const [showSpeakers, setShowSpeakers] = useState(true);
@@ -251,128 +271,75 @@ function Playground() {
       </p>
 
       <div style={styles.panel}>
-        <div style={styles.row}>
-          <div style={styles.col}>
-            <span style={styles.label}>1 · Media</span>
-            <input type="file" accept="video/*,audio/*" onChange={handleMediaFile} />
-            <div style={{ display: 'flex', gap: '0.4em' }}>
-              <input
-                style={styles.urlInput}
-                type="text"
-                placeholder="…or paste a video/audio URL"
-                value={urlField}
-                onChange={(e) => setUrlField(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleMediaUrl();
-                }}
-              />
-              <button style={styles.btn} onClick={handleMediaUrl}>
-                Use URL
-              </button>
+        <div style={styles.loadHeader} onClick={() => setLoadOpen(!loadOpen)}>
+          <span style={{ fontSize: 13 }}>{loadOpen ? '▾' : '▸'}</span>
+          Load &amp; options
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 12, fontWeight: 400, color: '#90a4ae' }}>{loadOpen ? '(click to collapse)' : '(click to expand)'}</span>
+        </div>
+        {loadOpen && (
+          <>
+            <div style={styles.row}>
+              <div style={styles.col}>
+                <span style={styles.label}>1 · Media</span>
+                <input type="file" accept="video/*,audio/*" onChange={handleMediaFile} />
+                <div style={{ display: 'flex', gap: '0.4em' }}>
+                  <input
+                    style={styles.urlInput}
+                    type="text"
+                    placeholder="…or paste a video/audio URL"
+                    value={urlField}
+                    onChange={(e) => setUrlField(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleMediaUrl();
+                    }}
+                  />
+                  <button style={styles.btn} onClick={handleMediaUrl}>
+                    Use URL
+                  </button>
+                </div>
+                {mediaName && (
+                  <span style={styles.ok}>
+                    ✓ {mediaName} <em>({getMediaType(mediaName)})</em>
+                  </span>
+                )}
+              </div>
+
+              <div style={styles.col}>
+                <span style={styles.label}>2 · Transcript (DPE JSON)</span>
+                <input type="file" accept="application/json,.json" onChange={handleTranscriptFile} />
+                {transcriptName && <span style={styles.ok}>✓ {transcriptName}</span>}
+              </div>
+
+              <div style={styles.col}>
+                <span style={styles.label}>Or load a bundled sample</span>
+                {Object.keys(SAMPLES).map((k) => (
+                  <button key={k} style={styles.btn} onClick={() => loadSample(SAMPLES[k])}>
+                    {SAMPLES[k].label}
+                  </button>
+                ))}
+                <button style={{ ...styles.btn, borderColor: '#6a1b9a', color: '#6a1b9a', fontWeight: 600 }} onClick={loadRevStrict}>
+                  rev.ai strict testing
+                </button>
+              </div>
             </div>
-            {mediaName && (
-              <span style={styles.ok}>
-                ✓ {mediaName} <em>({getMediaType(mediaName)})</em>
-              </span>
+
+            {!isRigid && (
+              <div style={styles.toggles}>
+                <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
+                  <input
+                    type="checkbox"
+                    checked={wordLevelEditing}
+                    onChange={(e) => {
+                      setWordLevelEditing(e.target.checked);
+                      remount();
+                    }}
+                  />{' '}
+                  Word-level editing
+                </label>
+              </div>
             )}
-          </div>
-
-          <div style={styles.col}>
-            <span style={styles.label}>2 · Transcript (DPE JSON)</span>
-            <input type="file" accept="application/json,.json" onChange={handleTranscriptFile} />
-            {transcriptName && <span style={styles.ok}>✓ {transcriptName}</span>}
-          </div>
-
-          <div style={styles.col}>
-            <span style={styles.label}>Or load a bundled sample</span>
-            {Object.keys(SAMPLES).map((k) => (
-              <button key={k} style={styles.btn} onClick={() => loadSample(SAMPLES[k])}>
-                {SAMPLES[k].label}
-              </button>
-            ))}
-            <button style={{ ...styles.btn, borderColor: '#6a1b9a', color: '#6a1b9a', fontWeight: 600 }} onClick={loadRevStrict}>
-              rev.ai strict testing
-            </button>
-          </div>
-        </div>
-
-        <div style={styles.toggles}>
-          <label>
-            <input type="checkbox" checked={isEditable} onChange={(e) => setIsEditable(e.target.checked)} /> Editable
-          </label>
-          <label>
-            <input type="checkbox" checked={showSpeakers} onChange={(e) => setShowSpeakers(e.target.checked)} /> Speakers
-          </label>
-          <label>
-            <input type="checkbox" checked={showTimecodes} onChange={(e) => setShowTimecodes(e.target.checked)} /> Timecodes
-          </label>
-          <label>
-            <input type="checkbox" checked={showTitle} onChange={(e) => setShowTitle(e.target.checked)} /> Title
-          </label>
-          <label title="Highlight low-confidence words/sentences (rev.ai transcripts)">
-            <input type="checkbox" checked={confidenceOverlay} onChange={(e) => setConfidenceOverlay(e.target.checked)} /> Confidence
-          </label>
-          <select
-            value={confidenceLevel}
-            disabled={!confidenceOverlay}
-            onChange={(e) => setConfidenceLevel(e.target.value)}
-            title="Confidence overlay level (word or sentence)"
-            style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #bbb', fontSize: 13, opacity: confidenceOverlay ? 1 : 0.45 }}
-          >
-            <option value="word">Word</option>
-            <option value="sentence">Sentence</option>
-          </select>
-          <select
-            value={confidenceCutoff}
-            disabled={!confidenceOverlay}
-            onChange={(e) => setConfidenceCutoff(Number(e.target.value))}
-            title="Confidence threshold — words at or below this value are highlighted"
-            style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #bbb', fontSize: 13, opacity: confidenceOverlay ? 1 : 0.45 }}
-          >
-            <option value={0.75}>≤ 0.75 · loose</option>
-            <option value={0.8}>≤ 0.80 · balanced</option>
-            <option value={0.85}>≤ 0.85 · strict</option>
-          </select>
-          {corpus && (
-            <span
-              style={{ fontSize: 11, color: '#777' }}
-              title="Average confidence across the whole transcript — choose a threshold relative to these"
-            >
-              corpus: mean {corpus.confidence[0]} · dur-weighted {corpus.confidence[1]}
-            </span>
-          )}
-          {!isRigid && (
-            <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
-              <input
-                type="checkbox"
-                checked={wordLevelEditing}
-                onChange={(e) => {
-                  setWordLevelEditing(e.target.checked);
-                  remount();
-                }}
-              />{' '}
-              Word-level editing
-            </label>
-          )}
-        </div>
-
-        {ready && (
-          <div style={styles.tier}>
-            {isRigid ? (
-              <>
-                <span style={styles.badgeRigid}>rev.ai · rigid (faithful)</span>
-                <span style={styles.hint}>
-                  Read-only base · double-click a word to rewrite · Alt/Opt-click to play/pause · Ctrl/Cmd-click to mute. The “rev.ai (faithful)”
-                  export plus Undo/Redo now live in the editor’s side menu →
-                </span>
-              </>
-            ) : (
-              <span style={styles.badgeClassic}>DPE · classic (copyedit)</span>
-            )}
-            <button style={styles.btn} onClick={() => openRaw()} title="Edit the raw source document (JSON)">
-              Raw…
-            </button>
-          </div>
+          </>
         )}
 
         {error && <div style={styles.error}>{error}</div>}
