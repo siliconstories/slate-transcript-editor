@@ -4,7 +4,7 @@ import path from 'path';
 import CssBaseline from '@mui/material/CssBaseline';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/Grid2';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
@@ -469,9 +469,9 @@ function SlateTranscriptEditor(props) {
     }
 
     return (
-      <Grid container direction="row" justifyContent="flex-start" alignItems="flex-start" {...props.attributes}>
+      <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'flex-start' }} {...props.attributes}>
         {showTimecodes && (
-          <Grid item contentEditable={false} xs={4} sm={3} md={3} lg={2} xl={2} className={'p-t-2 text-truncate'}>
+          <Grid contentEditable={false} size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'p-t-2 text-truncate'}>
             <code
               contentEditable={false}
               style={{ cursor: 'pointer' }}
@@ -489,7 +489,7 @@ function SlateTranscriptEditor(props) {
           </Grid>
         )}
         {showSpeakers && (
-          <Grid item contentEditable={false} xs={8} sm={9} md={9} lg={3} xl={3} className={'p-t-2 text-truncate'}>
+          <Grid contentEditable={false} size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'p-t-2 text-truncate'}>
             <Typography
               noWrap
               contentEditable={false}
@@ -507,7 +507,7 @@ function SlateTranscriptEditor(props) {
             </Typography>
           </Grid>
         )}
-        <Grid item xs={12} sm={12} md={12} lg={textLg} xl={textXl} className={'p-b-1 mx-auto'}>
+        <Grid size={{ xs: 12, sm: 12, md: 12, lg: textLg, xl: textXl }} className={'p-b-1 mx-auto'}>
           {props.children}
         </Grid>
       </Grid>
@@ -956,10 +956,15 @@ function SlateTranscriptEditor(props) {
           </Tooltip>
         )}
 
-        <Grid container direction="row" justifyContent="center" alignItems="stretch" spacing={2}>
-          <Grid item xs={12} sm={4} md={4} lg={4} xl={4} container direction="column" justifyContent="space-between" alignItems="stretch">
-            <Grid container direction="column" justifyContent="flex-start" alignItems="stretch" spacing={2}>
-              <Grid item container>
+        <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
+          <Grid
+            size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
+            container
+            direction="column"
+            sx={{ justifyContent: 'space-between', alignItems: 'stretch' }}
+          >
+            <Grid container direction="column" spacing={2} sx={{ justifyContent: 'flex-start', alignItems: 'stretch' }}>
+              <Grid container>
                 <video
                   style={{ backgroundColor: 'black' }}
                   ref={mediaRef}
@@ -970,15 +975,15 @@ function SlateTranscriptEditor(props) {
                   playsInline
                 ></video>
               </Grid>
-              <Grid container direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} item>
-                <Grid item>
+              <Grid container direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Grid>
                   <p>
                     <code style={{ color: 'grey' }}>{shortTimecode(currentTime)}</code>
                     <span style={{ color: 'grey' }}> {` | `}</span>
                     <code style={{ color: 'grey' }}>{duration ? `${shortTimecode(duration)}` : '00:00:00'}</code>
                   </p>
                 </Grid>
-                <Grid item>
+                <Grid>
                   <FormControl>
                     <Select labelId="demo-simple-select-label" id="demo-simple-select" value={playbackRate} onChange={handleSetPlaybackRate}>
                       {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => {
@@ -993,7 +998,7 @@ function SlateTranscriptEditor(props) {
                     <FormHelperText>Speed</FormHelperText>
                   </FormControl>
                 </Grid>
-                <Grid item>
+                <Grid>
                   <Tooltip title={<Typography variant="body1">{` Seek back by ${SEEK_BACK_SEC} seconds`}</Typography>}>
                     <Button color="primary" onClick={handleSeekBack}>
                       <Replay10Icon color="primary" fontSize="large" />
@@ -1006,7 +1011,7 @@ function SlateTranscriptEditor(props) {
                   </Tooltip>
                 </Grid>
 
-                <Grid item>
+                <Grid>
                   {props.isEditable && (
                     <Tooltip
                       enterDelay={3000}
@@ -1027,7 +1032,7 @@ function SlateTranscriptEditor(props) {
                 </Grid>
               </Grid>
 
-              <Grid item>
+              <Grid>
                 <Tooltip
                   enterDelay={100}
                   title={
@@ -1069,7 +1074,7 @@ function SlateTranscriptEditor(props) {
                   </div>
                 </Tooltip>
               </Grid>
-              <Grid item>
+              <Grid>
                 <Link
                   color="inherit"
                   onClick={() => {
@@ -1097,12 +1102,12 @@ function SlateTranscriptEditor(props) {
                   })}
                 </Collapse>
               </Grid>
-              {/* <Grid item>{props.children}</Grid> */}
+              {/* <Grid>{props.children}</Grid> */}
             </Grid>
-            <Grid item>{props.children}</Grid>
+            <Grid>{props.children}</Grid>
           </Grid>
 
-          <Grid item xs={12} sm={7} md={7} lg={7} xl={7}>
+          <Grid size={{ xs: 12, sm: 7, md: 7, lg: 7, xl: 7 }}>
             {value.length !== 0 ? (
               <>
                 <Paper elevation={3}>
@@ -1154,7 +1159,7 @@ function SlateTranscriptEditor(props) {
             )}
           </Grid>
 
-          <Grid container item xs={12} sm={1} md={1} lg={1} xl={1}>
+          <Grid container size={{ xs: 12, sm: 1, md: 1, lg: 1, xl: 1 }}>
             <SideBtns
               handleExport={handleExport}
               isProcessing={isProcessing}

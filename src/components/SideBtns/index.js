@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import Link from '@mui/material/Link';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/Grid2';
 import MenuItem from '@mui/material/MenuItem';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -54,8 +54,8 @@ function SideBtns({
   };
 
   return (
-    <Grid container direction="column" justifyContent="flex-start" alignItems="stretch">
-      <Grid item>
+    <Grid container direction="column" sx={{ justifyContent: 'flex-start', alignItems: 'stretch' }}>
+      <Grid>
         <Tooltip title={<Typography variant="body1">Export options</Typography>}>
           <Button aria-controls="simple-menu" aria-haspopup="true" onClick={handleMenuClick}>
             <SaveAltIcon color="primary" /> <KeyboardArrowDownIcon color="primary" />
@@ -303,10 +303,10 @@ function SideBtns({
         </Button>
       </Tooltip> */}
           {/*  */}
-          <Grid item>
+          <Grid>
             <br />
           </Grid>
-          <Grid item>
+          <Grid>
             <Tooltip
               title={
                 <Typography variant="body1">Put the cursor at a point where you'd want to add [INAUDIBLE] text, and click this button</Typography>
@@ -325,10 +325,10 @@ function SideBtns({
           </Grid>
 
           {/*  */}
-          <Grid item>
+          <Grid>
             <br />
           </Grid>
-          <Grid item>
+          <Grid>
             <Tooltip
               title={
                 <Typography variant="body1">
@@ -384,11 +384,11 @@ function SideBtns({
         </Button>
       </Tooltip> */}
           {/*  */}
-          <Grid item>
+          <Grid>
             <br />
           </Grid>
           {allowReplaceText && (
-            <Grid item>
+            <Grid>
               <Tooltip title={<Typography variant="body1">{REPLACE_WHOLE_TEXT_INSTRUCTION}</Typography>}>
                 <Button onClick={handleReplaceText} color="primary">
                   <ImportExportIcon color="primary" />
@@ -403,10 +403,10 @@ function SideBtns({
       </Tooltip> */}
         </>
       )}
-      <Grid item>
+      <Grid>
         <br />
       </Grid>
-      <Grid item>{optionalBtns}</Grid>
+      <Grid>{optionalBtns}</Grid>
     </Grid>
   );
 }

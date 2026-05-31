@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import findActiveWord from '../../util/find-active-word';
 
@@ -219,9 +219,9 @@ function WordLevelEditor({
         const child = paragraph.children && paragraph.children[0] ? paragraph.children[0] : { words: [] };
         const words = Array.isArray(child.words) ? child.words : [];
         return (
-          <Grid container direction="row" justifyContent="flex-start" alignItems="flex-start" key={pIdx} className="stw-paragraph">
+          <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'flex-start' }} key={pIdx} className="stw-paragraph">
             {showTimecodes && (
-              <Grid item xs={4} sm={3} md={3} lg={2} xl={2} className={'p-t-2 text-truncate'}>
+              <Grid size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'p-t-2 text-truncate'}>
                 <code
                   className={'timecode text-muted unselectable'}
                   style={{ cursor: 'pointer' }}
@@ -233,7 +233,7 @@ function WordLevelEditor({
               </Grid>
             )}
             {showSpeakers && (
-              <Grid item xs={8} sm={9} md={9} lg={3} xl={3} className={'p-t-2 text-truncate'}>
+              <Grid size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'p-t-2 text-truncate'}>
                 <Typography
                   noWrap
                   className={'text-truncate text-muted unselectable'}
@@ -245,7 +245,7 @@ function WordLevelEditor({
                 </Typography>
               </Grid>
             )}
-            <Grid item xs={12} sm={12} md={12} lg={showSpeakers || showTimecodes ? 7 : 12} xl={7} className={'p-b-1'}>
+            <Grid size={{ xs: 12, sm: 12, md: 12, lg: showSpeakers || showTimecodes ? 7 : 12, xl: 7 }} className={'p-b-1'}>
               {words.map((word, wIdx) => renderWord(paragraph, pIdx, word, wIdx))}
             </Grid>
           </Grid>
