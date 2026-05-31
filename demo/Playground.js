@@ -4,6 +4,7 @@ import getMediaType from '../src/util/get-media-type';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 import REV_SAMPLE from './sample-data/rev-ai-sample.json';
+import GEMS_STRICT from '../src/util/rev-to-sentences/__fixtures__/GEMS-01.json';
 import { detectProfile } from '../src/transcript-model/profile';
 import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
 import converSlateToDpe from '../src/util/export-adapters/slate-to-dpe';
@@ -242,6 +243,20 @@ function Playground() {
     remount();
   };
 
+  // Local strict-testing pair: GEMS-01.json transcript + GEMS-01.mp4 streamed from
+  // ~/cineminds-test via demo/serve.js (the 40MB media is not committed).
+  const loadRevStrict = () => {
+    setError('');
+    setMediaUrl('/strict-media/GEMS-01.mp4');
+    setMediaName('GEMS-01.mp4');
+    setUrlField('');
+    setTitle('GEMS-01 — rev.ai strict testing');
+    setProfileInst(detectProfile(GEMS_STRICT));
+    setTranscriptData(GEMS_STRICT);
+    setTranscriptName(`GEMS-01 strict — rigid (${revWordCount(GEMS_STRICT)} words)`);
+    remount();
+  };
+
   const ready = Boolean(mediaUrl) && Boolean(transcriptData);
 
   return (
@@ -295,6 +310,9 @@ function Playground() {
             ))}
             <button style={{ ...styles.btn, borderColor: '#1565c0', color: '#1565c0', fontWeight: 600 }} onClick={loadRevSample}>
               rev.ai sample (rigid)
+            </button>
+            <button style={{ ...styles.btn, borderColor: '#6a1b9a', color: '#6a1b9a', fontWeight: 600 }} onClick={loadRevStrict}>
+              rev.ai strict testing
             </button>
           </div>
         </div>
