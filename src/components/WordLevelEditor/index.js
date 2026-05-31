@@ -36,6 +36,7 @@ function WordLevelEditor({
   onSeekAndTogglePlay,
   onContentChange,
   onSetSpeakerName,
+  onShowRawSource,
 }) {
   const [editing, setEditing] = useState(null); // { pIdx, wIdx }
   const [draft, setDraft] = useState('');
@@ -139,20 +140,37 @@ function WordLevelEditor({
       return (
         <React.Fragment key={wIdx}>
           <span className="stw-edit-wrap">
-            <button
-              type="button"
-              className="stw-mute-btn"
-              // mousedown-preventDefault keeps the input focused, so its onBlur
-              // (commit) doesn't fire and unmount this button before the click lands
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                updateWord(pIdx, wIdx, { muted: !word.muted });
-                setEditing(null);
-              }}
-              title={word.muted ? 'Unmute this word' : 'Mute this word (blanked on export)'}
-            >
-              {word.muted ? 'unmute' : 'mute'}
-            </button>
+            <span className="stw-edit-tools" contentEditable={false}>
+              <button
+                type="button"
+                className="stw-mute-btn"
+                aria-pressed={Boolean(word.muted)}
+                // mousedown-preventDefault keeps the input focused, so its onBlur
+                // (commit) doesn't fire and unmount this button before the click lands
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  updateWord(pIdx, wIdx, { muted: !word.muted });
+                  setEditing(null);
+                }}
+                title={word.muted ? 'Unmute this word' : 'Mute this word (removed on export)'}
+              >
+                {word.muted ? 'Unmute' : 'Mute'}
+              </button>
+              {onShowRawSource && (
+                <button
+                  type="button"
+                  className="stw-raw-btn"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    cancelEdit();
+                    onShowRawSource({ key: word._key, start: word.start });
+                  }}
+                  title="Edit the raw source document (JSON)"
+                >
+                  Raw…
+                </button>
+              )}
+            </span>
             <input
               className="stw-word-input"
               autoFocus
@@ -250,6 +268,7 @@ WordLevelEditor.propTypes = {
   onSeekAndTogglePlay: PropTypes.func,
   onContentChange: PropTypes.func,
   onSetSpeakerName: PropTypes.func,
+  onShowRawSource: PropTypes.func,
 };
 
 export default WordLevelEditor;

@@ -5,6 +5,9 @@ import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
 import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 import REV_SAMPLE from './sample-data/rev-ai-sample.json';
 import { detectProfile } from '../src/transcript-model/profile';
+import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
+import converSlateToDpe from '../src/util/export-adapters/slate-to-dpe';
+import RawSourceDialog from './RawSourceDialog.js';
 
 const SAMPLES = {
   kate: {
@@ -84,6 +87,59 @@ function Playground() {
   const remount = () => setMountKey((k) => k + 1);
 
   const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
+
+  // raw-source editor (CodeMirror lightbox) — edits the current document JSON
+  const [liveValue, setLiveValue] = useState(null);
+  const [rawOpen, setRawOpen] = useState(false);
+  const [rawText, setRawText] = useState('');
+  const [rawLocator, setRawLocator] = useState(null);
+
+  // schema gate: must be a valid rev.ai ({ monologues }) or DPE ({ words, paragraphs }) doc
+  const validateRaw = (parsed) => {
+    if (isRevTranscript(parsed)) {
+      const allowed = ['text', 'punct', 'unknown'];
+      for (const m of parsed.monologues) {
+        for (const el of m.elements || []) {
+          if (el && !allowed.includes(el.type)) {
+            return `Invalid element "type": ${JSON.stringify(el.type)}. Allowed: text, punct, unknown.`;
+          }
+        }
+      }
+      try {
+        revToModel(parsed);
+        return null;
+      } catch (e) {
+        return `Invalid rev.ai data — ${e.message}`;
+      }
+    }
+    const dpeErr = validateDpe(parsed);
+    if (dpeErr) return `Not a rev.ai ({ monologues }) or DPE ({ words, paragraphs }) document. ${dpeErr}`;
+    return null;
+  };
+
+  // current document as raw JSON: rigid -> faithful rev.ai (reflects mutes/rewrites);
+  // classic -> current DPE from the live Slate value, falling back to the loaded source.
+  const openRaw = (locator) => {
+    let obj;
+    if (isRigid && profileInst && Array.isArray(profileInst.exporters)) {
+      const exporter = profileInst.exporters.find((e) => e.id === 'json-rev');
+      obj = (exporter && exporter.run()) || transcriptData;
+    } else {
+      obj = liveValue ? converSlateToDpe(liveValue) : transcriptData;
+    }
+    setRawText(JSON.stringify(obj, null, 2));
+    setRawLocator(locator && (locator.key != null || typeof locator.start === 'number') ? locator : null);
+    setRawOpen(true);
+  };
+
+  // Save in the raw editor: re-import the edited document as a fresh transcript
+  const applyRaw = (parsed) => {
+    setProfileInst(detectProfile(parsed));
+    setTranscriptData(parsed);
+    setLiveValue(null);
+    setRawOpen(false);
+    remount();
+  };
 
   const handleMediaFile = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -267,6 +323,9 @@ function Playground() {
             ) : (
               <span style={styles.badgeClassic}>DPE · classic (copyedit)</span>
             )}
+            <button style={styles.btn} onClick={() => openRaw()} title="Edit the raw source document (JSON)">
+              Raw…
+            </button>
           </div>
         )}
 
@@ -286,9 +345,22 @@ function Playground() {
           showSpeakers={showSpeakers}
           showTimecodes={showTimecodes}
           wordLevelEditing={wordLevelEditing}
+          onShowRawSource={openRaw}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
-          handleAutoSaveChanges={(content) => console.log('handleAutoSaveChanges', content)}
+          handleAutoSaveChanges={(content) => setLiveValue(content)}
           handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
+        />
+      )}
+
+      {rawOpen && (
+        <RawSourceDialog
+          title={isRigid ? 'Raw rev.ai source (JSON)' : 'Raw DPE source (JSON)'}
+          tier={isRigid ? 'rev' : 'dpe'}
+          openTo={rawLocator}
+          initialText={rawText}
+          validate={validateRaw}
+          onCancel={() => setRawOpen(false)}
+          onSave={applyRaw}
         />
       )}
     </div>

@@ -876,24 +876,43 @@ function SlateTranscriptEditor(props) {
                 position: relative;
                 display: inline-block;
               }
-              .stw-mute-btn {
+              .stw-edit-tools {
                 position: absolute;
                 bottom: 100%;
                 left: 0;
                 margin-bottom: 3px;
+                display: inline-flex;
+                gap: 3px;
+                z-index: 5;
+              }
+              .stw-mute-btn,
+              .stw-raw-btn {
                 font: inherit;
-                font-size: 10px;
-                line-height: 1.5;
-                padding: 0 5px;
                 border: 1px solid #1976d2;
                 border-radius: 3px;
                 background: #fff;
                 color: #1976d2;
                 cursor: pointer;
                 white-space: nowrap;
-                z-index: 5;
+                display: inline-flex;
+                align-items: center;
               }
-              .stw-mute-btn:hover {
+              .stw-mute-btn,
+              .stw-raw-btn {
+                font-size: 11px;
+                line-height: 1.5;
+                padding: 0 5px;
+              }
+              .stw-mute-btn[aria-pressed='true'] {
+                background: #1976d2;
+                color: #fff;
+              }
+              .stw-mute-btn[aria-pressed='true']:hover {
+                background: #145ea8;
+                color: #fff;
+              }
+              .stw-mute-btn:hover,
+              .stw-raw-btn:hover {
                 background: #1976d2;
                 color: #fff;
               }
@@ -1104,6 +1123,7 @@ function SlateTranscriptEditor(props) {
                         onSeekAndTogglePlay={seekAndTogglePlayWord}
                         onContentChange={handleWordLevelContentChange}
                         onSetSpeakerName={handleSetSpeakerName}
+                        onShowRawSource={props.onShowRawSource}
                       />
                     ) : (
                       <Slate
@@ -1184,6 +1204,7 @@ SlateTranscriptEditor.propTypes = {
   followPlayback: PropTypes.bool,
   wordLevelEditing: PropTypes.bool,
   profile: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
+  onShowRawSource: PropTypes.func,
 };
 
 SlateTranscriptEditor.defaultProps = {
