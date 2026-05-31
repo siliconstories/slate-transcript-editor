@@ -77,7 +77,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.3",
     "@material-ui/icons": "^4.11.2",
-    "docx": "4.7.1",
+    "docx": "^9.7.1",
     "fontsource-roboto": "^4.0.0",
     "lodash": "^4.17.20",
     "prop-types": "^15.7.2",

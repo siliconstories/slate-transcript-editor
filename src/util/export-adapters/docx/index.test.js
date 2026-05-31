@@ -15,10 +15,10 @@ import DPE from '../__fixtures__/golden-dpe.json';
 
 const slateValue = convertDpeToSlate(DPE);
 
-// docx 4.7.1 uses the instance Packer API; toBuffer works headlessly (no DOM).
+// docx 9 uses the static Packer API; toBuffer works headlessly (no DOM).
 async function documentXml(opts) {
   const doc = buildDocxDocument({ value: slateValue, title: 'My Transcript', ...opts });
-  const buffer = await new Packer().toBuffer(doc);
+  const buffer = await Packer.toBuffer(doc);
   const zip = await JSZip.loadAsync(buffer);
   return zip.file('word/document.xml').async('string');
 }

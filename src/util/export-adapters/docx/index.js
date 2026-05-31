@@ -1,11 +1,14 @@
-import { Document, Paragraph, TextRun, Packer } from 'docx';
+import { Document, Paragraph, TextRun, Packer, HeadingLevel, AlignmentType, Tab } from 'docx';
 import { shortTimecode } from '../../timecode-converter/';
 import { Node } from 'slate';
 export default slateToDocx;
 
 // Builds the docx Document model from a Slate value. Pure + DOM-free so it can be
-// snapshot-tested headlessly (Packer.toBuffer) — the golden baseline the docx 9
-// rewrite is diffed against. The browser download lives in downloadDocx below.
+// snapshot-tested headlessly (Packer.toBuffer) — see ./index.test.js. The browser
+// download lives in downloadDocx below. Mirrors the structure of the original
+// docx 4.7.1 exporter (Heading1+center title, a bold speaker run with a leading
+// tab when timecodes are shown, one break after each body paragraph) on docx 9's
+// declarative sections/children API.
 export function buildDocxDocument({
   value,
   speakers,
@@ -16,70 +19,62 @@ export function buildDocxDocument({
   creator = 'Slate Transcript Editor',
   description = 'Transcript',
 }) {
-  const doc = new Document({
-    creator: creator,
-    description: description,
-    title: title,
-  });
+  const paragraphs = [];
 
   if (!hideTitle) {
     // Transcript Title
-    const textTitle = new TextRun(title);
-    const paragraphTitle = new Paragraph();
-    paragraphTitle.addRun(textTitle);
-    paragraphTitle.heading1().center();
-    doc.addParagraph(paragraphTitle);
-
+    paragraphs.push(
+      new Paragraph({
+        children: [new TextRun(title)],
+        heading: HeadingLevel.HEADING_1,
+        alignment: AlignmentType.CENTER,
+      })
+    );
     // add spacing
-    var paragraphEmpty = new Paragraph();
-    doc.addParagraph(paragraphEmpty);
+    paragraphs.push(new Paragraph({}));
   }
 
   value.forEach((slateParagraph) => {
-    // TODO: use timecode converter module to convert from seconds to timecode
-
-    const paragraphSpeakerTimecodes = new Paragraph();
+    const headerChildren = [];
     if (timecodes) {
-      const timecodeStartTime = new TextRun(shortTimecode(slateParagraph.start));
-      paragraphSpeakerTimecodes.addRun(timecodeStartTime);
+      headerChildren.push(new TextRun(shortTimecode(slateParagraph.start)));
     }
     if (speakers) {
       if (timecodes) {
-        const speaker = new TextRun(slateParagraph.speaker).bold().tab();
-        paragraphSpeakerTimecodes.addRun(speaker);
+        // tab before the speaker name, both inside the bold run (as in docx 4.7.1)
+        headerChildren.push(new TextRun({ bold: true, children: [new Tab(), slateParagraph.speaker] }));
       } else {
-        const speaker = new TextRun(slateParagraph.speaker).bold();
-        paragraphSpeakerTimecodes.addRun(speaker);
+        headerChildren.push(new TextRun({ text: slateParagraph.speaker, bold: true }));
       }
     }
 
     const paragraphContents = Node.string(slateParagraph);
-    const textBreak = new TextRun('').break();
 
     if (inlineTimecodes) {
-      paragraphSpeakerTimecodes.addRun(new TextRun(`${slateParagraph.speaker.toUpperCase()}:  ${paragraphContents}`));
+      headerChildren.push(new TextRun(`${slateParagraph.speaker.toUpperCase()}:  ${paragraphContents}`));
     }
 
     if (timecodes || speakers || inlineTimecodes) {
-      doc.addParagraph(paragraphSpeakerTimecodes);
-      doc.addParagraph(new Paragraph());
+      paragraphs.push(new Paragraph({ children: headerChildren }));
+      paragraphs.push(new Paragraph({}));
     }
 
     if (!inlineTimecodes) {
-      const paragraphText = new Paragraph(paragraphContents);
-      paragraphText.addRun(textBreak);
-      doc.addParagraph(paragraphText);
+      paragraphs.push(new Paragraph({ children: [new TextRun(paragraphContents), new TextRun({ break: 1 })] }));
     }
   });
 
-  return doc;
+  return new Document({
+    creator: creator,
+    description: description,
+    title: title,
+    sections: [{ children: paragraphs }],
+  });
 }
 
 // Browser side-effect: pack the document to a blob and trigger a download.
 export function downloadDocx(doc, title = 'Transcript') {
-  const packer = new Packer();
-
-  return packer.toBlob(doc).then((blob) => {
+  return Packer.toBlob(doc).then((blob) => {
     const filename = `${title}.docx`;
     // // const type =  'application/octet-stream';
     const a = document.createElement('a');
