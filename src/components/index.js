@@ -15,6 +15,7 @@ import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 
 import EditorToolbar from './EditorToolbar';
+import FilesPanel from './FilesPanel';
 import { shortTimecode } from '../util/timecode-converter';
 import download from '../util/downlaod/index.js';
 import convertDpeToSlate from '../util/dpe-to-slate';
@@ -106,6 +107,9 @@ function SlateTranscriptEditorInner(props) {
   const seekStepSeconds = settings.playback.seekStepSeconds;
   const forwardStepSeconds = settings.playback.forwardStepSeconds;
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // Video|Files view tabs — only shown when the host supplies a `files` list.
+  const [activeTab, setActiveTab] = useState('video');
+  const hasFiles = Array.isArray(props.files) && props.files.length > 0;
 
   // Editing is prop-seeded but toggled in-UI via the toolbar's Edit-Lock. Seed from
   // props.isEditable, then sync through when the host changes that prop (mirrors the
@@ -1205,143 +1209,197 @@ function SlateTranscriptEditorInner(props) {
           />
         </div>
 
-        <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
-          <Grid
-            size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
-            container
-            sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
+        {hasFiles && (
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              borderBottom: `1px solid #e4e4e7`,
+              marginBottom: 14,
+              fontFamily: 'Inter, Roboto, system-ui, sans-serif',
+            }}
           >
-            <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
-              <Grid container>
-                <video
-                  style={{ backgroundColor: 'black' }}
-                  ref={mediaRef}
-                  src={props.mediaUrl}
-                  width={'100%'}
-                  // height="auto"
-                  controls
-                  playsInline
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                ></video>
-              </Grid>
-              {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
-              <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
-                <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
-                  <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
-                    −{seekStepSeconds}
-                  </button>
-                </Tooltip>
-                <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
-                  <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
-                    {isPlaying ? '❚❚' : '▶'}
-                  </button>
-                </Tooltip>
-                <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
-                  <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
-                    +{forwardStepSeconds}
-                  </button>
-                </Tooltip>
-                <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
-                <span
+            {[
+              ['video', 'Video'],
+              ['files', 'Files'],
+            ].map(([key, label]) => {
+              const on = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                    fontVariantNumeric: 'tabular-nums',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: '#18181b',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {shortTimecode(currentTime)}
-                  <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
-                    {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
-                  </span>
-                </span>
-                <select
-                  value={playbackRate}
-                  onChange={handleSetPlaybackRate}
-                  title="Playback speed"
-                  style={{
-                    marginLeft: 'auto',
-                    border: '1px solid #d4d4d8',
-                    borderRadius: 6,
-                    padding: '3px 6px',
-                    fontSize: 12,
-                    color: '#71717a',
-                    background: '#fff',
+                    border: 'none',
+                    background: 'transparent',
                     cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 14,
+                    padding: '8px 12px',
+                    color: on ? '#18181b' : '#71717a',
+                    fontWeight: on ? 600 : 400,
+                    boxShadow: on ? 'inset 0 -2px 0 #18181b' : 'none',
                   }}
                 >
-                  {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
-                    <option key={index + playbackRateValue} value={playbackRateValue}>
-                      {playbackRateValue}×
-                    </option>
-                  ))}
-                </select>
-              </Grid>
-              {/* <Grid>{props.children}</Grid> */}
-            </Grid>
-            <Grid>{props.children}</Grid>
-          </Grid>
+                  {label}
+                  {key === 'files' ? ` (${props.files.length})` : ''}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-          <Grid size={{ xs: 12, sm: 8, md: 8, lg: 8, xl: 8 }}>
-            {value.length !== 0 ? (
-              <>
-                <Paper elevation={3}>
-                  <section
-                    className="editor-wrapper-container"
-                    style={{ fontSize: settings.appearance.fontSize, lineHeight: settings.appearance.lineSpacing }}
+        {hasFiles && activeTab === 'files' && (
+          <FilesPanel
+            files={props.files}
+            activeId={props.activeFileId}
+            onSelect={(id) => {
+              if (props.onSelectFile) props.onSelectFile(id);
+              setActiveTab('video');
+            }}
+            onRemove={props.onRemoveFile}
+          />
+        )}
+
+        <div style={{ display: hasFiles && activeTab !== 'video' ? 'none' : 'block' }}>
+          <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
+            <Grid
+              size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
+              container
+              sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
+            >
+              <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
+                <Grid container>
+                  <video
+                    style={{ backgroundColor: 'black' }}
+                    ref={mediaRef}
+                    src={props.mediaUrl}
+                    width={'100%'}
+                    // height="auto"
+                    controls
+                    playsInline
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                  ></video>
+                </Grid>
+                {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
+                <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
+                  <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
+                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
+                      −{seekStepSeconds}
+                    </button>
+                  </Tooltip>
+                  <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
+                    <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
+                      {isPlaying ? '❚❚' : '▶'}
+                    </button>
+                  </Tooltip>
+                  <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
+                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
+                      +{forwardStepSeconds}
+                    </button>
+                  </Tooltip>
+                  <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
+                  <span
+                    style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: '#18181b',
+                      whiteSpace: 'nowrap',
+                    }}
                   >
-                    {wordLevelEditing ? (
-                      <WordLevelEditor
-                        value={value}
-                        setValue={setValue}
-                        confidenceOverlay={confidenceSettings}
-                        isEditable={editable}
-                        showSpeakers={showSpeakers}
-                        showTimecodes={showTimecodes}
-                        currentTime={currentTime}
-                        followPlayback={followPlayback}
-                        onSeek={seekWord}
-                        onSeekAndPlay={seekAndPlayWord}
-                        onSeekAndTogglePlay={seekAndTogglePlayWord}
-                        onContentChange={handleWordLevelContentChange}
-                        onSetSpeakerName={handleSetSpeakerName}
-                        onShowRawSource={props.onShowRawSource}
-                      />
-                    ) : (
-                      <Slate
-                        key={slateKey}
-                        editor={editor}
-                        initialValue={value}
-                        onChange={(value) => {
-                          if (props.handleAutoSaveChanges) {
-                            props.handleAutoSaveChanges(value);
-                            setIsContentSaved(true);
-                          }
-                          return setValue(value);
-                        }}
-                      >
-                        <Editable
-                          readOnly={!editable}
-                          renderElement={renderElement}
-                          renderLeaf={renderLeaf}
-                          decorate={decorate}
-                          onKeyDown={handleOnKeyDown}
+                    {shortTimecode(currentTime)}
+                    <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
+                      {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                    </span>
+                  </span>
+                  <select
+                    value={playbackRate}
+                    onChange={handleSetPlaybackRate}
+                    title="Playback speed"
+                    style={{
+                      marginLeft: 'auto',
+                      border: '1px solid #d4d4d8',
+                      borderRadius: 6,
+                      padding: '3px 6px',
+                      fontSize: 12,
+                      color: '#71717a',
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
+                      <option key={index + playbackRateValue} value={playbackRateValue}>
+                        {playbackRateValue}×
+                      </option>
+                    ))}
+                  </select>
+                </Grid>
+                {/* <Grid>{props.children}</Grid> */}
+              </Grid>
+              <Grid>{props.children}</Grid>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 8, md: 8, lg: 8, xl: 8 }}>
+              {value.length !== 0 ? (
+                <>
+                  <Paper elevation={3}>
+                    <section
+                      className="editor-wrapper-container"
+                      style={{ fontSize: settings.appearance.fontSize, lineHeight: settings.appearance.lineSpacing }}
+                    >
+                      {wordLevelEditing ? (
+                        <WordLevelEditor
+                          value={value}
+                          setValue={setValue}
+                          confidenceOverlay={confidenceSettings}
+                          isEditable={editable}
+                          showSpeakers={showSpeakers}
+                          showTimecodes={showTimecodes}
+                          currentTime={currentTime}
+                          followPlayback={followPlayback}
+                          onSeek={seekWord}
+                          onSeekAndPlay={seekAndPlayWord}
+                          onSeekAndTogglePlay={seekAndTogglePlayWord}
+                          onContentChange={handleWordLevelContentChange}
+                          onSetSpeakerName={handleSetSpeakerName}
+                          onShowRawSource={props.onShowRawSource}
                         />
-                      </Slate>
-                    )}
-                  </section>
-                </Paper>
-              </>
-            ) : (
-              <section className="text-center">
-                <i className="text-center">Loading...</i>
-              </section>
-            )}
+                      ) : (
+                        <Slate
+                          key={slateKey}
+                          editor={editor}
+                          initialValue={value}
+                          onChange={(value) => {
+                            if (props.handleAutoSaveChanges) {
+                              props.handleAutoSaveChanges(value);
+                              setIsContentSaved(true);
+                            }
+                            return setValue(value);
+                          }}
+                        >
+                          <Editable
+                            readOnly={!editable}
+                            renderElement={renderElement}
+                            renderLeaf={renderLeaf}
+                            decorate={decorate}
+                            onKeyDown={handleOnKeyDown}
+                          />
+                        </Slate>
+                      )}
+                    </section>
+                  </Paper>
+                </>
+              ) : (
+                <section className="text-center">
+                  <i className="text-center">Loading...</i>
+                </section>
+              )}
+            </Grid>
           </Grid>
-        </Grid>
+        </div>
         <PreferencesDialog open={prefsOpen} onClose={() => setPrefsOpen(false)} profileId={profile.id} />
       </Container>
     </div>
@@ -1398,6 +1456,11 @@ SlateTranscriptEditor.propTypes = {
   onSentenceModel: PropTypes.func,
   defaultPreferences: PropTypes.object,
   onPreferencesChange: PropTypes.func,
+  // Optional Video|Files tab bar — host supplies the document list + handlers.
+  files: PropTypes.arrayOf(PropTypes.shape({ id: PropTypes.string, label: PropTypes.string, sublabel: PropTypes.string })),
+  activeFileId: PropTypes.string,
+  onSelectFile: PropTypes.func,
+  onRemoveFile: PropTypes.func,
 };
 
 // defaults are applied via DEFAULT_PROPS at the top of the component (React 19

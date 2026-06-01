@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
 import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
@@ -25,6 +25,43 @@ const SAMPLES = {
     transcriptData: SOLEIO_DPE,
   },
 };
+
+const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
+
+const docSublabel = (transcriptData) =>
+  isRevTranscript(transcriptData) ? `rev.ai · rigid · ${revWordCount(transcriptData)} words` : 'DPE · classic';
+
+// Seed documents: the bundled samples + the local strict-testing pair. Session
+// uploads append to this list (see Playground state). Each carries the full payload.
+const SEED_DOCUMENTS = [
+  {
+    id: 'kate',
+    label: SAMPLES.kate.label,
+    sublabel: docSublabel(SAMPLES.kate.transcriptData),
+    mediaUrl: SAMPLES.kate.mediaUrl,
+    mediaName: SAMPLES.kate.mediaUrl.split('/').pop(),
+    transcriptData: SAMPLES.kate.transcriptData,
+    title: SAMPLES.kate.title,
+  },
+  {
+    id: 'soleio',
+    label: SAMPLES.soleio.label,
+    sublabel: docSublabel(SAMPLES.soleio.transcriptData),
+    mediaUrl: SAMPLES.soleio.mediaUrl,
+    mediaName: SAMPLES.soleio.mediaUrl.split('/').pop(),
+    transcriptData: SAMPLES.soleio.transcriptData,
+    title: SAMPLES.soleio.title,
+  },
+  {
+    id: 'gems-strict',
+    label: 'rev.ai strict testing',
+    sublabel: docSublabel(GEMS_STRICT),
+    mediaUrl: '/strict-media/GEMS-01.mp4',
+    mediaName: 'GEMS-01.mp4',
+    transcriptData: GEMS_STRICT,
+    title: 'GEMS-01 — rev.ai strict testing',
+  },
+];
 
 const isFiniteNumber = (n) => typeof n === 'number' && isFinite(n);
 
@@ -118,7 +155,13 @@ function Playground() {
 
   const remount = () => setMountKey((k) => k + 1);
 
-  const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
+  // Documents listed in the editor's Files tab: seeded with the bundled samples,
+  // appended by session uploads. The active row is highlighted via activeFileId.
+  const [documents, setDocuments] = useState(SEED_DOCUMENTS);
+  const [activeFileId, setActiveFileId] = useState(null);
+  const [uploadCounter, setUploadCounter] = useState(0);
+  const [pendingMedia, setPendingMedia] = useState(null); // { url, name }
+  const [pendingTranscript, setPendingTranscript] = useState(null); // { data, title, name }
 
   // raw-source editor (CodeMirror lightbox) — edits the current document JSON
   const [liveValue, setLiveValue] = useState(null);
@@ -173,22 +216,70 @@ function Playground() {
     remount();
   };
 
+  // Load a complete document (sample or uploaded) into both panes. The Files tab
+  // and the Load-section sample buttons both route through here.
+  const selectDocument = (id) => {
+    const doc = documents.find((d) => d.id === id);
+    if (!doc) return;
+    setError('');
+    setUrlField('');
+    setMediaUrl(doc.mediaUrl);
+    setMediaName(doc.mediaName);
+    setProfileInst(detectProfile(doc.transcriptData));
+    setTranscriptData(doc.transcriptData);
+    setTranscriptName(doc.label);
+    setTitle(doc.title);
+    setActiveFileId(id);
+    remount();
+  };
+
+  const removeDocument = (id) => {
+    setDocuments((docs) => docs.filter((d) => d.id !== id));
+  };
+
+  // Uploads arrive as separate media + transcript files; pair them into one document.
+  // When both pendings are present, synthesize a descriptor, append, and select it.
+  useEffect(() => {
+    if (!pendingMedia || !pendingTranscript) return;
+    const id = `uploaded-${uploadCounter + 1}`;
+    const doc = {
+      id,
+      label: pendingTranscript.title || pendingMedia.name,
+      sublabel: docSublabel(pendingTranscript.data),
+      mediaUrl: pendingMedia.url,
+      mediaName: pendingMedia.name,
+      transcriptData: pendingTranscript.data,
+      title: pendingTranscript.title || pendingMedia.name,
+    };
+    setUploadCounter((n) => n + 1);
+    setDocuments((docs) => [...docs, doc]);
+    setPendingMedia(null);
+    setPendingTranscript(null);
+    // select inline (selectDocument reads from `documents` which hasn't updated yet)
+    setError('');
+    setUrlField('');
+    setMediaUrl(doc.mediaUrl);
+    setMediaName(doc.mediaName);
+    setProfileInst(detectProfile(doc.transcriptData));
+    setTranscriptData(doc.transcriptData);
+    setTranscriptName(doc.label);
+    setTitle(doc.title);
+    setActiveFileId(id);
+    remount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingMedia, pendingTranscript]);
+
   const handleMediaFile = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setMediaUrl(objectUrl);
-    setMediaName(file.name);
-    setUrlField('');
-    remount();
+    setPendingMedia({ url: URL.createObjectURL(file), name: file.name });
   };
 
   const handleMediaUrl = () => {
     const url = urlField.trim();
     if (!url) return;
-    setMediaUrl(url);
-    setMediaName(url.split('/').pop());
-    remount();
+    setPendingMedia({ url, name: url.split('/').pop() });
+    setUrlField('');
   };
 
   const handleTranscriptFile = (e) => {
@@ -200,63 +291,23 @@ function Playground() {
       try {
         parsed = JSON.parse(reader.result);
       } catch (err) {
-        setTranscriptData(null);
         setError(`Could not parse JSON: ${err.message}`);
         return;
       }
-      // give the Title checkbox something to toggle for uploaded files
-      setTitle(file.name.replace(/\.[^/.]+$/, ''));
       const detected = detectProfile(parsed);
-      // rev.ai → rigid/faithful tier (immutable original + overlay); DPE → classic free-text.
-      if (detected.id === 'rigid') {
-        setError('');
-        setProfileInst(detected);
-        setTranscriptData(parsed);
-        setTranscriptName(`${file.name} — rev.ai (rigid, ${revWordCount(parsed)} words, faithful round-trip)`);
-        remount();
-        return;
+      // DPE must validate; rev.ai (rigid) is accepted as-is.
+      if (detected.id !== 'rigid') {
+        const dpeError = validateDpe(parsed);
+        if (dpeError) {
+          setError(`Unsupported transcript format. Expected DPE ({ words, paragraphs }) or rev.ai ({ monologues }). ${dpeError}`);
+          return;
+        }
       }
-      // DPE → classic free-text tier.
-      const dpeError = validateDpe(parsed);
-      if (dpeError) {
-        setTranscriptData(null);
-        setError(`Unsupported transcript format. Expected DPE ({ words, paragraphs }) or rev.ai ({ monologues }). ${dpeError}`);
-        return;
-      }
-      setProfileInst(detected);
       setError('');
-      setTranscriptData(parsed);
-      setTranscriptName(file.name);
-      remount();
+      setPendingTranscript({ data: parsed, title: file.name.replace(/\.[^/.]+$/, ''), name: file.name });
     };
     reader.onerror = () => setError('Could not read the file.');
     reader.readAsText(file);
-  };
-
-  const loadSample = (sample) => {
-    setError('');
-    setMediaUrl(sample.mediaUrl);
-    setMediaName(sample.mediaUrl.split('/').pop());
-    setUrlField('');
-    setProfileInst(detectProfile(sample.transcriptData));
-    setTranscriptData(sample.transcriptData);
-    setTranscriptName(`${sample.label} (bundled)`);
-    setTitle(sample.title);
-    remount();
-  };
-
-  // Local strict-testing pair: GEMS-01.json transcript + GEMS-01.mp4 streamed from
-  // ~/cineminds-test via demo/serve.js (the 40MB media is not committed).
-  const loadRevStrict = () => {
-    setError('');
-    setMediaUrl('/strict-media/GEMS-01.mp4');
-    setMediaName('GEMS-01.mp4');
-    setUrlField('');
-    setTitle('GEMS-01 — rev.ai strict testing');
-    setProfileInst(detectProfile(GEMS_STRICT));
-    setTranscriptData(GEMS_STRICT);
-    setTranscriptName(`GEMS-01 strict — rigid (${revWordCount(GEMS_STRICT)} words)`);
-    remount();
   };
 
   const ready = Boolean(mediaUrl) && Boolean(transcriptData);
@@ -312,15 +363,16 @@ function Playground() {
               </div>
 
               <div style={styles.col}>
-                <span style={styles.label}>Or load a bundled sample</span>
-                {Object.keys(SAMPLES).map((k) => (
-                  <button key={k} style={styles.btn} onClick={() => loadSample(SAMPLES[k])}>
-                    {SAMPLES[k].label}
+                <span style={styles.label}>Or open a document (also in the Files tab)</span>
+                {documents.map((d) => (
+                  <button
+                    key={d.id}
+                    style={d.id === activeFileId ? { ...styles.btn, borderColor: '#18181b', color: '#18181b' } : styles.btn}
+                    onClick={() => selectDocument(d.id)}
+                  >
+                    {d.label}
                   </button>
                 ))}
-                <button style={{ ...styles.btn, borderColor: '#6a1b9a', color: '#6a1b9a', fontWeight: 600 }} onClick={loadRevStrict}>
-                  rev.ai strict testing
-                </button>
               </div>
             </div>
 
@@ -360,6 +412,10 @@ function Playground() {
           showTimecodes={showTimecodes}
           wordLevelEditing={wordLevelEditing}
           onShowRawSource={openRaw}
+          files={documents.map(({ id, label, sublabel }) => ({ id, label, sublabel }))}
+          activeFileId={activeFileId}
+          onSelectFile={selectDocument}
+          onRemoveFile={removeDocument}
           handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
           handleAutoSaveChanges={(content) => setLiveValue(content)}
           onSentenceModel={(model) => console.log('onSentenceModel', model)}
