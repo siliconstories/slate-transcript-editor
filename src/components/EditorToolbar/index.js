@@ -284,7 +284,11 @@ function StyleGroup({ enabled, onApply }) {
 
 // Anchored "Display" popover: the Show toggles + confidence sub-controls, lifted
 // off the toolbar to keep it on one line. Self-contained (open state + click-outside).
-function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setDisplay, setConf }) {
+function DisplayPopover({ display, conf, cutoffOptions, sentenceCutoffOptions, canShowAnnotations, setDisplay, setConf }) {
+  const isSentence = conf.level === 'sentence';
+  const activeCutoffKey = isSentence ? 'sentenceCutoff' : 'cutoff';
+  const activeCutoff = isSentence ? (typeof conf.sentenceCutoff === 'number' ? conf.sentenceCutoff : conf.cutoff) : conf.cutoff;
+  const activeOptions = isSentence ? sentenceCutoffOptions || [0.85, 0.9, 0.95] : cutoffOptions || [0.75, 0.8, 0.85];
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -335,12 +339,12 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
             style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: conf.overlay ? 1 : 0.4, pointerEvents: conf.overlay ? 'auto' : 'none' }}
           >
             <select
-              value={String(conf.cutoff)}
-              onChange={(e) => setConf('cutoff', Number(e.target.value))}
-              title="Confidence threshold"
+              value={String(activeCutoff)}
+              onChange={(e) => setConf(activeCutoffKey, Number(e.target.value))}
+              title={isSentence ? 'Sentence confidence threshold' : 'Word confidence threshold'}
               style={{ ...S.select, color: C.text }}
             >
-              {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
+              {activeOptions.map((v) => (
                 <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
               ))}
             </select>
@@ -362,6 +366,7 @@ export default function EditorToolbar({
   canStructuralEdit,
   canShowAnnotations,
   cutoffOptions,
+  sentenceCutoffOptions,
   editingMode,
   editingModes,
   onEditingModeChange,
@@ -415,6 +420,7 @@ export default function EditorToolbar({
         display={display}
         conf={conf}
         cutoffOptions={cutoffOptions}
+        sentenceCutoffOptions={sentenceCutoffOptions}
         canShowAnnotations={canShowAnnotations}
         setDisplay={setDisplay}
         setConf={setConf}
@@ -471,8 +477,11 @@ export default function EditorToolbar({
       <span style={S.spring} />
 
       {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}
-      <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
+      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
+      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
+      <span style={S.groupGap} />
       <TextButton kind="primary" label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
+      <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <TextButton kind="outline" label="Export" chevron />
@@ -518,10 +527,6 @@ export default function EditorToolbar({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span style={S.groupGap} />
-      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
-      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
 
       <Dialog open={revertOpen} onOpenChange={setRevertOpen}>
         <DialogContent className="w-[min(440px,92vw)]">

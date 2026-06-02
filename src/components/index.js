@@ -48,6 +48,17 @@ import PreferencesDialog from './PreferencesDialog';
 import '../styles/toolbar.css';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
+const MEDIA_TOGGLE_STYLE = {
+  border: '1px solid #d4d4d8',
+  background: '#fff',
+  color: '#71717a',
+  borderRadius: 6,
+  padding: '2px 8px',
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'Inter, Roboto, system-ui, sans-serif',
+};
 const CIRCLE_BTN_STYLE = {
   width: 30,
   height: 30,
@@ -251,6 +262,8 @@ function SlateTranscriptEditorInner(props) {
   const [prefsOpen, setPrefsOpen] = useState(false);
   // Video|Files view tabs — only shown when the host supplies a `files` list.
   const [activeTab, setActiveTab] = useState('video');
+  // Collapse the left media column to give the transcript full width.
+  const [mediaCollapsed, setMediaCollapsed] = useState(false);
   const hasFiles = Array.isArray(props.files) && props.files.length > 0;
 
   // Editing is prop-seeded but toggled in-UI via the toolbar's Edit-Lock. Seed from
@@ -1256,8 +1269,6 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
-  const canStyleNow = wordLevelEditing ? selectedWordKey != null : Boolean(editor.selection && !Range.isCollapsed(editor.selection));
-
   // LOOSE-mode word gesture: a plain click places the text cursor (so you can type),
   // Alt/Option-click seeks to the word + toggles play/pause. In Strict, Ctrl/Cmd-click
   // mutes the clicked word (handled first).
@@ -1779,12 +1790,13 @@ function SlateTranscriptEditorInner(props) {
             canStructuralEdit={editPolicy.allowsStructuralEdits}
             canShowAnnotations={!!editPolicy.supportsAnnotations}
             cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
+            sentenceCutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.sentenceCutoffOptions) || [0.85, 0.9, 0.95]}
             editingMode={editingMode}
             editingModes={editingModes}
             onEditingModeChange={onEditingModeChange}
             showEditingModeSwitch={showEditingModeSwitch}
             canStyle={!!(profile.versioning && profile.versioning.setStyles)}
-            styleEnabled={canStyleNow}
+            styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
             onApplyStyle={applyStyleToSelection}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
@@ -1857,86 +1869,108 @@ function SlateTranscriptEditorInner(props) {
 
         <div style={{ display: hasFiles && activeTab !== 'video' ? 'none' : 'block' }}>
           <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
-            <Grid
-              size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
-              container
-              sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
-            >
-              <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
-                <Grid container>
-                  <video
-                    style={{ backgroundColor: 'black' }}
-                    ref={mediaRef}
-                    src={props.mediaUrl}
-                    width={'100%'}
-                    // height="auto"
-                    controls
-                    playsInline
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                  ></video>
-                </Grid>
-                {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
-                <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
-                  <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
-                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
-                      −{seekStepSeconds}
+            {!mediaCollapsed && (
+              <Grid
+                size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
+                container
+                sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
+              >
+                <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
+                  <Grid container sx={{ justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setMediaCollapsed(true)} style={MEDIA_TOGGLE_STYLE} title="Hide the media panel">
+                      ‹ Hide media
                     </button>
-                  </Tooltip>
-                  <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
-                    <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
-                      {isPlaying ? '❚❚' : '▶'}
-                    </button>
-                  </Tooltip>
-                  <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
-                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
-                      +{forwardStepSeconds}
-                    </button>
-                  </Tooltip>
-                  <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
-                  <span
-                    style={{
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: '#18181b',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {shortTimecode(currentTime)}
-                    <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
-                      {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                  </Grid>
+                  <Grid container>
+                    <video
+                      style={{ backgroundColor: 'black' }}
+                      ref={mediaRef}
+                      src={props.mediaUrl}
+                      width={'100%'}
+                      // height="auto"
+                      controls
+                      playsInline
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                    ></video>
+                  </Grid>
+                  {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
+                  <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
+                    <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
+                      <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
+                        −{seekStepSeconds}
+                      </button>
+                    </Tooltip>
+                    <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
+                      <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
+                        {isPlaying ? '❚❚' : '▶'}
+                      </button>
+                    </Tooltip>
+                    <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
+                      <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
+                        +{forwardStepSeconds}
+                      </button>
+                    </Tooltip>
+                    <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
+                    <span
+                      style={{
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        fontVariantNumeric: 'tabular-nums',
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: '#18181b',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {shortTimecode(currentTime)}
+                      <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
+                        {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                      </span>
                     </span>
-                  </span>
-                  <select
-                    value={playbackRate}
-                    onChange={handleSetPlaybackRate}
-                    title="Playback speed"
-                    style={{
-                      marginLeft: 'auto',
-                      border: '1px solid #d4d4d8',
-                      borderRadius: 6,
-                      padding: '3px 6px',
-                      fontSize: 12,
-                      color: '#71717a',
-                      background: '#fff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
-                      <option key={index + playbackRateValue} value={playbackRateValue}>
-                        {playbackRateValue}×
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      value={playbackRate}
+                      onChange={handleSetPlaybackRate}
+                      title="Playback speed"
+                      style={{
+                        marginLeft: 'auto',
+                        border: '1px solid #d4d4d8',
+                        borderRadius: 6,
+                        padding: '3px 6px',
+                        fontSize: 12,
+                        color: '#71717a',
+                        background: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
+                        <option key={index + playbackRateValue} value={playbackRateValue}>
+                          {playbackRateValue}×
+                        </option>
+                      ))}
+                    </select>
+                  </Grid>
+                  {/* <Grid>{props.children}</Grid> */}
                 </Grid>
-                {/* <Grid>{props.children}</Grid> */}
+                <Grid>{props.children}</Grid>
               </Grid>
-              <Grid>{props.children}</Grid>
-            </Grid>
+            )}
 
-            <Grid size={{ xs: 12, sm: 8, md: 8, lg: 8, xl: 8 }}>
+            <Grid
+              size={{
+                xs: 12,
+                sm: mediaCollapsed ? 12 : 8,
+                md: mediaCollapsed ? 12 : 8,
+                lg: mediaCollapsed ? 12 : 8,
+                xl: mediaCollapsed ? 12 : 8,
+              }}
+            >
+              {mediaCollapsed && (
+                <div style={{ marginBottom: 6 }}>
+                  <button type="button" onClick={() => setMediaCollapsed(false)} style={MEDIA_TOGGLE_STYLE} title="Show the media panel">
+                    › Show media
+                  </button>
+                </div>
+              )}
               {value.length !== 0 ? (
                 <>
                   <Paper elevation={3}>
@@ -2050,7 +2084,10 @@ function SlateTranscriptEditor(props) {
     const cd = whisperConfidenceDefaults(merged.transcriptData);
     if (!cd) return merged.defaultPreferences;
     const hostConf = (merged.defaultPreferences && merged.defaultPreferences.confidence) || {};
-    return { ...merged.defaultPreferences, confidence: { cutoff: cd.cutoff, floor: cd.floor, ...hostConf } };
+    return {
+      ...merged.defaultPreferences,
+      confidence: { cutoff: cd.cutoff, floor: cd.floor, sentenceCutoff: cd.sentenceCutoff, sentenceFloor: cd.sentenceFloor, ...hostConf },
+    };
   }, [merged.transcriptData, merged.defaultPreferences]);
   return (
     <PreferencesProvider

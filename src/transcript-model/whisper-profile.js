@@ -39,7 +39,16 @@ import { SESSION_FORMAT, isSessionFile } from './session-format';
 // lower than rev.ai (corpus median ≈ 0.46), so a 0.85 cutoff flags ~93% of words.
 // These format-specific defaults seed the confidence overlay so it highlights ~the
 // lowest third instead. rev.ai uses the global defaults (confidenceDefaults absent).
-const WHISPERX_CONFIDENCE_DEFAULTS = { cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] };
+const WHISPERX_CONFIDENCE_DEFAULTS = {
+  cutoff: 0.3,
+  floor: 0.08,
+  cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55],
+  // Sentence MEANS run ~0.15 higher than word scores (averaging compresses toward the
+  // mean), so the sentence overlay needs its own, higher cutoff or it flags ~nothing.
+  sentenceCutoff: 0.5,
+  sentenceFloor: 0.3,
+  sentenceCutoffOptions: [0.4, 0.45, 0.5, 0.55, 0.6],
+};
 
 /**
  * Format-specific confidence defaults for a raw transcript, derivable WITHOUT a

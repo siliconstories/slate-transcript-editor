@@ -104,7 +104,9 @@ describe('whisper profile — single tier, two source formats', () => {
       expect(value.length).toBe(2);
       expect(value[0].children[0].words[0]._key).toBe('0:0');
       expect(value[0].annotations.topicLabel).toBe('Career path');
-      expect(p.confidenceDefaults).toEqual({ cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] });
+      expect(p.confidenceDefaults).toMatchObject({ cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] });
+      // sentence overlay gets its own, higher cutoff (sentence means run higher than word scores)
+      expect(p.confidenceDefaults.sentenceCutoff).toBe(0.5);
       expect(p.exporters.map((e) => e.id)).toEqual(['json-whisperx', 'ste-session']);
     });
 

@@ -257,13 +257,13 @@ describe('SlateTranscriptEditor — WhisperX format', () => {
   it('uses the lowered cutoff dropdown options for whisperx, the high ones for rev.ai', () => {
     const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     openDisplay(wx);
-    const wxVals = [...wx.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
+    const wxVals = [...wx.querySelector('select[title="Word confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
     expect(wxVals).toContain('0.3');
     expect(wxVals).not.toContain('0.85');
 
     const { container: rev } = render(<SlateTranscriptEditor transcriptData={REV_DOC} mediaUrl="https://example.com/m.mp4" />);
     openDisplay(rev);
-    const revVals = [...rev.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
+    const revVals = [...rev.querySelector('select[title="Word confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
     expect(revVals).toContain('0.85');
   });
 
