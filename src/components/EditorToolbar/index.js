@@ -28,10 +28,7 @@ const WORD_EXPORTS = [
   { label: 'Word (Speakers & Timecodes)', args: { type: 'word', ext: 'docx', speakers: true, timecodes: true } },
   { label: 'Word (OHMS)', args: { type: 'word', ext: 'docx', speakers: false, timecodes: false, inlineTimecodes: true, hideTitle: true } },
 ];
-const DEV_EXPORTS = [
-  { label: 'SlateJs (.json)', args: { type: 'json-slate', ext: 'json', speakers: true, timecodes: true } },
-  { label: 'DPE (.json)', args: { type: 'json-digitalpaperedit', ext: 'json', speakers: true, timecodes: true } },
-];
+const DEV_EXPORTS = [{ label: 'SlateJs (.json)', args: { type: 'json-slate', ext: 'json', speakers: true, timecodes: true } }];
 
 // ── Hairline palette (the chosen look) ──
 const C = {

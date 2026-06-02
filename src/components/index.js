@@ -615,36 +615,6 @@ function SlateTranscriptEditorInner(props) {
   const showEditingModeSwitch = editingModes.length > 1 && !!profile.versioning;
   const onEditingModeChange = (m) => actions.setField('editing', 'editingMode', m);
 
-  // seek + play for the word-level editor (single click on a word)
-  // single-click: move the playhead to the word but do NOT change play state
-  const seekWord = (seconds) => {
-    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
-      mediaRef.current.currentTime = seconds;
-      if (props.handleAnalyticsEvents) {
-        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
-          fn: 'wordLevelSeek',
-          clickOrigin: 'word',
-          timeInSeconds: seconds,
-        });
-      }
-    }
-  };
-
-  // jump to a word/paragraph and start playing (used by the paragraph timecode click)
-  const seekAndPlayWord = (seconds) => {
-    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
-      mediaRef.current.currentTime = seconds;
-      mediaRef.current.play();
-      if (props.handleAnalyticsEvents) {
-        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
-          fn: 'wordLevelPlay',
-          clickOrigin: 'word',
-          timeInSeconds: seconds,
-        });
-      }
-    }
-  };
-
   // alt/option-click on a word: jump to it and toggle play/pause
   const seekAndTogglePlayWord = (seconds) => {
     if (mediaRef && mediaRef.current && typeof seconds === 'number') {
