@@ -245,6 +245,66 @@ StrictWordPopover.propTypes = {
   onCancel: PropTypes.func,
 };
 
+// HH:MM for comments made today, else a short date + time.
+function formatCommentTime(time) {
+  if (!time) return '';
+  const d = new Date(time);
+  const now = new Date();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return d.toDateString() === now.toDateString() ? `${hh}:${mm}` : `${d.toLocaleDateString()} ${hh}:${mm}`;
+}
+
+// Inline comment composer / viewer — anchored below the bubble (or the selection for a new
+// comment), in the scroll container's coordinates so it scrolls with the text.
+function CommentPopover({ state, onDraft, onSave, onDelete, onCancel }) {
+  return (
+    <div className="stw-comment-pop" contentEditable={false} style={{ position: 'absolute', left: state.left, top: state.top, zIndex: 1400 }}>
+      <div className="stw-comment-pop-head">
+        <span className="stw-comment-author">{state.author || 'You'}</span>
+        {state.time ? <span className="stw-comment-time">{formatCommentTime(state.time)}</span> : null}
+      </div>
+      <textarea
+        className="stw-comment-text"
+        autoFocus
+        rows={3}
+        placeholder="Add a comment…"
+        value={state.draft}
+        onChange={(e) => onDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            onSave();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+      />
+      <div className="stw-comment-actions">
+        <button type="button" className="stw-comment-save" onMouseDown={(e) => e.preventDefault()} onClick={onSave} disabled={!state.draft.trim()}>
+          Save
+        </button>
+        {state.mode === 'edit' && (
+          <button type="button" className="stw-comment-del" onMouseDown={(e) => e.preventDefault()} onClick={onDelete}>
+            Delete
+          </button>
+        )}
+        <button type="button" className="stw-comment-cancel" onMouseDown={(e) => e.preventDefault()} onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+CommentPopover.propTypes = {
+  state: PropTypes.object,
+  onDraft: PropTypes.func,
+  onSave: PropTypes.func,
+  onDelete: PropTypes.func,
+  onCancel: PropTypes.func,
+};
+
 function SlateTranscriptEditorInner(props) {
   props = { ...DEFAULT_PROPS, ...props };
   const { settings, actions, presets, activePresetId } = usePreferences();
@@ -747,10 +807,25 @@ function SlateTranscriptEditorInner(props) {
   // composes with confidence/karaoke/provenance on the same leaf. `showStyling` only
   // hides the rendering; the data (overlay.styles) is retained.
   const showStyling = settings.display.showStyling !== false;
+  // Comments ride the SAME overlay.styles as styling, but are a `{ comment, author, time, cid }`
+  // mark with its own "Comments" show toggle — so we split the ranges by kind and build two
+  // decoration sets from the one source (no separate persistence).
+  const showComments = settings.display.showComments !== false;
   const [styleRanges, setStyleRanges] = useState([]);
+  const isCommentRange = (r) => !!(r && r.mark && typeof r.mark.comment === 'string');
   const styleDecos = useMemo(
-    () => (showStyling ? buildStyleDecorations(value, styleRanges) : { enabled: false, byPara: [] }),
+    () =>
+      showStyling
+        ? buildStyleDecorations(
+            value,
+            styleRanges.filter((r) => !isCommentRange(r))
+          )
+        : { enabled: false, byPara: [] },
     [showStyling, value, styleRanges]
+  );
+  const commentDecos = useMemo(
+    () => (showComments ? buildStyleDecorations(value, styleRanges.filter(isCommentRange)) : { enabled: false, byPara: [] }),
+    [showComments, value, styleRanges]
   );
   const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
@@ -839,9 +914,20 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (F) comments — a wash over the commented span + a single end marker that renders
+      // the inline speech bubble (one per range, anchored at the span's last character).
+      if (commentDecos.enabled) {
+        const paraDecos = commentDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            ranges.push({ anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd }, comment: true });
+            ranges.push({ anchor: { path, offset: Math.max(d.charStart, d.charEnd - 1) }, focus: { path, offset: d.charEnd }, commentEnd: d.mark });
+          });
+        }
+      }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos, revisedDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, commentDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -914,6 +1000,11 @@ function SlateTranscriptEditorInner(props) {
         style.color = '#b91c1c';
         revisedTitle = 'Muted — removed on export';
       }
+      // (F) comment wash — subtle blue over commented words (a user highlight still wins)
+      if (leaf.comment && !leaf.styleHighlight) {
+        style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+        style.borderRadius = '2px';
+      }
       const hasStyle = Object.keys(style).length > 0;
       const title =
         leaf.styleNote ||
@@ -933,6 +1024,33 @@ function SlateTranscriptEditorInner(props) {
           {...attributes}
         >
           {children}
+          {leaf.commentEnd && (
+            <span
+              className="stw-comment-badge"
+              contentEditable={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                openComment(leaf.commentEnd, e.currentTarget);
+              }}
+              title={`Comment — ${leaf.commentEnd.author || 'You'}`}
+              aria-label="Open comment"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ display: 'block' }}
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+            </span>
+          )}
         </span>
       );
     },
@@ -940,7 +1058,7 @@ function SlateTranscriptEditorInner(props) {
     // switches and edits (renderLeaf is memoized; without them it captures stale state).
     // styleDecos gives renderLeaf a fresh identity when styling changes so leaves repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, wordLevelEditing, editable, value]
+    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, commentDecos, wordLevelEditing, editable, value]
   );
 
   //
@@ -1197,6 +1315,7 @@ function SlateTranscriptEditorInner(props) {
   // selects one word and opens a small popover for a single-word rewrite/mute; the
   // commit goes through the count-preserving snapshot path. Ctrl/Cmd-click mutes.
   const [strictEdit, setStrictEdit] = useState(null); // { pIdx, wIdx, draft, muted, wordKey, start, x, y } | null
+  const [commentEdit, setCommentEdit] = useState(null); // { mode, cid, draft, author, time, left, top } | null
   const [selectedWordKey, setSelectedWordKey] = useState(null); // the Strict double-click target for styling
   const styleIdRef = useRef(0);
 
@@ -1319,6 +1438,14 @@ function SlateTranscriptEditorInner(props) {
   // mark adds a word-anchored style range to overlay.styles (a decoration — never a
   // tree edit), so it is safe even on the read-only Strict surface.
   const sameMark = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const persistStyles = (next) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    setStyleRanges(next);
+    profile.versioning.setStyles(next);
+    setIsContentIsModified(true);
+    setIsContentSaved(false);
+    if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+  };
   const applyStyleRanges = (newRanges, mark) => {
     if (!profile.versioning || !profile.versioning.setStyles) return;
     const next = styleRanges.slice();
@@ -1330,34 +1457,99 @@ function SlateTranscriptEditorInner(props) {
       if (idx >= 0) next.splice(idx, 1);
       else next.push({ id: `sty-${(styleIdRef.current += 1)}`, ...r, mark });
     });
-    setStyleRanges(next);
-    profile.versioning.setStyles(next);
-    setIsContentIsModified(true);
-    setIsContentSaved(false);
-    if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+    persistStyles(next);
   };
 
-  const applyStyleToSelection = (mark) => {
-    if (!profile.versioning || !profile.versioning.setStyles) return;
+  // Word-anchored ranges for the current selection — Strict: the double-clicked word;
+  // Loose: the native text selection (split per paragraph). Shared by styling + comments.
+  const currentSelectionRanges = () => {
     if (wordLevelEditing) {
-      // STRICT: style the double-click-selected word (whole word)
-      if (!selectedWordKey) return;
+      if (!selectedWordKey) return [];
       let word = null;
       value.forEach((p) =>
         ((p.children && p.children[0] && p.children[0].words) || []).forEach((w) => {
           if (w._key === selectedWordKey) word = w;
         })
       );
-      if (!word) return;
-      applyStyleRanges([{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }], mark);
-    } else {
-      // LOOSE: style the native selection (split per paragraph)
-      const sel = editor.selection;
-      if (!sel || Range.isCollapsed(sel)) return;
-      if (commitFreestyleEdit) commitFreestyleEdit.flush();
-      const ranges = selectionToStyleRanges(editor.children, sel);
-      if (ranges.length) applyStyleRanges(ranges, mark);
+      if (!word) return [];
+      return [{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }];
     }
+    // Prefer Slate's selection; fall back to the live DOM selection (Slate's `editor.selection`
+    // can lag a fresh native selection, and styling/commenting is triggered from the toolbar).
+    let slateRange = editor.selection && !Range.isCollapsed(editor.selection) ? editor.selection : null;
+    if (!slateRange && typeof window !== 'undefined') {
+      const ds = window.getSelection();
+      if (ds && ds.rangeCount && !ds.isCollapsed) {
+        try {
+          slateRange = ReactEditor.toSlateRange(editor, ds.getRangeAt(0), { exactMatch: false, suppressThrow: true });
+        } catch (e) {
+          slateRange = null;
+        }
+      }
+    }
+    if (!slateRange) return [];
+    if (commitFreestyleEdit) commitFreestyleEdit.flush();
+    return selectionToStyleRanges(editor.children, slateRange);
+  };
+
+  const applyStyleToSelection = (mark) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    const ranges = currentSelectionRanges();
+    if (ranges.length) applyStyleRanges(ranges, mark);
+  };
+
+  // Comments share overlay.styles but are managed by `cid` (add / update / delete), never
+  // toggled; author + time are stamped at creation.
+  const addComment = (text, ranges) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    const rs = ranges && ranges.length ? ranges : currentSelectionRanges();
+    if (!rs.length || !text) return;
+    const cid = `cmt-${(styleIdRef.current += 1)}`;
+    const mark = { comment: text, author: props.commentAuthor || 'You', time: Date.now(), cid };
+    const next = styleRanges.slice();
+    rs.forEach((r) => next.push({ id: `sty-${(styleIdRef.current += 1)}`, ...r, mark }));
+    persistStyles(next);
+  };
+  const updateComment = (cid, text) =>
+    persistStyles(styleRanges.map((r) => (r.mark && r.mark.cid === cid ? { ...r, mark: { ...r.mark, comment: text } } : r)));
+  const deleteComment = (cid) => persistStyles(styleRanges.filter((r) => !(r.mark && r.mark.cid === cid)));
+
+  // Translate a viewport DOMRect to scroll-container coordinates (popover anchors below it).
+  const rectInScroll = (domRect) => {
+    const cont = editorScrollRef.current;
+    if (!cont || !domRect) return { left: 8, top: 8 };
+    const c = cont.getBoundingClientRect();
+    return { left: domRect.left - c.left + cont.scrollLeft, top: domRect.bottom - c.top + cont.scrollTop };
+  };
+  // Open the editor on an existing comment (from its bubble).
+  const openComment = (mark, anchorEl) => {
+    const pos = rectInScroll(anchorEl && anchorEl.getBoundingClientRect ? anchorEl.getBoundingClientRect() : null);
+    setCommentEdit({ mode: 'edit', cid: mark.cid, draft: mark.comment || '', author: mark.author, time: mark.time, left: pos.left, top: pos.top });
+  };
+  // Open the composer for a new comment — capture the target ranges NOW (the live selection
+  // is lost once the textarea takes focus) and anchor below the word/selection.
+  const openCommentComposer = () => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    const targets = currentSelectionRanges();
+    if (!targets.length) return;
+    let pos = { left: 8, top: 8 };
+    if (wordLevelEditing) {
+      let found = null;
+      value.forEach((p, pi) =>
+        ((p.children && p.children[0] && p.children[0].words) || []).forEach((w, wi) => {
+          if (w._key === selectedWordKey) found = { pi, wi };
+        })
+      );
+      if (found) {
+        const r = wordRectInContainer(found.pi, found.wi);
+        if (r) pos = { left: r.left, top: r.top + r.height };
+      }
+    } else {
+      const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+      const dr = sel && sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0).getBoundingClientRect() : null;
+      pos = rectInScroll(dr);
+    }
+    setCommentEdit({ mode: 'new', draft: '', author: props.commentAuthor || 'You', time: Date.now(), targets, left: pos.left, top: pos.top });
   };
 
   // Which style marks the currently-selected word carries — so the toolbar B/I/U/H/E
@@ -1781,6 +1973,91 @@ function SlateTranscriptEditorInner(props) {
                 color: #18181b;
               }
 
+              /* Comments — inline speech bubble + the compose/view popover */
+              .stw-comment-badge {
+                display: inline-flex;
+                align-items: center;
+                vertical-align: text-top;
+                margin-left: 2px;
+                color: #2563eb;
+                cursor: pointer;
+                user-select: none;
+              }
+              .stw-comment-badge:hover {
+                color: #1d4ed8;
+              }
+              .stw-comment-pop {
+                width: 240px;
+                margin-top: 4px;
+                background: #fff;
+                border: 1px solid #d4d4d8;
+                border-radius: 8px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+                padding: 8px;
+                font-family: Inter, Roboto, system-ui, sans-serif;
+              }
+              .stw-comment-pop-head {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 6px;
+              }
+              .stw-comment-author {
+                font-size: 12px;
+                font-weight: 600;
+                color: #18181b;
+              }
+              .stw-comment-time {
+                font-size: 11px;
+                color: #a1a1aa;
+                font-variant-numeric: tabular-nums;
+              }
+              .stw-comment-text {
+                width: 100%;
+                box-sizing: border-box;
+                font: inherit;
+                font-size: 13px;
+                line-height: 1.4;
+                color: #18181b;
+                border: 1px solid #e4e4e7;
+                border-radius: 6px;
+                padding: 6px 8px;
+                resize: vertical;
+                outline: none;
+              }
+              .stw-comment-text:focus {
+                border-color: #2563eb;
+              }
+              .stw-comment-actions {
+                display: flex;
+                gap: 6px;
+                margin-top: 8px;
+              }
+              .stw-comment-actions button {
+                font: inherit;
+                font-size: 12px;
+                border-radius: 6px;
+                padding: 4px 10px;
+                cursor: pointer;
+                border: 1px solid #d4d4d8;
+                background: #fff;
+                color: #3f3f46;
+              }
+              .stw-comment-save {
+                background: #18181b !important;
+                color: #fff !important;
+                border-color: #18181b !important;
+              }
+              .stw-comment-save:disabled {
+                opacity: 0.45;
+                cursor: default;
+              }
+              .stw-comment-del {
+                margin-left: auto;
+                color: #b91c1c !important;
+              }
+
               /* word-level editing view */
               .stw-paragraph {
                 margin-bottom: 0.6em;
@@ -2119,6 +2396,7 @@ function SlateTranscriptEditorInner(props) {
                       canStyle={!!(profile.versioning && profile.versioning.setStyles)}
                       styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
                       onApplyStyle={applyStyleToSelection}
+                      onAddComment={openCommentComposer}
                       activeMarks={activeMarks}
                       handleUndo={handleUndo}
                       handleRedo={handleRedo}
@@ -2183,6 +2461,27 @@ function SlateTranscriptEditorInner(props) {
                               : null
                           }
                           onCancel={() => setStrictEdit(null)}
+                        />
+                      )}
+                      {commentEdit && (
+                        <CommentPopover
+                          state={commentEdit}
+                          onDraft={(draft) => setCommentEdit((s) => (s ? { ...s, draft } : s))}
+                          onSave={() => {
+                            const text = (commentEdit.draft || '').trim();
+                            if (!text) {
+                              setCommentEdit(null);
+                              return;
+                            }
+                            if (commentEdit.mode === 'new') addComment(text, commentEdit.targets);
+                            else updateComment(commentEdit.cid, text);
+                            setCommentEdit(null);
+                          }}
+                          onDelete={() => {
+                            if (commentEdit.cid) deleteComment(commentEdit.cid);
+                            setCommentEdit(null);
+                          }}
+                          onCancel={() => setCommentEdit(null)}
                         />
                       )}
                     </section>

@@ -26,6 +26,7 @@ import {
   TbTextIncrease,
   TbTextDecrease,
   TbStack2,
+  TbMessagePlus,
 } from 'react-icons/tb';
 
 export const I = {
@@ -54,4 +55,5 @@ export const I = {
   fontPlus: TbTextIncrease,
   fontMinus: TbTextDecrease,
   presets: TbStack2,
+  comment: TbMessagePlus,
 };

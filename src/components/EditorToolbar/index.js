@@ -275,7 +275,7 @@ function StyleGroup({ enabled, onApply, active }) {
         a.highlight
       )}
       {/* Entity: marks the selected word(s) with a Link property (matched to imdb/wikipedia later). */}
-      {btn('E', { link: '' }, { fontWeight: 700, color: '#6d28d9' }, 'Entity — mark as a linkable entity', a.link)}
+      {btn('Entity', { link: '' }, { fontWeight: 600, color: '#6d28d9', padding: '0 6px' }, 'Entity — mark as a linkable entity', a.link)}
     </span>
   );
 }
@@ -392,6 +392,12 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               title="Per-sentence revert button in the Loose gutter"
               onClick={() => setDisplay('showRevertSentence', !(display.showRevertSentence !== false))}
             />
+            <ShowRow
+              label="Comments"
+              active={display.showComments !== false}
+              title="Show inline comment bubbles on commented words"
+              onClick={() => setDisplay('showComments', !(display.showComments !== false))}
+            />
           </div>
           {/* Confidence — set apart from the Show toggles, with its options grouped under it */}
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
@@ -461,6 +467,7 @@ export function EditingToolbar({
   canStyle,
   styleEnabled,
   onApplyStyle,
+  onAddComment,
   activeMarks,
   handleUndo,
   handleRedo,
@@ -488,6 +495,9 @@ export function EditingToolbar({
       {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
 
       {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} active={activeMarks} />}
+      {canStyle && editable && (
+        <IconBtn icon={I.comment} title="Comment on the selection" onMouseDown={(e) => e.preventDefault()} onClick={onAddComment} />
+      )}
 
       <span style={S.groupGap} />
       <IconBtn icon={I.undo} title="Undo (⌘Z)" framed onClick={handleUndo} disabled={!editable} />
