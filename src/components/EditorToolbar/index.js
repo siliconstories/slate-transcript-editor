@@ -124,7 +124,7 @@ const S = {
   popover: {
     position: 'absolute',
     top: '100%',
-    left: 0,
+    right: 0,
     marginTop: 6,
     background: C.bg,
     border: `1px solid ${C.line2}`,
@@ -349,12 +349,43 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+  // All / None — flip every display layer on or off in one click.
+  const setAll = (on) => {
+    ['showSpeakers', 'showTimecodes', 'showStyling', 'showRevised', 'showComments', 'showEntities', 'showSentenceConfidence'].forEach((k) =>
+      setDisplay(k, on)
+    );
+    if (canShowAnnotations) setDisplay('showAnnotations', on);
+    setConf('overlay', on);
+  };
+  const miniLink = {
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: C.muted,
+    padding: 0,
+  };
   return (
     <span ref={ref} style={{ position: 'relative', flex: '0 0 auto' }}>
       <TextButton kind="outline" label="Display" chevron onClick={() => setOpen((o) => !o)} aria-expanded={open} />
       {open && (
         <div className="stte-ui" style={S.popover} role="dialog" aria-label="Display options">
-          <div style={S.popLabel}>Show</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ ...S.popLabel, marginBottom: 0 }}>Show</span>
+            <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+              <button type="button" className="stte-hover-text" style={miniLink} onClick={() => setAll(true)}>
+                All
+              </button>
+              <span style={{ color: C.line2, fontSize: 11 }}>·</span>
+              <button type="button" className="stte-hover-text" style={miniLink} onClick={() => setAll(false)}>
+                None
+              </button>
+            </span>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 10, rowGap: 0, minWidth: 260 }}>
             <ShowRow label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
             <ShowRow label="Timecodes" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
@@ -521,7 +552,9 @@ export function EditingToolbar({
         </>
       )}
 
-      <span style={S.groupGap} />
+      <span style={S.spring} />
+
+      {/* Display + presets live on the right edge of the editing bar. */}
       <DisplayPopover
         display={display}
         conf={conf}
@@ -534,7 +567,7 @@ export function EditingToolbar({
         <DropdownMenuTrigger asChild>
           <IconBtn icon={I.presets} framed title={activePreset ? `Display presets — current: ${activePreset.name}` : 'Display presets'} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel>Display presets</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={activePresetId || ''} onValueChange={(id) => actions.selectPreset(id)}>
             {(presets || []).map((p) => (
@@ -546,7 +579,7 @@ export function EditingToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <span style={S.spring} />
+      <span style={S.groupGap} />
 
       {/* Font-size stepper — resizes the transcript text live (clamped 11–28); a view
           preference, so it stays enabled even when editing is locked. */}
