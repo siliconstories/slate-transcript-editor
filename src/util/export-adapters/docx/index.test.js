@@ -10,10 +10,24 @@
 import JSZip from 'jszip';
 import { Packer } from 'docx';
 import { buildDocxDocument } from './index';
-import convertDpeToSlate from '../../dpe-to-slate';
-import DPE from '../__fixtures__/golden-dpe.json';
+import { createWhisperProfile } from '../../../transcript-model/whisper-profile';
 
-const slateValue = convertDpeToSlate(DPE);
+// A small WhisperX transcript producing two speaker paragraphs (Alice, Bob), built
+// the way the editor builds its value on import — no DPE round-trip.
+const W = (word, start, end, speaker) => ({ word, start, end, score: 0.95, speaker });
+const seg = (start, end, speaker, words) => ({ start, end, text: words.map((w) => w.word).join(' '), speaker, words });
+const SEGMENTS = [
+  seg(0, 1.2, 'Alice', [
+    W('Hello', 0, 0.2, 'Alice'),
+    W('world', 0.2, 0.4, 'Alice'),
+    W('this', 0.4, 0.6, 'Alice'),
+    W('is', 0.6, 0.8, 'Alice'),
+    W('Alice', 0.8, 1.2, 'Alice'),
+  ]),
+  seg(2.0, 3.0, 'Bob', [W('And', 2.0, 2.2, 'Bob'), W('now', 2.2, 2.4, 'Bob'), W('Bob', 2.4, 2.7, 'Bob'), W('speaks', 2.7, 3.0, 'Bob')]),
+];
+const WHISPERX = { segments: SEGMENTS, word_segments: SEGMENTS.flatMap((s) => s.words), annotation_metadata: { chunks: [] } };
+const slateValue = createWhisperProfile().import(WHISPERX).value;
 
 // docx 9 uses the static Packer API; toBuffer works headlessly (no DOM).
 async function documentXml(opts) {
