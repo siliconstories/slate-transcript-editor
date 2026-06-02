@@ -354,7 +354,7 @@ function RawSourceDialog({ initialText, title, tier, openTo, validate, onSave, o
             Cancel
           </button>
           <button style={error ? { ...styles.btn, ...styles.btnDisabled } : styles.btn} disabled={Boolean(error)} onClick={handleSave}>
-            Save &amp; re-import
+            Save
           </button>
         </div>
       </div>

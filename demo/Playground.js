@@ -440,7 +440,7 @@ function Playground() {
 
       {rawOpen && (
         <RawSourceDialog
-          title={isRev ? 'Raw rev.ai source (JSON)' : isWhisperx ? 'Raw WhisperX source (JSON)' : 'Raw source (JSON)'}
+          title="Raw (JSON)"
           tier={isRev ? 'rev' : isWhisperx ? 'whisperx' : 'rev'}
           openTo={rawLocator}
           initialText={rawText}

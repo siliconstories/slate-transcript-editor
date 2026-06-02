@@ -614,7 +614,7 @@ export default function EditorToolbar({
     <div className="stte-ui stte-toolbar-scroll" style={S.bar}>
       <span style={S.spring} />
 
-      {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}
+      {onShowRawSource && <TextButton kind="ghost" label="Raw (JSON)" onClick={() => onShowRawSource()} />}
       <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
       <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
       <span style={S.groupGap} />
