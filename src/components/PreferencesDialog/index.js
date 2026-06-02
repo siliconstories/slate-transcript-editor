@@ -77,7 +77,7 @@ const PresetBar = () => {
 
 const TAB_LABELS = ['Confidence', 'Appearance', 'Playback', 'Editing', 'About'];
 
-const PreferencesDialog = ({ open, onClose, profileId, allowedModes, editingMode }) => {
+const PreferencesDialog = ({ open, onClose, profileFormat, allowedModes, editingMode }) => {
   const [tab, setTab] = useState(0);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -95,7 +95,7 @@ const PreferencesDialog = ({ open, onClose, profileId, allowedModes, editingMode
         {tab === 1 && <AppearanceTab />}
         {tab === 2 && <PlaybackTab />}
         {tab === 3 && <EditingTab allowedModes={allowedModes} editingMode={editingMode} />}
-        {tab === 4 && <AboutResetTab profileId={profileId} />}
+        {tab === 4 && <AboutResetTab profileFormat={profileFormat} />}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
@@ -107,7 +107,7 @@ const PreferencesDialog = ({ open, onClose, profileId, allowedModes, editingMode
 PreferencesDialog.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
-  profileId: PropTypes.string,
+  profileFormat: PropTypes.string,
   allowedModes: PropTypes.arrayOf(PropTypes.string),
   editingMode: PropTypes.string,
 };

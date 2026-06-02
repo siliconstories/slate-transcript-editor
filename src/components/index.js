@@ -18,7 +18,6 @@ import EditorToolbar from './EditorToolbar';
 import FilesPanel from './FilesPanel';
 import { shortTimecode } from '../util/timecode-converter';
 import download from '../util/downlaod/index.js';
-import convertDpeToSlate from '../util/dpe-to-slate';
 // TODO: This should be moved in export utils
 import insertTimecodesInLineInSlateJs from '../util/insert-timecodes-in-line-in-words-list';
 import pluck from '../util/pluk';
@@ -32,6 +31,9 @@ import stripMutedWords from '../util/strip-muted-words';
 import Chip from '@mui/material/Chip';
 import SlateHelpers from './slate-helpers';
 import { resolveProfile } from '../transcript-model/profile';
+import { whisperToModel, newHistory } from '../transcript-model/whisper-overlay';
+import { whisperModelToSlate } from '../transcript-model/whisper-to-slate';
+import { whisperConfidenceDefaults } from '../transcript-model/whisper-profile';
 import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
@@ -543,7 +545,7 @@ function SlateTranscriptEditorInner(props) {
   // it or the active profile has no sentence exporter (e.g. classic free-text).
   const wantsSentenceModel = Boolean(props.onSentenceModel);
   const emitSentenceModel = useMemo(() => {
-    const sentenceExporter = (profile.exporters || []).find((e) => e.id === 'json-rev-sentences');
+    const sentenceExporter = (profile.exporters || []).find((e) => typeof e.id === 'string' && e.id.endsWith('-sentences'));
     if (!wantsSentenceModel || !sentenceExporter) return null;
     return debounce(() => {
       const model = sentenceExporter.run();
@@ -612,10 +614,17 @@ function SlateTranscriptEditorInner(props) {
 
   useEffect(() => {
     if (props.transcriptData) {
-      const { value: importedValue } = profile.import(props.transcriptData);
-      setValue(importedValue);
-      importedValueRef.current = cloneValue(importedValue);
-      lastSavedValueRef.current = cloneValue(importedValue);
+      try {
+        const { value: importedValue } = profile.import(props.transcriptData);
+        setValue(importedValue);
+        importedValueRef.current = cloneValue(importedValue);
+        lastSavedValueRef.current = cloneValue(importedValue);
+      } catch (e) {
+        // Unrecognized transcript (not rev.ai or WhisperX) is a hard error — surface it
+        // loudly and leave the editor empty rather than crashing the host React tree.
+        // eslint-disable-next-line no-console
+        console.error('[SlateTranscriptEditor] import failed:', e && e.message ? e.message : e);
+      }
     }
   }, []);
 
@@ -641,7 +650,9 @@ function SlateTranscriptEditorInner(props) {
   // handles interim results for worrking with a Live STT
   useEffect(() => {
     if (props.transcriptDataLive) {
-      const nodes = convertDpeToSlate(props.transcriptDataLive);
+      // Live chunks are rev.ai/WhisperX fragments — project them straight to Slate
+      // nodes for append (display-only; not threaded through the overlay/history).
+      const nodes = whisperModelToSlate(whisperToModel(props.transcriptDataLive), newHistory());
       // if the user is selecting the / typing the text
       // Transforms.insertNodes would insert the node at seleciton point
       // instead we check if they are in the editor
@@ -1821,7 +1832,7 @@ function SlateTranscriptEditorInner(props) {
             presets={presets}
             activePresetId={activePresetId}
             canStructuralEdit={editPolicy.allowsStructuralEdits}
-            canShowAnnotations={profile.id === 'whisperx'}
+            canShowAnnotations={!!editPolicy.supportsAnnotations}
             cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
             editingMode={editingMode}
             editingModes={editingModes}
@@ -2049,7 +2060,7 @@ function SlateTranscriptEditorInner(props) {
         <PreferencesDialog
           open={prefsOpen}
           onClose={() => setPrefsOpen(false)}
-          profileId={profile.id}
+          profileFormat={profile.format}
           allowedModes={editingModes}
           editingMode={editingMode}
         />
@@ -2084,11 +2095,11 @@ function SlateTranscriptEditor(props) {
   // inner component keeps the original defaultPreferences so the values are a
   // freely-adjustable default rather than a host-controlled lock.
   const seededDefaultPreferences = useMemo(() => {
-    const cd = resolveProfile(merged.profile).confidenceDefaults;
+    const cd = whisperConfidenceDefaults(merged.transcriptData);
     if (!cd) return merged.defaultPreferences;
     const hostConf = (merged.defaultPreferences && merged.defaultPreferences.confidence) || {};
     return { ...merged.defaultPreferences, confidence: { cutoff: cd.cutoff, floor: cd.floor, ...hostConf } };
-  }, [merged.profile, merged.defaultPreferences]);
+  }, [merged.transcriptData, merged.defaultPreferences]);
   return (
     <PreferencesProvider
       seedProps={merged}

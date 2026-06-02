@@ -1,13 +1,11 @@
 /**
  * @jest-environment jsdom
  *
- * Slate 0.124 runtime integration test. The Phase-0 unit goldens cover the
- * dpe<->slate DATA round-trip, but NOT the editor RUNTIME that Phase 6 reworked:
- * the `value` -> `initialValue` switch (slate-react 0.95+ no longer reads a
- * controlled value), the key-remount used to reproject programmatically
- * (replaceSlateValue), and edit -> onChange -> re-render. The migration plan
- * flags this as "the only thing that catches the RA1 breaks the unit goldens
- * cannot". jsdom lacks Selection/Range geometry + HTMLMediaElement, polyfilled below.
+ * Slate 0.124 runtime integration test for the unified `whisper` tier. Covers the
+ * editor RUNTIME (value -> initialValue, key-remount reproject, edit -> onChange ->
+ * re-render) plus the WhisperX/rev.ai profile wiring (import, annotations toggle,
+ * confidence defaults, Rigid|Loose modes). jsdom lacks Selection/Range geometry +
+ * HTMLMediaElement, polyfilled below.
  */
 import '@testing-library/jest-dom';
 import React, { useState } from 'react';
@@ -15,9 +13,8 @@ import { render, act, cleanup, fireEvent } from '@testing-library/react';
 import { createEditor, Transforms, Editor } from 'slate';
 import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
-import convertDpeToSlate from '../util/dpe-to-slate';
+import { createWhisperProfile } from '../transcript-model/whisper-profile';
 import SlateTranscriptEditor, { transcriptHasConfidence } from './index';
-import DPE from '../util/export-adapters/__fixtures__/golden-dpe.json';
 
 beforeAll(() => {
   const fakeSelection = () => ({
@@ -49,104 +46,16 @@ beforeAll(() => {
 afterEach(cleanup);
 
 const makeEditor = () => withReact(withHistory(createEditor()));
+// Project a transcript to a Slate value the way the editor does on import.
+const toSlate = (doc) => createWhisperProfile().import(doc).value;
 
-// The Show toggles + confidence sub-controls now live in an anchored "Display" popover.
+// The Show toggles + confidence sub-controls live in an anchored "Display" popover.
 const openDisplay = (container) => {
   const btn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Display');
   act(() => {
     fireEvent.click(btn);
   });
 };
-
-describe('Slate 0.124 runtime — value→initialValue + reproject rework', () => {
-  it('renders the initialValue document (slate-react 0.124, no controlled value)', () => {
-    const editor = makeEditor();
-    const { container } = render(
-      <Slate editor={editor} initialValue={convertDpeToSlate(DPE)} onChange={() => {}}>
-        <Editable />
-      </Slate>
-    );
-    expect(container.textContent).toContain('Hello world this is Alice');
-    expect(container.textContent).toContain('And now Bob speaks');
-  });
-
-  it('fires onChange and updates the DOM on a programmatic edit', async () => {
-    const editor = makeEditor();
-    const onChange = jest.fn();
-    const { container } = render(
-      <Slate editor={editor} initialValue={convertDpeToSlate(DPE)} onChange={onChange}>
-        <Editable />
-      </Slate>
-    );
-    // Slate batches ops and flushes editor.onChange() on a microtask, so the edit
-    // must run inside an async act() to let that microtask resolve before asserting.
-    await act(async () => {
-      Transforms.insertText(editor, ' EDITED', { at: Editor.end(editor, []) });
-    });
-    expect(onChange).toHaveBeenCalled();
-    expect(container.textContent).toContain('EDITED');
-    // onChange receives the live editor document, which getSlateContent()/exports read
-    expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toBe(editor.children);
-  });
-
-  it('remounting <Slate> via key re-reads initialValue (the replaceSlateValue reproject mechanism)', () => {
-    const editor = makeEditor();
-    const trigger = {};
-    const Harness = () => {
-      const [k, setK] = useState(0);
-      const [doc, setDoc] = useState(() => convertDpeToSlate(DPE));
-      trigger.reproject = (dpe) => {
-        setDoc(convertDpeToSlate(dpe));
-        setK((x) => x + 1);
-      };
-      return (
-        <Slate key={k} editor={editor} initialValue={doc} onChange={() => {}}>
-          <Editable />
-        </Slate>
-      );
-    };
-    const { container } = render(<Harness />);
-    expect(container.textContent).toContain('Hello world this is Alice');
-
-    const NEW_DPE = {
-      words: [
-        { start: 0, end: 1, text: 'Completely' },
-        { start: 1, end: 2, text: 'different' },
-        { start: 2, end: 3, text: 'projection' },
-      ],
-      paragraphs: [{ start: 0, end: 3, speaker: 'Zoe' }],
-    };
-    act(() => {
-      trigger.reproject(NEW_DPE);
-    });
-    expect(container.textContent).toContain('Completely different projection');
-    expect(container.textContent).not.toContain('Hello world this is Alice');
-  });
-
-  it('preserves words + timecodes through a dpe→slate→edit→slate round-trip', () => {
-    const slate = convertDpeToSlate(DPE);
-    // edit: rename the first word's text in place (mirrors WordLevelEditor / inline edit)
-    const firstWords = slate[0].children[0].words;
-    const originalCount = slate.reduce((n, p) => n + p.children[0].words.length, 0);
-    firstWords[0] = { ...firstWords[0], text: 'Howdy' };
-    // the per-word start/end timecodes survive the edit (only text changed)
-    expect(slate[0].children[0].words[0].text).toBe('Howdy');
-    expect(slate[0].children[0].words[0].start).toBe(DPE.words[0].start);
-    expect(slate[0].children[0].words[0].end).toBe(DPE.words[0].end);
-    // word count per paragraph is unchanged → slate→dpe save round-trip stays aligned
-    const afterCount = slate.reduce((n, p) => n + p.children[0].words.length, 0);
-    expect(afterCount).toBe(originalCount);
-  });
-});
-
-describe('SlateTranscriptEditor — full editor on Slate 0.124', () => {
-  it('mounts the classic editor with a contenteditable Slate surface and the transcript', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" title="T" />);
-    expect(container.textContent).toContain('Hello world this is Alice');
-    const editable = container.querySelector('[contenteditable="true"], [role="textbox"]');
-    expect(editable).toBeTruthy();
-  });
-});
 
 const WHISPERX_DOC = {
   segments: [
@@ -183,31 +92,135 @@ const WHISPERX_DOC = {
   annotation_metadata: { chunks: [] },
 };
 
-describe('SlateTranscriptEditor — WhisperX profile', () => {
-  it('mounts the whisperx tier, renders one paragraph per segment with verbatim speakers', () => {
+// rev.ai-shaped transcript: no segment annotations, normal ASR confidence scale.
+const REV_DOC = {
+  monologues: [
+    {
+      speaker: 0,
+      elements: [
+        { type: 'text', value: 'Hello', ts: 0, end_ts: 0.2, confidence: 0.97 },
+        { type: 'punct', value: ' ' },
+        { type: 'text', value: 'there', ts: 0.2, end_ts: 0.4, confidence: 0.9 },
+        { type: 'punct', value: '.' },
+      ],
+    },
+  ],
+};
+
+describe('Slate 0.124 runtime — value→initialValue + reproject rework', () => {
+  it('renders the initialValue document (slate-react 0.124, no controlled value)', () => {
+    const editor = makeEditor();
     const { container } = render(
-      <SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" title="T" />
+      <Slate editor={editor} initialValue={toSlate(WHISPERX_DOC)} onChange={() => {}}>
+        <Editable />
+      </Slate>
     );
+    expect(container.textContent).toContain('Ich wollte werden,');
+    expect(container.textContent).toContain('Ich auch.');
+  });
+
+  it('fires onChange and updates the DOM on a programmatic edit', async () => {
+    const editor = makeEditor();
+    const onChange = jest.fn();
+    const { container } = render(
+      <Slate editor={editor} initialValue={toSlate(WHISPERX_DOC)} onChange={onChange}>
+        <Editable />
+      </Slate>
+    );
+    await act(async () => {
+      Transforms.insertText(editor, ' EDITED', { at: Editor.end(editor, []) });
+    });
+    expect(onChange).toHaveBeenCalled();
+    expect(container.textContent).toContain('EDITED');
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toBe(editor.children);
+  });
+
+  it('remounting <Slate> via key re-reads initialValue (the replaceSlateValue reproject mechanism)', () => {
+    const editor = makeEditor();
+    const trigger = {};
+    const Harness = () => {
+      const [k, setK] = useState(0);
+      const [doc, setDoc] = useState(() => toSlate(WHISPERX_DOC));
+      trigger.reproject = (wx) => {
+        setDoc(toSlate(wx));
+        setK((x) => x + 1);
+      };
+      return (
+        <Slate key={k} editor={editor} initialValue={doc} onChange={() => {}}>
+          <Editable />
+        </Slate>
+      );
+    };
+    const { container } = render(<Harness />);
+    expect(container.textContent).toContain('Ich wollte werden,');
+
+    const NEW_DOC = {
+      segments: [
+        {
+          start: 0,
+          end: 3,
+          text: 'Completely different projection',
+          speaker: 'Zoe',
+          words: [
+            { word: 'Completely', start: 0, end: 1, score: 0.9, speaker: 'Zoe' },
+            { word: 'different', start: 1, end: 2, score: 0.9, speaker: 'Zoe' },
+            { word: 'projection', start: 2, end: 3, score: 0.9, speaker: 'Zoe' },
+          ],
+        },
+      ],
+      word_segments: [
+        { word: 'Completely', start: 0, end: 1, score: 0.9, speaker: 'Zoe' },
+        { word: 'different', start: 1, end: 2, score: 0.9, speaker: 'Zoe' },
+        { word: 'projection', start: 2, end: 3, score: 0.9, speaker: 'Zoe' },
+      ],
+    };
+    act(() => {
+      trigger.reproject(NEW_DOC);
+    });
+    expect(container.textContent).toContain('Completely different projection');
+    expect(container.textContent).not.toContain('Ich wollte werden,');
+  });
+
+  it('preserves words + timecodes through a project→edit round-trip', () => {
+    const slate = toSlate(WHISPERX_DOC);
+    const firstWords = slate[0].children[0].words;
+    const originalCount = slate.reduce((n, p) => n + p.children[0].words.length, 0);
+    firstWords[0] = { ...firstWords[0], text: 'Howdy' };
+    expect(slate[0].children[0].words[0].text).toBe('Howdy');
+    expect(slate[0].children[0].words[0].start).toBe(WHISPERX_DOC.segments[0].words[0].start);
+    expect(slate[0].children[0].words[0].end).toBe(WHISPERX_DOC.segments[0].words[0].end);
+    const afterCount = slate.reduce((n, p) => n + p.children[0].words.length, 0);
+    expect(afterCount).toBe(originalCount);
+  });
+});
+
+describe('SlateTranscriptEditor — full editor on Slate 0.124', () => {
+  it('mounts the editor with the transcript text and a word-level surface', () => {
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" title="T" />);
+    expect(container.textContent).toContain('Ich wollte werden,');
+    // word-level-only tier renders the WordLevelEditor surface (clickable word spans)
+    expect(container.querySelector('.stw-word-level')).toBeTruthy();
+  });
+});
+
+describe('SlateTranscriptEditor — WhisperX format', () => {
+  it('mounts the whisperx tier, renders one paragraph per segment with verbatim speakers', () => {
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" title="T" />);
     expect(container.textContent).toContain('Ich wollte werden,');
     expect(container.textContent).toContain('Ich auch.');
     expect(container.textContent).toContain('SPEAKER_00');
     expect(container.textContent).toContain('SPEAKER_01');
-    // word-level-only tier renders the WordLevelEditor surface (clickable word spans),
-    // not a contenteditable Slate <Editable>
     expect(container.querySelector('.stw-word-level')).toBeTruthy();
     expect(container.querySelector('.stw-word')).toBeTruthy();
   });
 
   it('hides annotation chips by default and shows them when the preference is enabled', () => {
-    const { container: hidden } = render(
-      <SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />
-    );
+    const { container: hidden } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     expect(hidden.textContent).not.toContain('Career path');
 
     const { container: shown } = render(
       <SlateTranscriptEditor
         transcriptData={WHISPERX_DOC}
-        profile="whisperx"
         mediaUrl="https://example.com/m.mp4"
         defaultPreferences={{ display: { showAnnotations: true } }}
       />
@@ -216,25 +229,24 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
     expect(shown.textContent).toContain('sentiment: neutral');
   });
 
-  it('exposes an Annotations toggle in the Display popover: enabled + functional for whisperx, disabled otherwise', () => {
-    const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+  it('exposes an Annotations toggle: enabled for whisperx, disabled for rev.ai (no annotations)', () => {
+    const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     openDisplay(wx);
     const wxBtn = [...wx.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Annotations');
     expect(wxBtn).toBeTruthy();
     expect(wxBtn.disabled).toBe(false);
-    // clicking the toggle reveals the chips
     expect(wx.textContent).not.toContain('Career path');
     act(() => {
       fireEvent.click(wxBtn);
     });
     expect(wx.textContent).toContain('Career path');
 
-    // classic (DPE) transcripts have no annotations → the toggle is present but disabled
-    const { container: dpe } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
-    openDisplay(dpe);
-    const dpeBtn = [...dpe.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Annotations');
-    expect(dpeBtn).toBeTruthy();
-    expect(dpeBtn.disabled).toBe(true);
+    // rev.ai transcripts have no annotations → the toggle is present but disabled
+    const { container: rev } = render(<SlateTranscriptEditor transcriptData={REV_DOC} mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(rev);
+    const revBtn = [...rev.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Annotations');
+    expect(revBtn).toBeTruthy();
+    expect(revBtn.disabled).toBe(true);
   });
 
   it('transcriptHasConfidence detects WhisperX score (so the overlay defaults on)', () => {
@@ -242,21 +254,21 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
     expect(transcriptHasConfidence({ segments: [], word_segments: [] })).toBe(false);
   });
 
-  it('uses the lowered cutoff dropdown options for whisperx, the high ones otherwise (inside Display)', () => {
-    const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+  it('uses the lowered cutoff dropdown options for whisperx, the high ones for rev.ai', () => {
+    const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     openDisplay(wx);
     const wxVals = [...wx.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
     expect(wxVals).toContain('0.3');
     expect(wxVals).not.toContain('0.85');
 
-    const { container: dpe } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
-    openDisplay(dpe);
-    const dpeVals = [...dpe.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
-    expect(dpeVals).toContain('0.85');
+    const { container: rev } = render(<SlateTranscriptEditor transcriptData={REV_DOC} mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(rev);
+    const revVals = [...rev.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
+    expect(revVals).toContain('0.85');
   });
 
   it('orders Annotations before Confidence inside the Display popover', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     openDisplay(container);
     const labels = [...container.querySelectorAll('button')].map((b) => b.textContent.trim());
     expect(labels.indexOf('Annotations')).toBeGreaterThan(-1);
@@ -264,9 +276,9 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
   });
 });
 
-describe('SlateTranscriptEditor — Rigid|Loose editing modes (strict tiers)', () => {
-  it('shows the Mode: Rigid|Loose switch for whisperx and switches Rigid → Loose (grid → Slate surface)', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+describe('SlateTranscriptEditor — Rigid|Loose editing modes', () => {
+  it('shows the Mode: Rigid|Loose switch and switches Rigid → Loose (grid → Slate surface)', () => {
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
     const looseBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Loose');
     expect(looseBtn).toBeTruthy();
     // default mode = Rigid (word) → the per-word grid (no contenteditable Slate surface)
@@ -282,15 +294,9 @@ describe('SlateTranscriptEditor — Rigid|Loose editing modes (strict tiers)', (
     expect(container.textContent).toContain('Ich wollte werden,');
   });
 
-  it('does not show the editing-mode switch for the classic (DPE) tier', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
-    const looseBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Loose');
-    expect(looseBtn).toBeFalsy();
-  });
-
-  it('honors the editingMode="freestyle" prop on mount for a strict tier', () => {
+  it('honors the editingMode="freestyle" prop on mount', () => {
     const { container } = render(
-      <SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" editingMode="freestyle" mediaUrl="https://example.com/m.mp4" />
+      <SlateTranscriptEditor transcriptData={WHISPERX_DOC} editingMode="freestyle" mediaUrl="https://example.com/m.mp4" />
     );
     expect(container.querySelector('[contenteditable="true"], [role="textbox"]')).toBeTruthy();
     expect(container.querySelector('.stw-word-level')).toBeFalsy();

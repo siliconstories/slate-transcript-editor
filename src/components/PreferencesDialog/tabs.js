@@ -230,18 +230,12 @@ export const EditingTab = ({ allowedModes, editingMode }) => {
 };
 EditingTab.propTypes = { allowedModes: PropTypes.arrayOf(PropTypes.string), editingMode: PropTypes.string };
 
-export const AboutResetTab = ({ profileId }) => {
+export const AboutResetTab = ({ profileFormat }) => {
   const { actions } = usePreferences();
   return (
     <div>
       <Row label="Transcript tier">
-        <Typography variant="body2">
-          {profileId === 'rigid'
-            ? 'Rigid (rev.ai, faithful)'
-            : profileId === 'whisperx'
-              ? 'WhisperX (faithful, annotated)'
-              : 'Classic (free-text DPE)'}
-        </Typography>
+        <Typography variant="body2">{profileFormat === 'whisperx' ? 'WhisperX (faithful, annotated)' : 'rev.ai (faithful)'}</Typography>
       </Row>
       <Divider style={{ margin: '12px 0' }} />
       <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -253,4 +247,4 @@ export const AboutResetTab = ({ profileId }) => {
     </div>
   );
 };
-AboutResetTab.propTypes = { profileId: PropTypes.string };
+AboutResetTab.propTypes = { profileFormat: PropTypes.string };

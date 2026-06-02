@@ -1,25 +1,25 @@
 /**
  * TranscriptProfile registry. A profile decides how an imported transcript is
  * detected, converted to a Slate value, what edits are allowed, how it is
- * exported, and (optionally) how versioning/undo works. The editor stays
- * format-agnostic: it routes import / edit-gate / export / versioning through
- * the resolved profile. The default (no profile) IS the classic free-text DPE
- * tier, so the published component API is unchanged.
+ * exported, and how versioning/undo works. The editor stays format-agnostic: it
+ * routes import / edit-gate / export / versioning through the resolved profile.
  *
- * Because some tiers (e.g. rigid) hold mutable versioning state in a closure, a
- * profile is created PER editor mount. The registry therefore stores DESCRIPTORS
- * with a `create()` factory rather than shared singletons.
+ * There is now exactly ONE tier — the unified `whisper` profile — which imports
+ * rev.ai OR WhisperX and keeps the source transcript immutable. There is no
+ * free-text/DPE fallback: an unrecognized transcript is a hard error.
+ *
+ * Because the profile holds mutable versioning state in a closure, it is created
+ * PER editor mount. The registry stores DESCRIPTORS with a `create()` factory
+ * rather than shared singletons.
  *
  *   Descriptor: { id:string, detect(parsed)->bool, create()->Profile }
  *   Profile:    { id, import(parsed)->{value, model},
- *                 editPolicy:{ allowsStructuralEdits, allowsFreeText, wordLevelOnly },
- *                 exporters:[{ id,label,ext,run() }] | null,
- *                 versioning:{ snapshot,undo,redo,revertAll,canUndo,canRedo,currentOverlay } | null,
- *                 reproject:()->value | null }
+ *                 editPolicy:{ allowsStructuralEdits, allowsFreeText, wordLevelOnly, supportsAnnotations },
+ *                 exporters:[{ id,label,ext,run() }],
+ *                 versioning:{ snapshot,undo,redo,revertAll,canUndo,canRedo,currentOverlay },
+ *                 reproject:()->value }
  */
-import { classicDescriptor } from './classic-profile';
-import { rigidDescriptor } from './rigid-profile';
-import { whisperxDescriptor } from './whisperx-profile';
+import { whisperDescriptor } from './whisper-profile';
 
 const registry = new Map();
 
@@ -39,39 +39,38 @@ export const getProfile = (id) => {
 
 /**
  * Return a fresh instance of the first registered profile whose detect() matches
- * `parsed`, falling back to classic. (classic.detect is always true, so it is
- * skipped in the scan and used only as the explicit fallback.)
+ * `parsed`. Throws if nothing matches — an unrecognized transcript is a hard error
+ * (only rev.ai or WhisperX are accepted).
  */
 export const detectProfile = (parsed) => {
   for (const descriptor of registry.values()) {
-    if (descriptor.id === 'classic' || typeof descriptor.detect !== 'function') continue;
+    if (typeof descriptor.detect !== 'function') continue;
     try {
       if (descriptor.detect(parsed)) return descriptor.create();
     } catch (e) {
       // a misbehaving detector must never break detection
     }
   }
-  return classicDescriptor.create();
+  throw new Error('detectProfile: unrecognized transcript — expected rev.ai (monologues) or WhisperX (segments + word_segments) JSON.');
 };
 
 /**
  * Resolve the component's `profile` prop into a profile instance:
  *  - an instance (object carrying editPolicy) -> returned as-is
- *  - a string id -> a fresh instance from the registry (classic if unknown)
- *  - nullish -> classic
+ *  - a string id -> a fresh instance from the registry (the `whisper` profile if
+ *    the id is unknown, including the legacy 'rigid'/'whisperx'/'classic' strings)
+ *  - nullish -> a fresh `whisper` profile (format auto-detected at import time)
  */
 export const resolveProfile = (profileProp) => {
   if (profileProp && typeof profileProp === 'object' && profileProp.editPolicy) {
     return profileProp;
   }
   if (typeof profileProp === 'string') {
-    return getProfile(profileProp) || classicDescriptor.create();
+    return getProfile(profileProp) || whisperDescriptor.create();
   }
-  return classicDescriptor.create();
+  return whisperDescriptor.create();
 };
 
-registerProfile(classicDescriptor);
-registerProfile(rigidDescriptor);
-registerProfile(whisperxDescriptor);
+registerProfile(whisperDescriptor);
 
 export default { registerProfile, getProfile, detectProfile, resolveProfile };

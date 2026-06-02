@@ -9,6 +9,7 @@
  * editor mount gets its own isolated history.
  */
 import buildSentenceModel from '../util/rev-to-sentences';
+import { isWhisperxTranscript } from './whisperx-overlay';
 import {
   isWhisperTranscript,
   whisperToModel,
@@ -32,6 +33,14 @@ import { originalWordsBetween } from './freetext-profile-helpers';
 // These format-specific defaults seed the confidence overlay so it highlights ~the
 // lowest third instead. rev.ai uses the global defaults (confidenceDefaults absent).
 const WHISPERX_CONFIDENCE_DEFAULTS = { cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] };
+
+/**
+ * Format-specific confidence defaults for a raw transcript, derivable WITHOUT a
+ * profile instance/import — so the public component can seed the preferences store
+ * before mount. WhisperX `score` runs far lower than rev.ai confidence, hence the
+ * lowered cutoff; rev.ai uses the global defaults (returns undefined).
+ */
+export const whisperConfidenceDefaults = (parsed) => (isWhisperxTranscript(parsed) ? WHISPERX_CONFIDENCE_DEFAULTS : undefined);
 
 export const createWhisperProfile = () => {
   let model = null;
