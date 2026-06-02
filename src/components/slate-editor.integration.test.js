@@ -195,11 +195,12 @@ describe('Slate 0.124 runtime — value→initialValue + reproject rework', () =
 });
 
 describe('SlateTranscriptEditor — full editor on Slate 0.124', () => {
-  it('mounts the editor with the transcript text and a word-level surface', () => {
+  it('mounts the editor with the transcript text on a single Slate surface', () => {
     const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" title="T" />);
     expect(container.textContent).toContain('Ich wollte werden,');
-    // word-level-only tier renders the WordLevelEditor surface (clickable word spans)
-    expect(container.querySelector('.stw-word-level')).toBeTruthy();
+    // both modes render ONE Slate surface (no separate word grid)
+    expect(container.querySelector('[data-slate-editor]')).toBeTruthy();
+    expect(container.querySelector('.stw-word-level')).toBeFalsy();
   });
 });
 
@@ -210,8 +211,7 @@ describe('SlateTranscriptEditor — WhisperX format', () => {
     expect(container.textContent).toContain('Ich auch.');
     expect(container.textContent).toContain('SPEAKER_00');
     expect(container.textContent).toContain('SPEAKER_01');
-    expect(container.querySelector('.stw-word-level')).toBeTruthy();
-    expect(container.querySelector('.stw-word')).toBeTruthy();
+    expect(container.querySelector('[data-slate-editor]')).toBeTruthy();
   });
 
   it('hides annotation chips by default and shows them when the preference is enabled', () => {
@@ -276,29 +276,30 @@ describe('SlateTranscriptEditor — WhisperX format', () => {
   });
 });
 
-describe('SlateTranscriptEditor — Rigid|Loose editing modes', () => {
-  it('shows the Mode: Rigid|Loose switch and switches Rigid → Loose (grid → Slate surface)', () => {
+describe('SlateTranscriptEditor — Strict|Loose editing modes (one shared surface)', () => {
+  it('shows the Mode: Strict|Loose switch; both modes are the SAME Slate surface, differing in read-only', () => {
     const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} mediaUrl="https://example.com/m.mp4" />);
+    const strictBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Strict');
     const looseBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Loose');
+    expect(strictBtn).toBeTruthy();
     expect(looseBtn).toBeTruthy();
-    // default mode = Rigid (word) → the per-word grid (no contenteditable Slate surface)
-    expect(container.querySelector('.stw-word-level')).toBeTruthy();
+    // default mode = Strict (word) → the SAME Slate surface, but read-only (not editable)
+    expect(container.querySelector('[data-slate-editor]')).toBeTruthy();
     expect(container.querySelector('[contenteditable="true"]')).toBeFalsy();
+    expect(container.querySelector('.stw-word-level')).toBeFalsy(); // no separate grid
 
     act(() => {
       fireEvent.click(looseBtn);
     });
-    // Loose (freestyle) → contenteditable Slate surface, grid gone, text preserved
+    // Loose (freestyle) → the same surface becomes contenteditable, text preserved
     expect(container.querySelector('[contenteditable="true"], [role="textbox"]')).toBeTruthy();
-    expect(container.querySelector('.stw-word-level')).toBeFalsy();
     expect(container.textContent).toContain('Ich wollte werden,');
   });
 
-  it('honors the editingMode="freestyle" prop on mount', () => {
+  it('honors the editingMode="freestyle" prop on mount (editable Slate surface)', () => {
     const { container } = render(
       <SlateTranscriptEditor transcriptData={WHISPERX_DOC} editingMode="freestyle" mediaUrl="https://example.com/m.mp4" />
     );
     expect(container.querySelector('[contenteditable="true"], [role="textbox"]')).toBeTruthy();
-    expect(container.querySelector('.stw-word-level')).toBeFalsy();
   });
 });

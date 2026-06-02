@@ -217,12 +217,14 @@ function WordSentenceSwitch({ value, onChange }) {
   );
 }
 
-// Editing-mode switch (strict tiers only): "Mode:" + Rigid | Loose pills.
-// 'word' (fixed word count: seek/mute/rewrite) reads as "Rigid"; 'freestyle'
-// (free-text, timestamps re-align) reads as "Loose".
-const EDITING_MODE_LABELS = { word: 'Rigid', freestyle: 'Loose', paragraph: 'Paragraph' };
+// Editing-mode switch: "Mode:" + Strict | Loose pills. Both modes share the same
+// Slate surface, data model, display options, and keyboard navigation — they differ
+// ONLY in double-click: 'word' ("Strict") selects one word for single-word edit/mute
+// on a read-only surface; 'freestyle' ("Loose") is free-text editing with re-aligned
+// timestamps.
+const EDITING_MODE_LABELS = { word: 'Strict', freestyle: 'Loose', paragraph: 'Paragraph' };
 const EDITING_MODE_TITLES = {
-  word: 'Rigid — per-word seek, mute, and rewrite (word count fixed)',
+  word: 'Strict — double-click a word to edit or mute it (word count fixed)',
   freestyle: 'Loose — free-text editing; timestamps re-align on the original words',
 };
 function EditingModeSwitch({ value, modes, onChange }) {
