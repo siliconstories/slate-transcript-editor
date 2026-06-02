@@ -177,14 +177,12 @@ AnnotationChips.propTypes = { annotations: PropTypes.object };
 // in place, with small "Mute"/"Raw…" tools above it), floated at the double-clicked word
 // so it works over the read-only single Slate surface. Commits on Enter/blur; Esc cancels.
 function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, onCancel }) {
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
-  const left = Math.max(8, Math.min(state.x, vw - 200));
-  const top = state.y;
-  // Near the viewport top the tools (normally above the input) would clip — flip them
-  // below, mirroring the old grid's first-paragraph handling.
-  const toolsBelow = top < 70;
+  // left/top are in the scroll container's own coordinates, so the editor sits over the
+  // word in place and scrolls with the text. Near the container top the tools (normally
+  // above the input) would clip — flip them below, mirroring the old grid's first-row handling.
+  const toolsBelow = state.top < 28;
   return (
-    <span className="stw-edit-wrap" contentEditable={false} style={{ position: 'fixed', left, top, zIndex: 1400 }}>
+    <span className="stw-edit-wrap" contentEditable={false} style={{ position: 'absolute', left: state.left, top: state.top, zIndex: 1400 }}>
       <span
         className="stw-edit-tools"
         contentEditable={false}
@@ -228,6 +226,7 @@ function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, on
           }
         }}
         size={Math.max(state.draft.length, 2)}
+        style={state.width ? { minWidth: state.width } : undefined}
       />
     </span>
   );
@@ -303,6 +302,8 @@ function SlateTranscriptEditorInner(props) {
   // Per-instance media element ref (was a module-scope React.createRef(), which is
   // shared across every mounted editor — a latent multi-instance bug).
   const mediaRef = useRef(null);
+  // The transcript scroll container — positioning context for the in-place word editor.
+  const editorScrollRef = useRef(null);
   // The active transcript profile decides import / edit-gate / export / versioning.
   // No `profile` prop => classic free-text DPE tier => the editor's original behavior.
   const profile = useMemo(() => resolveProfile(props.profile), [props.profile]);
@@ -1234,6 +1235,34 @@ function SlateTranscriptEditorInner(props) {
     handleWordLevelContentChange(newValue);
   };
 
+  // Pixel box of word `wIdx` in paragraph `pIdx`, in the scroll container's own
+  // coordinates — so the in-place editor sits exactly over the word and scrolls with it.
+  // Uses the bare-word join convention (leaf text = words.map(t).join(' ')).
+  const wordRectInContainer = (pIdx, wIdx) => {
+    const cont = editorScrollRef.current;
+    if (!cont) return null;
+    const para = value[pIdx];
+    const words = para && para.children && para.children[0] && Array.isArray(para.children[0].words) ? para.children[0].words : [];
+    if (!words.length || !words[wIdx]) return null;
+    let charStart = 0;
+    for (let i = 0; i < wIdx; i += 1) charStart += (typeof words[i].text === 'string' ? words[i].text : '').length + 1;
+    const len = (typeof words[wIdx].text === 'string' ? words[wIdx].text : '').length;
+    const range = { anchor: { path: [pIdx, 0], offset: charStart }, focus: { path: [pIdx, 0], offset: charStart + len } };
+    let domRect;
+    try {
+      domRect = ReactEditor.toDOMRange(editor, range).getBoundingClientRect();
+    } catch (err) {
+      return null;
+    }
+    const contRect = cont.getBoundingClientRect();
+    return {
+      left: domRect.left - contRect.left + cont.scrollLeft,
+      top: domRect.top - contRect.top + cont.scrollTop,
+      width: domRect.width,
+      height: domRect.height,
+    };
+  };
+
   const handleLeafDoubleClick = (e) => {
     if (!wordLevelEditing) return; // LOOSE: let the browser do native word selection
     if (editable === false) return;
@@ -1242,6 +1271,7 @@ function SlateTranscriptEditorInner(props) {
     if (!resolved) return;
     const w = resolved.word;
     setSelectedWordKey(w._key);
+    const rect = wordRectInContainer(resolved.pIdx, resolved.wIdx);
     setStrictEdit({
       pIdx: resolved.pIdx,
       wIdx: resolved.wIdx,
@@ -1249,8 +1279,10 @@ function SlateTranscriptEditorInner(props) {
       muted: w.muted === true,
       wordKey: w._key,
       start: w.start,
-      x: e.clientX,
-      y: e.clientY,
+      left: rect ? rect.left : 0,
+      top: rect ? rect.top : 0,
+      width: rect ? rect.width : 0,
+      height: rect ? rect.height : 0,
     });
   };
 
@@ -1683,9 +1715,9 @@ function SlateTranscriptEditorInner(props) {
     // auto align when not typing
   };
   return (
-    <div style={{ paddingTop: '1em' }}>
+    <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <CssBaseline />
-      <Container>
+      <Container sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: '1em' }}>
         <Paper elevation={3} />
         <style scoped>
           {`/* Next words */
@@ -1770,6 +1802,7 @@ function SlateTranscriptEditorInner(props) {
                 border: 1px solid #1976d2;
                 border-radius: 2px;
                 padding: 0 2px;
+                background: #fff;
               }
               .stw-edit-wrap {
                 position: relative;
@@ -1825,8 +1858,9 @@ function SlateTranscriptEditorInner(props) {
 
               .editor-wrapper-container {
                 padding: 8px 16px;
-                height: 85vh;
+                height: 100%;
                 overflow: auto;
+                position: relative;
               }
               /* https://developer.mozilla.org/en-US/docs/Web/CSS/user-select
               TODO: only working in Chrome, not working in Firefox, and Safari - OSX
@@ -1854,7 +1888,7 @@ function SlateTranscriptEditorInner(props) {
             <Typography variant="h5">{props.title}</Typography>
           </div>
         )}
-        <div style={{ marginBottom: '0.75em', position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
+        <div style={{ marginBottom: '0.75em', flex: '0 0 auto', zIndex: 20, background: '#fff' }}>
           <EditorToolbar
             editable={editable}
             setEditable={setEditable}
@@ -1942,8 +1976,15 @@ function SlateTranscriptEditorInner(props) {
           />
         )}
 
-        <div style={{ display: hasFiles && activeTab !== 'video' ? 'none' : 'block' }}>
-          <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
+        <div
+          style={{
+            display: hasFiles && activeTab !== 'video' ? 'none' : 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
             {!mediaCollapsed && (
               <Grid
                 size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
@@ -2038,6 +2079,7 @@ function SlateTranscriptEditorInner(props) {
                 lg: mediaCollapsed ? 12 : 8,
                 xl: mediaCollapsed ? 12 : 8,
               }}
+              sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
             >
               {mediaCollapsed && (
                 <div style={{ marginBottom: 6 }}>
@@ -2048,8 +2090,9 @@ function SlateTranscriptEditorInner(props) {
               )}
               {value.length !== 0 ? (
                 <>
-                  <Paper elevation={3}>
+                  <Paper elevation={3} sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     <section
+                      ref={editorScrollRef}
                       className="editor-wrapper-container"
                       style={{ fontSize: settings.appearance.fontSize, lineHeight: settings.appearance.lineSpacing }}
                     >

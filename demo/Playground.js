@@ -77,7 +77,18 @@ const SEED_DOCUMENTS = [
 ];
 
 const styles = {
-  wrap: { fontFamily: 'Roboto, system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1em' },
+  wrap: {
+    fontFamily: 'Roboto, system-ui, sans-serif',
+    maxWidth: 1200,
+    margin: '0 auto',
+    padding: '1em',
+    boxSizing: 'border-box',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  editorHost: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
   panel: { background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 10, padding: '1em 1.2em', marginBottom: '1em' },
   loadHeader: {
     display: 'flex',
@@ -399,31 +410,33 @@ function Playground() {
         {!ready && !error && <p style={styles.hint}>Provide a media source and a valid transcript to start editing.</p>}
       </div>
 
-      {ready && (
-        <SlateTranscriptEditor
-          key={mountKey}
-          transcriptData={transcriptData}
-          profile={profileInst}
-          defaultPreferences={{
-            confidence: { overlay: confidenceOverlay, level: confidenceLevel, cutoff: profileInst?.confidenceDefaults?.cutoff ?? confidenceCutoff },
-          }}
-          mediaUrl={mediaUrl}
-          title={title}
-          showTitle={showTitle}
-          isEditable={isEditable}
-          showSpeakers={showSpeakers}
-          showTimecodes={showTimecodes}
-          onShowRawSource={openRaw}
-          files={documents.map(({ id, label, sublabel }) => ({ id, label, sublabel }))}
-          activeFileId={activeFileId}
-          onSelectFile={selectDocument}
-          onRemoveFile={removeDocument}
-          handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
-          handleAutoSaveChanges={(content) => setLiveValue(content)}
-          onSentenceModel={(model) => console.log('onSentenceModel', model)}
-          handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
-        />
-      )}
+      <div style={styles.editorHost}>
+        {ready && (
+          <SlateTranscriptEditor
+            key={mountKey}
+            transcriptData={transcriptData}
+            profile={profileInst}
+            defaultPreferences={{
+              confidence: { overlay: confidenceOverlay, level: confidenceLevel, cutoff: profileInst?.confidenceDefaults?.cutoff ?? confidenceCutoff },
+            }}
+            mediaUrl={mediaUrl}
+            title={title}
+            showTitle={showTitle}
+            isEditable={isEditable}
+            showSpeakers={showSpeakers}
+            showTimecodes={showTimecodes}
+            onShowRawSource={openRaw}
+            files={documents.map(({ id, label, sublabel }) => ({ id, label, sublabel }))}
+            activeFileId={activeFileId}
+            onSelectFile={selectDocument}
+            onRemoveFile={removeDocument}
+            handleSaveEditor={(content) => console.log('handleSaveEditor', content)}
+            handleAutoSaveChanges={(content) => setLiveValue(content)}
+            onSentenceModel={(model) => console.log('onSentenceModel', model)}
+            handleAnalyticsEvents={(name, payload) => console.log('analytics', name, payload)}
+          />
+        )}
+      </div>
 
       {rawOpen && (
         <RawSourceDialog

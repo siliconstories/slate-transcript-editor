@@ -383,7 +383,6 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               }
               onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
             />
-            <ShowRow label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
             <ShowRow
               label="Styling"
               active={display.showStyling !== false}
@@ -395,12 +394,6 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               active={!!display.showRevised}
               title="Highlight revised words — edited (amber), inserted (green), muted (struck)"
               onClick={() => setDisplay('showRevised', !display.showRevised)}
-            />
-            <ShowRow
-              label="Sentence conf."
-              active={display.showSentenceConfidence !== false}
-              title="Per-sentence confidence badge in the Loose gutter"
-              onClick={() => setDisplay('showSentenceConfidence', !(display.showSentenceConfidence !== false))}
             />
             <ShowRow
               label="Interpolation"
@@ -415,21 +408,47 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               onClick={() => setDisplay('showRevertSentence', !(display.showRevertSentence !== false))}
             />
           </div>
-          <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: conf.overlay ? 1 : 0.4, pointerEvents: conf.overlay ? 'auto' : 'none' }}
-          >
-            <select
-              value={String(conf.cutoff)}
-              onChange={(e) => setConf('cutoff', Number(e.target.value))}
-              title="Word confidence threshold (sentence offset is in Preferences → Confidence)"
-              style={{ ...S.select, color: C.text }}
+          {/* Confidence — set apart from the Show toggles, with its options grouped under it */}
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+            <div style={S.popLabel}>Confidence</div>
+            <ShowRow
+              label="Heat overlay"
+              active={conf.overlay}
+              title="Wash each word in colour by recognition confidence"
+              onClick={() => setConf('overlay', !conf.overlay)}
+            />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                marginTop: 6,
+                paddingLeft: 6,
+                opacity: conf.overlay ? 1 : 0.4,
+                pointerEvents: conf.overlay ? 'auto' : 'none',
+              }}
             >
-              {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
-                <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
-              ))}
-            </select>
-            <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
+              <select
+                value={String(conf.cutoff)}
+                onChange={(e) => setConf('cutoff', Number(e.target.value))}
+                title="Word confidence threshold (sentence offset is in Preferences → Confidence)"
+                style={{ ...S.select, color: C.text }}
+              >
+                {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
+                  <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
+                ))}
+              </select>
+              <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
+            </div>
+            {/* Sentence Status — the per-sentence badge, sits below the confidence section */}
+            <div style={{ marginTop: 10 }}>
+              <ShowRow
+                label="Sentence Status"
+                active={display.showSentenceConfidence !== false}
+                title="Per-sentence status badge in the Loose gutter"
+                onClick={() => setDisplay('showSentenceConfidence', !(display.showSentenceConfidence !== false))}
+              />
+            </div>
           </div>
         </div>
       )}
