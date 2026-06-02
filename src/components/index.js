@@ -728,11 +728,13 @@ function SlateTranscriptEditorInner(props) {
     [settings.confidence, settings.appearance.highlightOpacity]
   );
   const confidenceDecos = useMemo(() => buildConfidenceDecorations(value, confidenceSettings), [value, confidenceSettings]);
-  // Estimated-timing (inserted) words in Freestyle mode — value-only (no playback recompute).
-  // Estimated-timing (inserted) words underline in BOTH modes — a paragraph edited in
-  // Loose can carry estimated words that are still visible in Strict, so the display is
-  // identical regardless of the active mode.
-  const provenanceDecos = useMemo(() => buildProvenanceDecorations(value), [value]);
+  // Interpolation mark — estimated-timing (inserted) words get a grey dotted underline in
+  // both modes. Gated on the "Interpolation" display toggle so it can be hidden entirely.
+  const showInterpolation = settings.display.showInterpolation !== false;
+  const provenanceDecos = useMemo(
+    () => (showInterpolation ? buildProvenanceDecorations(value) : { enabled: false, byPara: [] }),
+    [showInterpolation, value]
+  );
 
   // (D) user styling — bold/italic/underline/highlight/note, anchored to word ids and
   // rendered as decorations (never marks), so it can't corrupt word/timing data and
@@ -747,8 +749,9 @@ function SlateTranscriptEditorInner(props) {
   const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
   // (E) track changes — mark revised words (rewritten / inserted / muted) against the
-  // immutable original. Rewrites are read from the overlay; inserted/muted are leaf flags.
-  const showRevised = settings.display.showRevised === true;
+  // immutable original. Driven INDEPENDENTLY by the "Revised" display option AND the
+  // top-level "Track" toggle (either shows revisions; toggling one never flips the other).
+  const showRevised = settings.display.showRevised === true || settings.display.trackChanges === true;
   const revisedDecos = useMemo(() => {
     if (!showRevised) return { enabled: false, byPara: [] };
     const overlay = profile.versioning && profile.versioning.currentOverlay ? profile.versioning.currentOverlay() : {};
@@ -756,6 +759,10 @@ function SlateTranscriptEditorInner(props) {
     return buildRevisedDecorations(value, rewritten);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRevised, value]);
+
+  // Per-sentence gutter elements (Loose mode) — each independently show/hide-able.
+  const showSentenceConfidence = settings.display.showSentenceConfidence !== false;
+  const showRevertSentence = settings.display.showRevertSentence !== false;
 
   const decorate = useCallback(
     ([node, path]) => {
@@ -854,7 +861,7 @@ function SlateTranscriptEditorInner(props) {
     // without them here Slate keeps the stale closure and the editor ignores the toggles.
     // isFreestyle/editable drive the per-sentence gutter rendered inside the element.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [showSpeakers, showTimecodes, showAnnotations, isFreestyle, editable, value]
+    [showSpeakers, showTimecodes, showAnnotations, showSentenceConfidence, showInterpolation, showRevertSentence, isFreestyle, editable, value]
   );
 
   // NOTE: activeWordIndex is intentionally in the dependency list even though it
@@ -1038,18 +1045,22 @@ function SlateTranscriptEditorInner(props) {
           const lastKey = survivors.length ? survivors[survivors.length - 1]._key : null;
           return (
             <span key={si} className="stw-sentence-gutter">
-              <span
-                className="stw-conf-badge"
-                style={{ background: badgeColor }}
-                title={typeof conf === 'number' ? `Sentence confidence ${conf.toFixed(2)}` : 'Sentence confidence n/a'}
-                aria-label={typeof conf === 'number' ? `confidence ${conf.toFixed(2)}` : 'confidence not available'}
-              />
-              {hasEstimated && (
-                <span className="stw-est-dot" title="Contains estimated (interpolated) timing">
-                  ●
+              {showSentenceConfidence && (
+                <span
+                  className="stw-conf-badge"
+                  style={{ background: badgeColor }}
+                  title={typeof conf === 'number' ? `Sentence confidence ${conf.toFixed(2)}` : 'Sentence confidence n/a'}
+                  aria-label={typeof conf === 'number' ? `confidence ${conf.toFixed(2)}` : 'confidence not available'}
+                />
+              )}
+              {showInterpolation && hasEstimated && (
+                <span className="stw-est-dot" title="Contains estimated (interpolated) timing" aria-label="estimated timing">
+                  <svg width="13" height="8" viewBox="0 0 13 8" style={{ display: 'block' }}>
+                    <path d="M1 5 Q2.5 1 4 5 T7 5 T10 5 T12.5 5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
                 </span>
               )}
-              {editable && firstKey != null && (
+              {showRevertSentence && editable && firstKey != null && (
                 <button
                   type="button"
                   className="stw-revert-sentence"
@@ -1312,10 +1323,30 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
+  // Which style marks the currently-selected word carries — so the toolbar B/I/U/H/E
+  // buttons show as active when the selected word already has that mark.
+  const activeMarks = useMemo(() => {
+    const m = { bold: false, italic: false, underline: false, highlight: false, link: false };
+    if (selectedWordKey == null) return m;
+    styleRanges.forEach((r) => {
+      if (r.fromKey !== selectedWordKey && r.toKey !== selectedWordKey) return;
+      const mk = r.mark;
+      if (mk === 'bold') m.bold = true;
+      else if (mk === 'italic') m.italic = true;
+      else if (mk === 'underline') m.underline = true;
+      else if (mk && mk.highlight != null) m.highlight = true;
+      else if (mk && typeof mk.link === 'string') m.link = true;
+    });
+    return m;
+  }, [selectedWordKey, styleRanges]);
+
   // LOOSE-mode word gesture: a plain click places the text cursor (so you can type),
   // Alt/Option-click seeks to the word + toggles play/pause. In Strict, Ctrl/Cmd-click
   // mutes the clicked word (handled first).
   const handleLeafAltClick = (e) => {
+    // track the clicked word so the toolbar can reflect ITS marks (active B/I/U/H/E)
+    const clicked = resolveWordFromEvent(e);
+    if (clicked && clicked.word && clicked.word._key != null) setSelectedWordKey(clicked.word._key);
     if (handleLeafMute(e)) return;
     if (!e.altKey) return; // plain single click: let Slate place the caret
     const { startWord } = SlateHelpers.getSelectionNodes(editor, editor.selection);
@@ -1693,8 +1724,9 @@ function SlateTranscriptEditorInner(props) {
                 border: 1px solid rgba(0, 0, 0, 0.15);
               }
               .stw-est-dot {
-                font-size: 10px;
                 color: #8b5cf6;
+                display: inline-flex;
+                align-items: center;
               }
               .stw-revert-sentence {
                 font: inherit;
@@ -1822,7 +1854,7 @@ function SlateTranscriptEditorInner(props) {
             <Typography variant="h5">{props.title}</Typography>
           </div>
         )}
-        <div style={{ marginBottom: '0.75em' }}>
+        <div style={{ marginBottom: '0.75em', position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
           <EditorToolbar
             editable={editable}
             setEditable={setEditable}
@@ -1840,6 +1872,7 @@ function SlateTranscriptEditorInner(props) {
             canStyle={!!(profile.versioning && profile.versioning.setStyles)}
             styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
             onApplyStyle={applyStyleToSelection}
+            activeMarks={activeMarks}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
             handleSave={handleSave}

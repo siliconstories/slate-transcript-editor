@@ -251,7 +251,8 @@ function EditingModeSwitch({ value, modes, onChange }) {
 
 // User-styling buttons: bold / italic / underline / highlight, applied to the current
 // selection (one word in Strict, an arbitrary range in Loose). Shared by both modes.
-function StyleGroup({ enabled, onApply }) {
+function StyleGroup({ enabled, onApply, active }) {
+  const a = active || {};
   const base = {
     border: '1px solid transparent',
     borderRadius: 4,
@@ -262,31 +263,34 @@ function StyleGroup({ enabled, onApply }) {
     lineHeight: 1,
     padding: '0 4px',
   };
-  const btn = (label, mark, extra, title) => (
+  // `on` lights the button when the selected word already carries that mark.
+  const btn = (label, mark, extra, title, on) => (
     <button
       type="button"
       disabled={!enabled}
+      aria-pressed={!!on}
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => onApply(mark)}
       title={title}
-      style={{ ...base, ...extra, opacity: enabled ? 1 : 0.4, cursor: enabled ? 'pointer' : 'default' }}
+      style={{ ...base, ...extra, ...(on ? { background: C.soft } : null), opacity: enabled ? 1 : 0.4, cursor: enabled ? 'pointer' : 'default' }}
     >
       {label}
     </button>
   );
   return (
     <span style={{ display: 'inline-flex', gap: 2, alignItems: 'center' }} title="Apply styling to the selection">
-      {btn('B', 'bold', { fontWeight: 700 }, 'Bold (⌘B)')}
-      {btn('I', 'italic', { fontStyle: 'italic' }, 'Italic (⌘I)')}
-      {btn('U', 'underline', { textDecoration: 'underline' }, 'Underline (⌘U)')}
+      {btn('B', 'bold', { fontWeight: 700 }, 'Bold (⌘B)', a.bold)}
+      {btn('I', 'italic', { fontStyle: 'italic' }, 'Italic (⌘I)', a.italic)}
+      {btn('U', 'underline', { textDecoration: 'underline' }, 'Underline (⌘U)', a.underline)}
       {btn(
         <I.highlight size={15} style={{ display: 'block' }} />,
         { highlight: '#fde68a' },
         { display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
-        'Highlight'
+        'Highlight',
+        a.highlight
       )}
       {/* Entity: marks the selected word(s) with a Link property (matched to imdb/wikipedia later). */}
-      {btn('E', { link: '' }, { fontWeight: 700, color: '#6d28d9' }, 'Entity — mark as a linkable entity')}
+      {btn('E', { link: '' }, { fontWeight: 700, color: '#6d28d9' }, 'Entity — mark as a linkable entity', a.link)}
     </span>
   );
 }
@@ -392,6 +396,24 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               title="Highlight revised words — edited (amber), inserted (green), muted (struck)"
               onClick={() => setDisplay('showRevised', !display.showRevised)}
             />
+            <ShowRow
+              label="Sentence conf."
+              active={display.showSentenceConfidence !== false}
+              title="Per-sentence confidence badge in the Loose gutter"
+              onClick={() => setDisplay('showSentenceConfidence', !(display.showSentenceConfidence !== false))}
+            />
+            <ShowRow
+              label="Interpolation"
+              active={display.showInterpolation !== false}
+              title="Mark words with estimated (interpolated) timing"
+              onClick={() => setDisplay('showInterpolation', !(display.showInterpolation !== false))}
+            />
+            <ShowRow
+              label="Revert"
+              active={display.showRevertSentence !== false}
+              title="Per-sentence revert button in the Loose gutter"
+              onClick={() => setDisplay('showRevertSentence', !(display.showRevertSentence !== false))}
+            />
           </div>
           <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
           <div
@@ -432,6 +454,7 @@ export default function EditorToolbar({
   canStyle,
   styleEnabled,
   onApplyStyle,
+  activeMarks,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -471,15 +494,15 @@ export default function EditorToolbar({
 
       {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
 
-      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} />}
+      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} active={activeMarks} />}
 
       <span style={S.groupGap} />
-      {/* Track changes — highlights revised / inserted / muted words (bound to display.showRevised). */}
+      {/* Track changes — independent of the "Revised" show option (toggling one never flips the other). */}
       <FlatToggle
         label="Track"
-        active={!!display.showRevised}
+        active={!!display.trackChanges}
         title="Track changes — highlight revised (amber), inserted (green) and muted (struck) words"
-        onClick={() => setDisplay('showRevised', !display.showRevised)}
+        onClick={() => setDisplay('trackChanges', !display.trackChanges)}
       />
       <DisplayPopover
         display={display}
