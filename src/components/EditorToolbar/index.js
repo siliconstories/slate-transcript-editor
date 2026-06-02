@@ -48,7 +48,7 @@ const S = {
     display: 'flex',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     padding: '7px 10px',
     // no rule directly below the toolbar — the Video|Files tab strip below carries the
     // single header hairline, so the toolbar + tabs read as one unit.
@@ -137,7 +137,7 @@ const S = {
     flexDirection: 'column',
   },
   popLabel: { fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.faint, marginBottom: 6 },
-  groupGap: { width: 12, flex: '0 0 auto' }, // breathing room between logical toolbar groups (no divider line)
+  groupGap: { width: 8, flex: '0 0 auto' }, // breathing room between logical toolbar groups (no divider line)
 };
 
 const IconBtn = React.forwardRef(({ icon: Icon, title, framed, active, onClick, disabled, ...rest }, ref) => (
@@ -275,7 +275,7 @@ function StyleGroup({ enabled, onApply, active }) {
         a.highlight
       )}
       {/* Entity: marks the selected word(s) with a Link property (matched to imdb/wikipedia later). */}
-      {btn('Entity', { link: '' }, { fontWeight: 600, color: '#6d28d9', padding: '0 6px' }, 'Entity — mark as a linkable entity', a.link)}
+      {btn('Entity', { link: '' }, { padding: '0 6px' }, 'Entity — mark as a linkable entity', a.link)}
     </span>
   );
 }
@@ -381,18 +381,6 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               onClick={() => setDisplay('showRevised', !display.showRevised)}
             />
             <ShowRow
-              label="Interpolation"
-              active={display.showInterpolation !== false}
-              title="Mark words with estimated (interpolated) timing"
-              onClick={() => setDisplay('showInterpolation', !(display.showInterpolation !== false))}
-            />
-            <ShowRow
-              label="Revert"
-              active={display.showRevertSentence !== false}
-              title="Per-sentence revert button in the Loose gutter"
-              onClick={() => setDisplay('showRevertSentence', !(display.showRevertSentence !== false))}
-            />
-            <ShowRow
               label="Comments"
               active={display.showComments !== false}
               title="Show inline comment bubbles on commented words"
@@ -402,12 +390,20 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
           {/* Confidence — set apart from the Show toggles, with its options grouped under it */}
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
             <div style={S.popLabel}>Confidence</div>
-            <ShowRow
-              label="Heat overlay"
-              active={conf.overlay}
-              title="Wash each word in colour by recognition confidence"
-              onClick={() => setConf('overlay', !conf.overlay)}
-            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 10 }}>
+              <ShowRow
+                label="Heat overlay"
+                active={conf.overlay}
+                title="Wash each word in colour by recognition confidence"
+                onClick={() => setConf('overlay', !conf.overlay)}
+              />
+              <ShowRow
+                label="Sentence Status"
+                active={display.showSentenceConfidence !== false}
+                title="Per-sentence gutter — confidence, interpolation & revert"
+                onClick={() => setDisplay('showSentenceConfidence', !(display.showSentenceConfidence !== false))}
+              />
+            </div>
             <div
               style={{
                 display: 'flex',
@@ -430,15 +426,6 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
                 ))}
               </select>
               <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
-            </div>
-            {/* Sentence Status — the per-sentence badge, sits below the confidence section */}
-            <div style={{ marginTop: 10 }}>
-              <ShowRow
-                label="Sentence Status"
-                active={display.showSentenceConfidence !== false}
-                title="Per-sentence status badge in the Loose gutter"
-                onClick={() => setDisplay('showSentenceConfidence', !(display.showSentenceConfidence !== false))}
-              />
             </div>
           </div>
         </div>

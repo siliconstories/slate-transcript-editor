@@ -1177,14 +1177,14 @@ function SlateTranscriptEditorInner(props) {
                   aria-label={typeof conf === 'number' ? `confidence ${conf.toFixed(2)}` : 'confidence not available'}
                 />
               )}
-              {showInterpolation && hasEstimated && (
+              {showSentenceConfidence && hasEstimated && (
                 <span className="stw-est-dot" title="Contains estimated (interpolated) timing" aria-label="estimated timing">
                   <svg width="13" height="8" viewBox="0 0 13 8" style={{ display: 'block' }}>
                     <path d="M1 5 Q2.5 1 4 5 T7 5 T10 5 T12.5 5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                   </svg>
                 </span>
               )}
-              {showRevertSentence && editable && firstKey != null && (
+              {showSentenceConfidence && editable && firstKey != null && (
                 <button
                   type="button"
                   className="stw-revert-sentence"
