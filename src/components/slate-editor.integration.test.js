@@ -50,6 +50,14 @@ afterEach(cleanup);
 
 const makeEditor = () => withReact(withHistory(createEditor()));
 
+// The Show toggles + confidence sub-controls now live in an anchored "Display" popover.
+const openDisplay = (container) => {
+  const btn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Display');
+  act(() => {
+    fireEvent.click(btn);
+  });
+};
+
 describe('Slate 0.124 runtime — value→initialValue + reproject rework', () => {
   it('renders the initialValue document (slate-react 0.124, no controlled value)', () => {
     const editor = makeEditor();
@@ -208,12 +216,13 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
     expect(shown.textContent).toContain('sentiment: neutral');
   });
 
-  it('exposes an Annotations toolbar toggle: enabled + functional for whisperx, disabled otherwise', () => {
+  it('exposes an Annotations toggle in the Display popover: enabled + functional for whisperx, disabled otherwise', () => {
     const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(wx);
     const wxBtn = [...wx.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Annotations');
     expect(wxBtn).toBeTruthy();
     expect(wxBtn.disabled).toBe(false);
-    // clicking the toolbar toggle reveals the chips
+    // clicking the toggle reveals the chips
     expect(wx.textContent).not.toContain('Career path');
     act(() => {
       fireEvent.click(wxBtn);
@@ -222,6 +231,7 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
 
     // classic (DPE) transcripts have no annotations → the toggle is present but disabled
     const { container: dpe } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(dpe);
     const dpeBtn = [...dpe.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Annotations');
     expect(dpeBtn).toBeTruthy();
     expect(dpeBtn.disabled).toBe(true);
@@ -232,38 +242,41 @@ describe('SlateTranscriptEditor — WhisperX profile', () => {
     expect(transcriptHasConfidence({ segments: [], word_segments: [] })).toBe(false);
   });
 
-  it('uses the lowered cutoff dropdown options for whisperx, the high ones otherwise', () => {
+  it('uses the lowered cutoff dropdown options for whisperx, the high ones otherwise (inside Display)', () => {
     const { container: wx } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(wx);
     const wxVals = [...wx.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
     expect(wxVals).toContain('0.3');
     expect(wxVals).not.toContain('0.85');
 
     const { container: dpe } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(dpe);
     const dpeVals = [...dpe.querySelector('select[title="Confidence threshold"]').querySelectorAll('option')].map((o) => o.value);
     expect(dpeVals).toContain('0.85');
   });
 
-  it('orders the Annotations toggle before Confidence in the toolbar', () => {
+  it('orders Annotations before Confidence inside the Display popover', () => {
     const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
+    openDisplay(container);
     const labels = [...container.querySelectorAll('button')].map((b) => b.textContent.trim());
     expect(labels.indexOf('Annotations')).toBeGreaterThan(-1);
     expect(labels.indexOf('Annotations')).toBeLessThan(labels.indexOf('Confidence'));
   });
 });
 
-describe('SlateTranscriptEditor — Word|Freestyle editing modes (strict tiers)', () => {
-  it('shows the Word|Freestyle switch for whisperx and switches Word → Freestyle (grid → Slate surface)', () => {
+describe('SlateTranscriptEditor — Rigid|Loose editing modes (strict tiers)', () => {
+  it('shows the Mode: Rigid|Loose switch for whisperx and switches Rigid → Loose (grid → Slate surface)', () => {
     const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX_DOC} profile="whisperx" mediaUrl="https://example.com/m.mp4" />);
-    const freestyleBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Freestyle');
-    expect(freestyleBtn).toBeTruthy();
-    // default mode = Word → the per-word grid (no contenteditable Slate surface)
+    const looseBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Loose');
+    expect(looseBtn).toBeTruthy();
+    // default mode = Rigid (word) → the per-word grid (no contenteditable Slate surface)
     expect(container.querySelector('.stw-word-level')).toBeTruthy();
     expect(container.querySelector('[contenteditable="true"]')).toBeFalsy();
 
     act(() => {
-      fireEvent.click(freestyleBtn);
+      fireEvent.click(looseBtn);
     });
-    // Freestyle → contenteditable Slate surface, grid gone, text preserved
+    // Loose (freestyle) → contenteditable Slate surface, grid gone, text preserved
     expect(container.querySelector('[contenteditable="true"], [role="textbox"]')).toBeTruthy();
     expect(container.querySelector('.stw-word-level')).toBeFalsy();
     expect(container.textContent).toContain('Ich wollte werden,');
@@ -271,8 +284,8 @@ describe('SlateTranscriptEditor — Word|Freestyle editing modes (strict tiers)'
 
   it('does not show the editing-mode switch for the classic (DPE) tier', () => {
     const { container } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/m.mp4" />);
-    const freestyleBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Freestyle');
-    expect(freestyleBtn).toBeFalsy();
+    const looseBtn = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Loose');
+    expect(looseBtn).toBeFalsy();
   });
 
   it('honors the editingMode="freestyle" prop on mount for a strict tier', () => {
