@@ -14,7 +14,7 @@ import { createEditor, Editor, Transforms, Text, Range, Element as SlateElement 
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 
-import EditorToolbar from './EditorToolbar';
+import EditorToolbar, { EditingToolbar } from './EditorToolbar';
 import FilesPanel from './FilesPanel';
 import { shortTimecode } from '../util/timecode-converter';
 import download from '../util/downlaod/index.js';
@@ -750,9 +750,9 @@ function SlateTranscriptEditorInner(props) {
   const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
   // (E) track changes — mark revised words (rewritten / inserted / muted) against the
-  // immutable original. Driven INDEPENDENTLY by the "Revised" display option AND the
-  // top-level "Track" toggle (either shows revisions; toggling one never flips the other).
-  const showRevised = settings.display.showRevised === true || settings.display.trackChanges === true;
+  // immutable original. Edits are always recorded vs. that original; the "Revised" display
+  // option is the single switch for whether those revisions are highlighted.
+  const showRevised = settings.display.showRevised === true;
   const revisedDecos = useMemo(() => {
     if (!showRevised) return { enabled: false, byPara: [] };
     const overlay = profile.versioning && profile.versioning.currentOverlay ? profile.versioning.currentOverlay() : {};
@@ -1858,7 +1858,8 @@ function SlateTranscriptEditorInner(props) {
 
               .editor-wrapper-container {
                 padding: 8px 16px;
-                height: 100%;
+                flex: 1;
+                min-height: 0;
                 overflow: auto;
                 position: relative;
               }
@@ -1891,34 +1892,19 @@ function SlateTranscriptEditorInner(props) {
         <div style={{ marginBottom: '0.75em', flex: '0 0 auto', zIndex: 20, background: '#fff' }}>
           <EditorToolbar
             editable={editable}
-            setEditable={setEditable}
             settings={settings}
             actions={actions}
             presets={presets}
             activePresetId={activePresetId}
-            canStructuralEdit={editPolicy.allowsStructuralEdits}
             canShowAnnotations={!!editPolicy.supportsAnnotations}
             cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
-            editingMode={editingMode}
-            editingModes={editingModes}
-            onEditingModeChange={onEditingModeChange}
-            showEditingModeSwitch={showEditingModeSwitch}
-            canStyle={!!(profile.versioning && profile.versioning.setStyles)}
-            styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
-            onApplyStyle={applyStyleToSelection}
-            activeMarks={activeMarks}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
             handleSave={handleSave}
-            handleUndo={handleUndo}
-            handleRedo={handleRedo}
             handleExport={handleExport}
             exporters={profile.exporters}
             onRevertToSaved={handleRevertToSaved}
             onRevertToImported={handleRevertToImported}
-            handleReplaceText={handleReplaceText}
-            insertTextInaudible={insertTextInaudible}
-            handleInsertMusicNote={handleInsertMusicNote}
             onOpenPreferences={() => setPrefsOpen(true)}
             onShowRawSource={props.onShowRawSource}
           />
@@ -2091,6 +2077,26 @@ function SlateTranscriptEditorInner(props) {
               {value.length !== 0 ? (
                 <>
                   <Paper elevation={3} sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    <EditingToolbar
+                      editable={editable}
+                      setEditable={setEditable}
+                      settings={settings}
+                      actions={actions}
+                      canStructuralEdit={editPolicy.allowsStructuralEdits}
+                      editingMode={editingMode}
+                      editingModes={editingModes}
+                      onEditingModeChange={onEditingModeChange}
+                      showEditingModeSwitch={showEditingModeSwitch}
+                      canStyle={!!(profile.versioning && profile.versioning.setStyles)}
+                      styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
+                      onApplyStyle={applyStyleToSelection}
+                      activeMarks={activeMarks}
+                      handleUndo={handleUndo}
+                      handleRedo={handleRedo}
+                      insertTextInaudible={insertTextInaudible}
+                      handleInsertMusicNote={handleInsertMusicNote}
+                      handleReplaceText={handleReplaceText}
+                    />
                     <section
                       ref={editorScrollRef}
                       className="editor-wrapper-container"

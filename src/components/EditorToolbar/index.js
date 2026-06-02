@@ -140,21 +140,6 @@ const S = {
   groupGap: { width: 12, flex: '0 0 auto' }, // breathing room between logical toolbar groups (no divider line)
 };
 
-function FlatToggle({ label, active, onClick, disabled, title }) {
-  return (
-    <button
-      type="button"
-      className="stte-hover-text"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      title={title}
-      style={{ ...S.toggle(active && !disabled), ...(disabled ? { opacity: 0.4, cursor: 'default' } : null) }}
-    >
-      {label}
-    </button>
-  );
-}
-
 const IconBtn = React.forwardRef(({ icon: Icon, title, framed, active, onClick, disabled, ...rest }, ref) => (
   <button
     ref={ref}
@@ -456,16 +441,15 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
   );
 }
 
-export default function EditorToolbar({
+// Editing toolbar — docked to the top of the text area (the transcript card's header).
+// Holds the change-the-text controls: lock, mode, styling, undo/redo, structural tools,
+// and a font-size stepper. Display + file controls live in the top EditorToolbar below.
+export function EditingToolbar({
   editable,
   setEditable,
   settings,
   actions,
-  presets,
-  activePresetId,
   canStructuralEdit,
-  canShowAnnotations,
-  cutoffOptions,
   editingMode,
   editingModes,
   onEditingModeChange,
@@ -474,18 +458,84 @@ export default function EditorToolbar({
   styleEnabled,
   onApplyStyle,
   activeMarks,
+  handleUndo,
+  handleRedo,
+  insertTextInaudible,
+  handleInsertMusicNote,
+  handleReplaceText,
+}) {
+  const fontSize = settings.appearance.fontSize;
+  const setFontSize = (next) => actions.setField('appearance', 'fontSize', Math.min(28, Math.max(11, next)));
+  return (
+    <div className="stte-ui stte-toolbar-scroll" style={{ ...S.bar, borderBottom: `1px solid ${C.line}` }}>
+      <IconBtn
+        icon={editable ? I.unlock : I.lock}
+        title={editable ? 'Editing unlocked — click to lock' : 'Read-only — click to unlock'}
+        framed={!editable}
+        active={!editable}
+        onClick={() => setEditable(!editable)}
+      />
+
+      {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
+
+      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} active={activeMarks} />}
+
+      <span style={S.groupGap} />
+      <IconBtn icon={I.undo} title="Undo (⌘Z)" framed onClick={handleUndo} disabled={!editable} />
+      <IconBtn icon={I.redo} title="Redo (⌘Y)" framed onClick={handleRedo} disabled={!editable} />
+
+      {canStructuralEdit && (
+        <>
+          <span style={S.groupGap} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconBtn icon={I.tools} title="Tools" disabled={!editable} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLabel>Tools</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => insertTextInaudible && insertTextInaudible()}>
+                <I.inaudible /> Insert [INAUDIBLE]
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleInsertMusicNote && handleInsertMusicNote()}>
+                <I.music /> Insert ♪ music note
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => handleReplaceText && handleReplaceText()}>
+                <I.replace /> Replace whole text…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+
+      <span style={S.spring} />
+
+      {/* Font-size stepper — resizes the transcript text live (clamped 11–28); a view
+          preference, so it stays enabled even when editing is locked. */}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: '0 0 auto' }}>
+        <IconBtn icon={I.fontMinus} title="Decrease font size" framed onClick={() => setFontSize(fontSize - 1)} disabled={fontSize <= 11} />
+        <span style={{ fontSize: 12, color: C.muted, fontVariantNumeric: 'tabular-nums', minWidth: 26, textAlign: 'center' }}>{fontSize}</span>
+        <IconBtn icon={I.fontPlus} title="Increase font size" framed onClick={() => setFontSize(fontSize + 1)} disabled={fontSize >= 28} />
+      </span>
+    </div>
+  );
+}
+
+export default function EditorToolbar({
+  editable,
+  settings,
+  actions,
+  presets,
+  activePresetId,
+  canShowAnnotations,
+  cutoffOptions,
   isProcessing,
   isContentSaved,
   handleSave,
-  handleUndo,
-  handleRedo,
   handleExport,
   exporters,
   onRevertToSaved,
   onRevertToImported,
-  handleReplaceText,
-  insertTextInaudible,
-  handleInsertMusicNote,
   onOpenPreferences,
   onShowRawSource,
 }) {
@@ -503,26 +553,6 @@ export default function EditorToolbar({
 
   return (
     <div className="stte-ui stte-toolbar-scroll" style={S.bar}>
-      <IconBtn
-        icon={editable ? I.unlock : I.lock}
-        title={editable ? 'Editing unlocked — click to lock' : 'Read-only — click to unlock'}
-        framed={!editable}
-        active={!editable}
-        onClick={() => setEditable(!editable)}
-      />
-
-      {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
-
-      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} active={activeMarks} />}
-
-      <span style={S.groupGap} />
-      {/* Track changes — independent of the "Revised" show option (toggling one never flips the other). */}
-      <FlatToggle
-        label="Track"
-        active={!!display.trackChanges}
-        title="Track changes — highlight revised (amber), inserted (green) and muted (struck) words"
-        onClick={() => setDisplay('trackChanges', !display.trackChanges)}
-      />
       <DisplayPopover
         display={display}
         conf={conf}
@@ -552,33 +582,6 @@ export default function EditorToolbar({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span style={S.groupGap} />
-      <IconBtn icon={I.undo} title="Undo (⌘Z)" framed onClick={handleUndo} disabled={!editable} />
-      <IconBtn icon={I.redo} title="Redo (⌘Y)" framed onClick={handleRedo} disabled={!editable} />
-
-      <span style={S.groupGap} />
-
-      {canStructuralEdit && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <IconBtn icon={I.tools} title="Tools" disabled={!editable} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Tools</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => insertTextInaudible && insertTextInaudible()}>
-              <I.inaudible /> Insert [INAUDIBLE]
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => handleInsertMusicNote && handleInsertMusicNote()}>
-              <I.music /> Insert ♪ music note
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => handleReplaceText && handleReplaceText()}>
-              <I.replace /> Replace whole text…
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
 
       <span style={S.spring} />
 

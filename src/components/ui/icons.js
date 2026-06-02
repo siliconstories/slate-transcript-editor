@@ -23,6 +23,8 @@ import {
   TbHistory,
   TbPlayerPlayFilled,
   TbHighlight,
+  TbTextIncrease,
+  TbTextDecrease,
 } from 'react-icons/tb';
 
 export const I = {
@@ -48,4 +50,6 @@ export const I = {
   restoreTimecodes: TbHistory,
   play: TbPlayerPlayFilled,
   highlight: TbHighlight,
+  fontPlus: TbTextIncrease,
+  fontMinus: TbTextDecrease,
 };
