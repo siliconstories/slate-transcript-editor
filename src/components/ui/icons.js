@@ -22,6 +22,7 @@ import {
   TbMusic,
   TbHistory,
   TbPlayerPlayFilled,
+  TbHighlight,
 } from 'react-icons/tb';
 
 export const I = {
@@ -46,4 +47,5 @@ export const I = {
   music: TbMusic,
   restoreTimecodes: TbHistory,
   play: TbPlayerPlayFilled,
+  highlight: TbHighlight,
 };

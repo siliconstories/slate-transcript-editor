@@ -40,6 +40,7 @@ import buildConfidenceDecorations from '../util/confidence-decorations';
 import buildProvenanceDecorations from '../util/provenance-decorations';
 import buildStyleDecorations from '../util/style-decorations';
 import selectionToStyleRanges from '../util/selection-to-style-range';
+import buildRevisedDecorations from '../util/revised-decorations';
 import { alignParagraph } from '../transcript-model/align-paragraph';
 import { tokenToLeafWord } from '../transcript-model/freetext-to-slate';
 import { confidenceOf, groupSlateWordsIntoSentences } from '../util/rev-to-sentences';
@@ -745,6 +746,17 @@ function SlateTranscriptEditorInner(props) {
   );
   const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
+  // (E) track changes — mark revised words (rewritten / inserted / muted) against the
+  // immutable original. Rewrites are read from the overlay; inserted/muted are leaf flags.
+  const showRevised = settings.display.showRevised === true;
+  const revisedDecos = useMemo(() => {
+    if (!showRevised) return { enabled: false, byPara: [] };
+    const overlay = profile.versioning && profile.versioning.currentOverlay ? profile.versioning.currentOverlay() : {};
+    const rewritten = new Set(Object.keys(overlay || {}).filter((k) => overlay[k] && typeof overlay[k].value === 'string'));
+    return buildRevisedDecorations(value, rewritten);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRevised, value]);
+
   const decorate = useCallback(
     ([node, path]) => {
       if (!Text.isText(node) || path.length !== 2 || path[1] !== 0) return [];
@@ -803,9 +815,18 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (E) track changes — revised words
+      if (revisedDecos.enabled) {
+        const paraDecos = revisedDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            ranges.push({ anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd }, revised: d.revised });
+          });
+        }
+      }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos, revisedDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -854,8 +875,24 @@ function SlateTranscriptEditorInner(props) {
         style.backgroundColor = leaf.styleHighlight;
         style.borderRadius = '2px';
       }
+      // (E) track changes — revised words: amber=rewritten, green=inserted, strike=muted
+      let revisedTitle;
+      if (leaf.revised === 'rewritten') {
+        style.backgroundColor = 'rgba(245, 158, 11, 0.22)';
+        style.borderRadius = '2px';
+        revisedTitle = 'Revised — text edited';
+      } else if (leaf.revised === 'inserted') {
+        style.backgroundColor = 'rgba(34, 197, 94, 0.22)';
+        style.borderRadius = '2px';
+        revisedTitle = 'Inserted — not in the original transcript';
+      } else if (leaf.revised === 'muted') {
+        style.textDecoration = style.textDecoration ? `${style.textDecoration} line-through` : 'line-through';
+        style.color = '#b91c1c';
+        revisedTitle = 'Muted — removed on export';
+      }
       const hasStyle = Object.keys(style).length > 0;
-      const title = leaf.styleNote || (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
+      const title =
+        leaf.styleNote || revisedTitle || (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
       return (
         <span
           onDoubleClick={handleLeafDoubleClick}
@@ -876,7 +913,7 @@ function SlateTranscriptEditorInner(props) {
     // switches and edits (renderLeaf is memoized; without them it captures stale state).
     // styleDecos gives renderLeaf a fresh identity when styling changes so leaves repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, wordLevelEditing, editable, value]
+    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, wordLevelEditing, editable, value]
   );
 
   //

@@ -50,7 +50,8 @@ const S = {
     alignItems: 'center',
     gap: 8,
     padding: '7px 10px',
-    borderBottom: `1px solid ${C.line}`,
+    // loose hairline below the toolbar — a single faint rule separating it from the content
+    borderBottom: '1px solid #efefef',
     background: C.bg,
     fontFamily: 'Inter, Roboto, system-ui, sans-serif',
     color: C.text,
@@ -277,8 +278,61 @@ function StyleGroup({ enabled, onApply }) {
       {btn('B', 'bold', { fontWeight: 700 }, 'Bold (⌘B)')}
       {btn('I', 'italic', { fontStyle: 'italic' }, 'Italic (⌘I)')}
       {btn('U', 'underline', { textDecoration: 'underline' }, 'Underline (⌘U)')}
-      {btn('H', { highlight: '#fde68a' }, { background: '#fde68a' }, 'Highlight')}
+      {btn(
+        <I.highlight size={15} style={{ display: 'block' }} />,
+        { highlight: '#fde68a' },
+        { display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+        'Highlight'
+      )}
     </span>
+  );
+}
+
+// Compact show-option row: a square checkbox + label (used in the Display "Show" list).
+function ShowRow({ label, active, disabled, title, onClick }) {
+  return (
+    <button
+      type="button"
+      className="stte-hover-soft"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={title}
+      aria-pressed={active}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        border: 'none',
+        background: 'transparent',
+        cursor: disabled ? 'default' : 'pointer',
+        padding: '4px 6px',
+        borderRadius: 6,
+        fontFamily: 'inherit',
+        fontSize: 13,
+        color: disabled ? C.faint : C.text,
+        opacity: disabled ? 0.55 : 1,
+        textAlign: 'left',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 15,
+          height: 15,
+          flex: '0 0 auto',
+          borderRadius: 3,
+          border: `1.5px solid ${active && !disabled ? C.primary : C.line2}`,
+          background: active && !disabled ? C.primary : 'transparent',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: 1, background: active && !disabled ? '#fff' : 'transparent' }} />
+      </span>
+      {label}
+    </button>
   );
 }
 
@@ -308,10 +362,10 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
       {open && (
         <div className="stte-ui" style={S.popover} role="dialog" aria-label="Display options">
           <div style={S.popLabel}>Show</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            <FlatToggle label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
-            <FlatToggle label="Timecodes" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
-            <FlatToggle
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 10, rowGap: 0, minWidth: 260 }}>
+            <ShowRow label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
+            <ShowRow label="Timecodes" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
+            <ShowRow
               label="Annotations"
               active={display.showAnnotations}
               disabled={!canShowAnnotations}
@@ -322,12 +376,18 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               }
               onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
             />
-            <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
-            <FlatToggle
+            <ShowRow label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
+            <ShowRow
               label="Styling"
               active={display.showStyling !== false}
               title="Show user styling (bold / italic / underline / highlight / notes)"
               onClick={() => setDisplay('showStyling', !(display.showStyling !== false))}
+            />
+            <ShowRow
+              label="Revised"
+              active={!!display.showRevised}
+              title="Highlight revised words — edited (amber), inserted (green), muted (struck)"
+              onClick={() => setDisplay('showRevised', !display.showRevised)}
             />
           </div>
           <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
@@ -401,7 +461,7 @@ export default function EditorToolbar({
       <IconBtn
         icon={editable ? I.unlock : I.lock}
         title={editable ? 'Editing unlocked — click to lock' : 'Read-only — click to unlock'}
-        framed
+        framed={!editable}
         active={!editable}
         onClick={() => setEditable(!editable)}
       />
@@ -411,6 +471,13 @@ export default function EditorToolbar({
       {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} />}
 
       <span style={S.groupGap} />
+      {/* Track changes — highlights revised / inserted / muted words (bound to display.showRevised). */}
+      <FlatToggle
+        label="Track"
+        active={!!display.showRevised}
+        title="Track changes — highlight revised (amber), inserted (green) and muted (struck) words"
+        onClick={() => setDisplay('showRevised', !display.showRevised)}
+      />
       <DisplayPopover
         display={display}
         conf={conf}
