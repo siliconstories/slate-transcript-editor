@@ -12,7 +12,6 @@
     "demo:build": "vite build -c demo/vite.config.mjs",
     "demo:serve": "node demo/serve.js",
     "demo:start": "npm run demo:build && npm run demo:serve",
-    "convert:rev": "node demo/rev-to-dpe-cli.js",
     "convert:sentences": "node demo/rev-to-sentences-cli.js",
     "deploy:ghpages": "npm run build-storybook  && cp .nojekyll .out/.nojekyll && gh-pages -d .out",
     "build:component": "cross-env BABEL_ENV=production babel src -d dist --ignore \"**/*.test.js,**/*.stories.js\" && /bin/cp -rf package.json dist && /bin/cp -rf README.md dist && npm run build:css",

@@ -10,8 +10,8 @@ import '@fontsource/roboto/700.css';
 
 const DEMO_MEDIA_URL_SOLEIO =
   'https://digital-paper-edit-demo.s3.eu-west-2.amazonaws.com/PBS-Frontline/The+Facebook+Dilemma+-+interviews/The+Facebook+Dilemma+-+Soleio+Cuervo-OIAUfZBd_7w.mp4';
-const DEMO_TITLE_SOLEIO = 'Soleio Interview, PBS Frontline';
-import DEMO_SOLEIO from '../sample-data/soleio-dpe.json';
+const DEMO_TITLE_SOLEIO = 'GEMS-01 — UZH annotated (WhisperX)';
+import DEMO_WHISPERX from '../sample-data/GEMS-01-UZH.json';
 
 export default {
   title: 'Saving indicator',
@@ -28,8 +28,8 @@ export const NoAutoSave = {
         title={DEMO_TITLE_SOLEIO}
         mediaUrl={DEMO_MEDIA_URL_SOLEIO}
         handleSaveEditor={action('handleSaveEditor')}
-        autoSaveContentType={'digitalpaperedit'}
-        transcriptData={DEMO_SOLEIO}
+        autoSaveContentType={'whisperx'}
+        transcriptData={DEMO_WHISPERX}
       />
     </>
   ),
@@ -46,8 +46,8 @@ export const AutoSave = {
         mediaUrl={DEMO_MEDIA_URL_SOLEIO}
         handleSaveEditor={action('handleSaveEditor')}
         handleAutoSaveChanges={action('handleAutoSaveChanges')}
-        autoSaveContentType={'digitalpaperedit'}
-        transcriptData={DEMO_SOLEIO}
+        autoSaveContentType={'whisperx'}
+        transcriptData={DEMO_WHISPERX}
       />
     </>
   ),

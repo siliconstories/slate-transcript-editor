@@ -13,7 +13,40 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
 import SlateTranscriptEditor from './index';
-import DPE from '../util/export-adapters/__fixtures__/golden-dpe.json';
+
+// WhisperX-shaped transcript (the canonical accepted import).
+const WHISPERX = {
+  segments: [
+    {
+      start: 0,
+      end: 1.2,
+      text: 'Hello world this is Alice',
+      speaker: 'Alice',
+      words: [
+        { word: 'Hello', start: 0, end: 0.2, score: 0.9, speaker: 'Alice' },
+        { word: 'world', start: 0.2, end: 0.4, score: 0.8, speaker: 'Alice' },
+        { word: 'this', start: 0.4, end: 0.6, score: 0.9, speaker: 'Alice' },
+        { word: 'is', start: 0.6, end: 0.8, score: 0.9, speaker: 'Alice' },
+        { word: 'Alice', start: 0.8, end: 1.2, score: 0.95, speaker: 'Alice' },
+      ],
+    },
+    {
+      start: 2.0,
+      end: 3.0,
+      text: 'And now Bob speaks',
+      speaker: 'Bob',
+      words: [
+        { word: 'And', start: 2.0, end: 2.2, score: 0.9, speaker: 'Bob' },
+        { word: 'now', start: 2.2, end: 2.4, score: 0.9, speaker: 'Bob' },
+        { word: 'Bob', start: 2.4, end: 2.7, score: 0.95, speaker: 'Bob' },
+        { word: 'speaks', start: 2.7, end: 3.0, score: 0.9, speaker: 'Bob' },
+      ],
+    },
+  ],
+  word_segments: [],
+  annotation_metadata: { chunks: [] },
+};
+WHISPERX.word_segments = WHISPERX.segments.flatMap((s) => s.words);
 
 beforeAll(() => {
   const fakeSelection = () => ({
@@ -47,8 +80,8 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe('SlateTranscriptEditor — mount smoke', () => {
-  it('mounts with a DPE transcript and renders the paragraph text', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/media.mp4" title="Smoke Test" />);
+  it('mounts with a WhisperX transcript and renders the paragraph text', () => {
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX} mediaUrl="https://example.com/media.mp4" title="Smoke Test" />);
     // Slate splits a paragraph across leaf/speaker/timecode nodes, so assert on the
     // concatenated text content rather than a single element.
     expect(container.textContent).toContain('Hello world this is Alice');
@@ -56,7 +89,7 @@ describe('SlateTranscriptEditor — mount smoke', () => {
   });
 
   it('renders speaker labels and a media element', () => {
-    const { container } = render(<SlateTranscriptEditor transcriptData={DPE} mediaUrl="https://example.com/media.mp4" title="Smoke Test" />);
+    const { container } = render(<SlateTranscriptEditor transcriptData={WHISPERX} mediaUrl="https://example.com/media.mp4" title="Smoke Test" />);
     expect(container.textContent).toMatch(/Alice/);
     expect(container.textContent).toMatch(/Bob/);
     // the media player mounted

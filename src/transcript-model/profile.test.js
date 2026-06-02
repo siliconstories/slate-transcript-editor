@@ -9,39 +9,36 @@ const WHISPERX = {
   annotation_metadata: { chunks: [] },
 };
 
-describe('profile registry', () => {
-  it('resolveProfile(nullish) -> classic', () => {
-    expect(resolveProfile(undefined).id).toBe('classic');
-    expect(resolveProfile(null).id).toBe('classic');
-    expect(resolveProfile(undefined).editPolicy.allowsStructuralEdits).toBe(true);
+describe('profile registry — single unified whisper tier', () => {
+  it('resolveProfile(nullish) -> a fresh whisper profile', () => {
+    expect(resolveProfile(undefined).id).toBe('whisper');
+    expect(resolveProfile(null).id).toBe('whisper');
+    // word-level-only strict tier (no free-text DPE default any more)
+    expect(resolveProfile(undefined).editPolicy.wordLevelOnly).toBe(true);
+    expect(resolveProfile(undefined).editPolicy.allowsStructuralEdits).toBe(false);
   });
 
-  it('resolveProfile(string id) -> fresh instance from registry', () => {
-    const rigid = resolveProfile('rigid');
-    expect(rigid.id).toBe('rigid');
-    expect(rigid.editPolicy.wordLevelOnly).toBe(true);
-  });
-
-  it('resolveProfile(unknown id) -> classic fallback', () => {
-    expect(resolveProfile('does-not-exist').id).toBe('classic');
+  it('resolveProfile(legacy/unknown string id) -> whisper', () => {
+    expect(resolveProfile('whisper').id).toBe('whisper');
+    expect(resolveProfile('rigid').id).toBe('whisper'); // legacy id maps to the unified tier
+    expect(resolveProfile('whisperx').id).toBe('whisper');
+    expect(resolveProfile('does-not-exist').id).toBe('whisper');
   });
 
   it('resolveProfile(instance) -> returned as-is', () => {
-    const instance = resolveProfile('rigid');
+    const instance = resolveProfile('whisper');
     expect(resolveProfile(instance)).toBe(instance);
   });
 
-  it('detectProfile routes rev.ai -> rigid, WhisperX -> whisperx, DPE -> classic', () => {
-    expect(detectProfile(REV).id).toBe('rigid');
-    expect(detectProfile(WHISPERX).id).toBe('whisperx');
-    expect(detectProfile(DPE).id).toBe('classic');
+  it('detectProfile routes rev.ai and WhisperX -> whisper; throws on anything else', () => {
+    expect(detectProfile(REV).id).toBe('whisper');
+    expect(detectProfile(WHISPERX).id).toBe('whisper');
+    expect(() => detectProfile(DPE)).toThrow(/unrecognized transcript/);
+    expect(() => detectProfile({})).toThrow(/unrecognized transcript/);
   });
 
-  it('whisperx detection needs BOTH segments and word_segments (segments-only -> classic fallback)', () => {
-    expect(detectProfile({ segments: WHISPERX.segments }).id).toBe('classic');
-    const rigidWhisperx = resolveProfile('whisperx');
-    expect(rigidWhisperx.id).toBe('whisperx');
-    expect(rigidWhisperx.editPolicy.wordLevelOnly).toBe(true);
+  it('whisperx detection needs BOTH segments and word_segments (segments-only -> not detected)', () => {
+    expect(() => detectProfile({ segments: WHISPERX.segments })).toThrow(/unrecognized transcript/);
   });
 
   it('registerProfile + getProfile round-trip; getProfile returns a fresh instance', () => {
@@ -53,7 +50,7 @@ describe('profile registry', () => {
     registerProfile(descriptor);
     expect(getProfile('demo-x').id).toBe('demo-x');
     expect(getProfile('demo-x')).not.toBe(getProfile('demo-x')); // fresh each call
-    expect(detectProfile({ __x: true }).id).toBe('demo-x'); // a custom detector wins over classic
+    expect(detectProfile({ __x: true }).id).toBe('demo-x'); // a custom detector is honored
     expect(getProfile('nope')).toBeUndefined();
   });
 

@@ -138,6 +138,7 @@ export const projectWhisperx = (original, overlay) => {
   const freeBySeg = new Map(); // segIdx -> token list (Freestyle whole-segment rebuild)
 
   Object.keys(overlay || {}).forEach((key) => {
+    if (key === 'styles') return; // user-styling layer is dropped from faithful STT export
     const o = overlay[key];
     if (!o) return;
     if (o.kind === 'freetext') {

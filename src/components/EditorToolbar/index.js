@@ -28,10 +28,7 @@ const WORD_EXPORTS = [
   { label: 'Word (Speakers & Timecodes)', args: { type: 'word', ext: 'docx', speakers: true, timecodes: true } },
   { label: 'Word (OHMS)', args: { type: 'word', ext: 'docx', speakers: false, timecodes: false, inlineTimecodes: true, hideTitle: true } },
 ];
-const DEV_EXPORTS = [
-  { label: 'SlateJs (.json)', args: { type: 'json-slate', ext: 'json', speakers: true, timecodes: true } },
-  { label: 'DPE (.json)', args: { type: 'json-digitalpaperedit', ext: 'json', speakers: true, timecodes: true } },
-];
+const DEV_EXPORTS = [{ label: 'SlateJs (.json)', args: { type: 'json-slate', ext: 'json', speakers: true, timecodes: true } }];
 
 // ── Hairline palette (the chosen look) ──
 const C = {
@@ -63,8 +60,8 @@ const S = {
   spring: { flex: 1, minWidth: 8 },
   toggle: (active) => ({
     cursor: 'pointer',
-    border: `1px solid ${active ? C.text : C.line2}`,
-    background: active ? C.soft : C.bg,
+    border: '1px solid transparent',
+    background: active ? C.soft : 'transparent',
     fontFamily: 'inherit',
     fontSize: 13,
     lineHeight: 1,
@@ -80,8 +77,8 @@ const S = {
     width: 28,
     height: 28,
     borderRadius: 6,
-    border: `1px solid ${framed ? C.line2 : 'transparent'}`,
-    background: framed ? C.bg : 'transparent',
+    border: '1px solid transparent',
+    background: framed ? C.soft : 'transparent',
     color: C.muted,
     cursor: 'pointer',
     display: 'inline-flex',
@@ -104,8 +101,8 @@ const S = {
       whiteSpace: 'nowrap',
       flex: '0 0 auto',
     };
-    if (kind === 'primary') return { ...base, background: C.primary, color: C.primaryFg, border: `1px solid ${C.primary}` };
-    if (kind === 'outline') return { ...base, background: C.bg, color: C.text, border: `1px solid ${C.line2}` };
+    if (kind === 'primary') return { ...base, background: C.primary, color: C.primaryFg, border: '1px solid transparent' };
+    if (kind === 'outline') return { ...base, background: 'transparent', color: C.text, border: '1px solid transparent' };
     return { ...base, background: 'transparent', color: C.muted, border: '1px solid transparent' }; // ghost
   },
   select: {
@@ -217,12 +214,14 @@ function WordSentenceSwitch({ value, onChange }) {
   );
 }
 
-// Editing-mode switch (strict tiers only): "Mode:" + Rigid | Loose pills.
-// 'word' (fixed word count: seek/mute/rewrite) reads as "Rigid"; 'freestyle'
-// (free-text, timestamps re-align) reads as "Loose".
-const EDITING_MODE_LABELS = { word: 'Rigid', freestyle: 'Loose', paragraph: 'Paragraph' };
+// Editing-mode switch: "Mode:" + Strict | Loose pills. Both modes share the same
+// Slate surface, data model, display options, and keyboard navigation — they differ
+// ONLY in double-click: 'word' ("Strict") selects one word for single-word edit/mute
+// on a read-only surface; 'freestyle' ("Loose") is free-text editing with re-aligned
+// timestamps.
+const EDITING_MODE_LABELS = { word: 'Strict', freestyle: 'Loose', paragraph: 'Paragraph' };
 const EDITING_MODE_TITLES = {
-  word: 'Rigid — per-word seek, mute, and rewrite (word count fixed)',
+  word: 'Strict — double-click a word to edit or mute it (word count fixed)',
   freestyle: 'Loose — free-text editing; timestamps re-align on the original words',
 };
 function EditingModeSwitch({ value, modes, onChange }) {
@@ -244,6 +243,41 @@ function EditingModeSwitch({ value, modes, onChange }) {
           </button>
         ))}
       </span>
+    </span>
+  );
+}
+
+// User-styling buttons: bold / italic / underline / highlight, applied to the current
+// selection (one word in Strict, an arbitrary range in Loose). Shared by both modes.
+function StyleGroup({ enabled, onApply }) {
+  const base = {
+    border: '1px solid transparent',
+    borderRadius: 4,
+    background: 'transparent',
+    minWidth: 22,
+    height: 22,
+    fontSize: 12,
+    lineHeight: 1,
+    padding: '0 4px',
+  };
+  const btn = (label, mark, extra, title) => (
+    <button
+      type="button"
+      disabled={!enabled}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => onApply(mark)}
+      title={title}
+      style={{ ...base, ...extra, opacity: enabled ? 1 : 0.4, cursor: enabled ? 'pointer' : 'default' }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <span style={{ display: 'inline-flex', gap: 2, alignItems: 'center' }} title="Apply styling to the selection">
+      {btn('B', 'bold', { fontWeight: 700 }, 'Bold (⌘B)')}
+      {btn('I', 'italic', { fontStyle: 'italic' }, 'Italic (⌘I)')}
+      {btn('U', 'underline', { textDecoration: 'underline' }, 'Underline (⌘U)')}
+      {btn('H', { highlight: '#fde68a' }, { background: '#fde68a' }, 'Highlight')}
     </span>
   );
 }
@@ -289,6 +323,12 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
             />
             <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
+            <FlatToggle
+              label="Styling"
+              active={display.showStyling !== false}
+              title="Show user styling (bold / italic / underline / highlight / notes)"
+              onClick={() => setDisplay('showStyling', !(display.showStyling !== false))}
+            />
           </div>
           <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
           <div
@@ -297,7 +337,7 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
             <select
               value={String(conf.cutoff)}
               onChange={(e) => setConf('cutoff', Number(e.target.value))}
-              title="Confidence threshold"
+              title="Word confidence threshold (sentence offset is in Preferences → Confidence)"
               style={{ ...S.select, color: C.text }}
             >
               {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
@@ -326,6 +366,9 @@ export default function EditorToolbar({
   editingModes,
   onEditingModeChange,
   showEditingModeSwitch,
+  canStyle,
+  styleEnabled,
+  onApplyStyle,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -364,6 +407,8 @@ export default function EditorToolbar({
       />
 
       {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
+
+      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} />}
 
       <span style={S.groupGap} />
       <DisplayPopover
@@ -426,8 +471,11 @@ export default function EditorToolbar({
       <span style={S.spring} />
 
       {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}
-      <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
+      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
+      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
+      <span style={S.groupGap} />
       <TextButton kind="primary" label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
+      <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <TextButton kind="outline" label="Export" chevron />
@@ -473,10 +521,6 @@ export default function EditorToolbar({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span style={S.groupGap} />
-      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
-      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
 
       <Dialog open={revertOpen} onOpenChange={setRevertOpen}>
         <DialogContent className="w-[min(440px,92vw)]">

@@ -18,7 +18,6 @@ import EditorToolbar from './EditorToolbar';
 import FilesPanel from './FilesPanel';
 import { shortTimecode } from '../util/timecode-converter';
 import download from '../util/downlaod/index.js';
-import convertDpeToSlate from '../util/dpe-to-slate';
 // TODO: This should be moved in export utils
 import insertTimecodesInLineInSlateJs from '../util/insert-timecodes-in-line-in-words-list';
 import pluck from '../util/pluk';
@@ -32,10 +31,15 @@ import stripMutedWords from '../util/strip-muted-words';
 import Chip from '@mui/material/Chip';
 import SlateHelpers from './slate-helpers';
 import { resolveProfile } from '../transcript-model/profile';
+import { whisperToModel, newHistory } from '../transcript-model/whisper-overlay';
+import { whisperModelToSlate } from '../transcript-model/whisper-to-slate';
+import { whisperConfidenceDefaults } from '../transcript-model/whisper-profile';
 import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
 import buildProvenanceDecorations from '../util/provenance-decorations';
+import buildStyleDecorations from '../util/style-decorations';
+import selectionToStyleRanges from '../util/selection-to-style-range';
 import { alignParagraph } from '../transcript-model/align-paragraph';
 import { tokenToLeafWord } from '../transcript-model/freetext-to-slate';
 import { confidenceOf, groupSlateWordsIntoSentences } from '../util/rev-to-sentences';
@@ -44,6 +48,17 @@ import PreferencesDialog from './PreferencesDialog';
 import '../styles/toolbar.css';
 
 const PLAYBACK_RATE_VALUES = [0.2, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5];
+const MEDIA_TOGGLE_STYLE = {
+  border: '1px solid #d4d4d8',
+  background: '#fff',
+  color: '#71717a',
+  borderRadius: 6,
+  padding: '2px 8px',
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'Inter, Roboto, system-ui, sans-serif',
+};
 const CIRCLE_BTN_STYLE = {
   width: 30,
   height: 30,
@@ -136,316 +151,8 @@ const DEFAULT_PROPS = {
   editingMode: 'auto',
 };
 
-// window after the last click in which further clicks are collected, so we can
-// tell single- / double- / triple-click apart
-const MULTI_CLICK_DELAY_MS = 260;
-
-/**
- * RIGID-mode editing surface (the "Word" approach). Lives in this same file as the
- * LOOSE/freestyle Slate surface below — they are two editing approaches over the
- * same value/handlers, not separate components in separate files.
- *
- * Renders every word as its own span so editing happens at the word granularity the
- * DPE/rev.ai/whisperx JSON stores. Gestures:
- *   - single click     -> seek media to the word's start (no play-state change)
- *   - double click     -> edit just that word (inline input); commit writes words[i].text
- *   - alt/option click -> seek to the word and toggle play/pause
- *   - ctrl/cmd click   -> toggle muted (adds `muted: true` to the word; strikethrough)
- */
-function WordLevelEditor({
-  value,
-  setValue,
-  isEditable,
-  showSpeakers,
-  showTimecodes,
-  showAnnotations,
-  currentTime,
-  followPlayback,
-  onSeek,
-  onSeekAndPlay,
-  onSeekAndTogglePlay,
-  onContentChange,
-  onSetSpeakerName,
-  onShowRawSource,
-  confidenceOverlay,
-}) {
-  const [editing, setEditing] = useState(null); // { pIdx, wIdx }
-  const [draft, setDraft] = useState('');
-  const clickTimer = useRef(null);
-
-  // active word for the "follow the speech" highlight, computed over a flat,
-  // time-sorted list that points back to (pIdx, wIdx).
-  const flatWords = useMemo(() => {
-    const flat = [];
-    value.forEach((paragraph, pIdx) => {
-      const words = paragraph && paragraph.children && Array.isArray(paragraph.children[0].words) ? paragraph.children[0].words : [];
-      words.forEach((word, wIdx) => {
-        if (typeof word.text === 'string' && word.text.length > 0) {
-          flat.push({ pIdx, wIdx, start: typeof word.start === 'number' ? word.start : 0 });
-        }
-      });
-    });
-    flat.sort((a, b) => a.start - b.start);
-    return flat;
-  }, [value]);
-
-  const activeWord = useMemo(() => {
-    if (!followPlayback) return null;
-    const i = findActiveWord(flatWords, currentTime);
-    return i >= 0 ? flatWords[i] : null;
-  }, [followPlayback, flatWords, currentTime]);
-
-  // confidence "heat" overlay (word or sentence level), driven by preferences
-  const ov = confidenceOverlay || {};
-  const overlayOn = ov.overlay === true;
-  const styleOpts = { cutoff: ov.cutoff, floor: ov.floor, highlightOpacity: ov.highlightOpacity };
-  const metricIdx = ov.sentenceMetric === 'duration_weighted' ? 1 : 0;
-  const wordColors = useMemo(() => {
-    if (!overlayOn) return null;
-    return value.map((paragraph) => {
-      const words = paragraph && paragraph.children && Array.isArray(paragraph.children[0].words) ? paragraph.children[0].words : [];
-      if (ov.level === 'sentence') {
-        const colors = new Array(words.length).fill(null);
-        groupSlateWordsIntoSentences(words).forEach(({ wIdxStart, wIdxEnd, words: sWords }) => {
-          const color = confidenceToStyle(confidenceOf(sWords)[metricIdx], styleOpts);
-          for (let i = wIdxStart; i <= wIdxEnd; i += 1) colors[i] = color;
-        });
-        return colors;
-      }
-      return words.map((w) => confidenceToStyle(w.confidence, styleOpts));
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, overlayOn, ov.level, ov.cutoff, ov.floor, ov.highlightOpacity, metricIdx]);
-
-  const updateWord = useCallback(
-    (pIdx, wIdx, changes) => {
-      const newValue = value.map((paragraph, pi) => {
-        if (pi !== pIdx) return paragraph;
-        const child = paragraph.children[0];
-        const words = child.words.map((word, wi) => (wi === wIdx ? { ...word, ...changes } : word));
-        const text = words.map((word) => (typeof word.text === 'string' ? word.text : '') + (word.punctAfter || '')).join(' ');
-        return { ...paragraph, children: [{ ...child, words, text }] };
-      });
-      setValue(newValue);
-      if (onContentChange) onContentChange(newValue);
-    },
-    [value, setValue, onContentChange]
-  );
-
-  const beginEdit = (pIdx, wIdx, word) => {
-    if (isEditable === false) return;
-    setEditing({ pIdx, wIdx });
-    setDraft(typeof word.text === 'string' ? word.text : '');
-  };
-
-  const commitEdit = () => {
-    if (!editing) return;
-    updateWord(editing.pIdx, editing.wIdx, { text: draft });
-    setEditing(null);
-  };
-
-  const cancelEdit = () => setEditing(null);
-
-  const handleWordClick = (e, pIdx, wIdx, word) => {
-    if (e.ctrlKey || e.metaKey) {
-      if (clickTimer.current) {
-        clearTimeout(clickTimer.current);
-        clickTimer.current = null;
-      }
-      if (isEditable !== false) updateWord(pIdx, wIdx, { muted: !word.muted });
-      return;
-    }
-    if (e.altKey) {
-      if (clickTimer.current) {
-        clearTimeout(clickTimer.current);
-        clickTimer.current = null;
-      }
-      if (onSeekAndTogglePlay && typeof word.start === 'number') onSeekAndTogglePlay(word.start);
-      return;
-    }
-    if (clickTimer.current) clearTimeout(clickTimer.current);
-    clickTimer.current = setTimeout(() => {
-      clickTimer.current = null;
-      if (onSeek && typeof word.start === 'number') onSeek(word.start);
-    }, MULTI_CLICK_DELAY_MS);
-  };
-
-  const handleWordDoubleClick = (e, pIdx, wIdx, word) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-    }
-    beginEdit(pIdx, wIdx, word);
-  };
-
-  const renderWord = (paragraph, pIdx, word, wIdx) => {
-    const text = typeof word.text === 'string' ? word.text : '';
-    if (text.length === 0) return null;
-    const isEditingThis = editing && editing.pIdx === pIdx && editing.wIdx === wIdx;
-    if (isEditingThis) {
-      return (
-        <React.Fragment key={wIdx}>
-          <span className="stw-edit-wrap">
-            <span
-              className="stw-edit-tools"
-              contentEditable={false}
-              style={pIdx === 0 ? { bottom: 'auto', top: '100%', marginTop: 3, marginBottom: 0 } : undefined}
-            >
-              <button
-                type="button"
-                className="stw-mute-btn"
-                aria-pressed={Boolean(word.muted)}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  updateWord(pIdx, wIdx, { muted: !word.muted });
-                  setEditing(null);
-                }}
-                title={word.muted ? 'Unmute this word' : 'Mute this word (removed on export)'}
-              >
-                {word.muted ? 'Unmute' : 'Mute'}
-              </button>
-              {onShowRawSource && (
-                <button
-                  type="button"
-                  className="stw-raw-btn"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    cancelEdit();
-                    onShowRawSource({ key: word._key, start: word.start });
-                  }}
-                  title="Edit the raw source document (JSON)"
-                >
-                  Raw…
-                </button>
-              )}
-            </span>
-            <input
-              className="stw-word-input"
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  commitEdit();
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  cancelEdit();
-                }
-              }}
-              size={Math.max(draft.length, 2)}
-            />
-          </span>
-          {word.punctAfter ? <span className="stw-punct">{word.punctAfter}</span> : null}{' '}
-        </React.Fragment>
-      );
-    }
-    const isActive = activeWord && activeWord.pIdx === pIdx && activeWord.wIdx === wIdx;
-    let className = 'stw-word';
-    if (word.muted) className += ' stw-muted';
-    if (isActive) className += ' current-word';
-    const paraColors = wordColors ? wordColors[pIdx] : null;
-    const myColor = paraColors ? paraColors[wIdx] : null;
-    const nextColor = paraColors ? paraColors[wIdx + 1] : null;
-    const wordStyle = !isActive && myColor ? { backgroundColor: myColor } : undefined;
-    const punctStyle = myColor ? { backgroundColor: myColor } : undefined;
-    const spaceStyle = myColor && nextColor ? { background: `linear-gradient(to right, ${myColor}, ${nextColor})` } : undefined;
-    return (
-      <React.Fragment key={wIdx}>
-        <span
-          className={className}
-          style={wordStyle}
-          role="button"
-          tabIndex={0}
-          title={isEditable === false ? undefined : 'Click: seek · Double-click: edit · Alt/Opt-click: play/pause · Ctrl/Cmd-click: mute'}
-          onClick={(e) => handleWordClick(e, pIdx, wIdx, word)}
-          onDoubleClick={(e) => handleWordDoubleClick(e, pIdx, wIdx, word)}
-        >
-          {text}
-        </span>
-        {word.punctAfter ? (
-          <span className="stw-punct" style={punctStyle}>
-            {word.punctAfter}
-          </span>
-        ) : null}
-        <span style={spaceStyle}> </span>
-      </React.Fragment>
-    );
-  };
-
-  return (
-    <div className="stw-word-level">
-      {value.map((paragraph, pIdx) => {
-        const child = paragraph.children && paragraph.children[0] ? paragraph.children[0] : { words: [] };
-        const words = Array.isArray(child.words) ? child.words : [];
-        return (
-          <Grid container direction="row" sx={{ justifyContent: 'flex-start', alignItems: 'baseline' }} key={pIdx} className="stw-paragraph">
-            {showTimecodes && (
-              <Grid size={{ xs: 4, sm: 3, md: 3, lg: 2, xl: 2 }} className={'text-truncate'}>
-                <code
-                  className={'timecode unselectable'}
-                  style={{ cursor: 'pointer', fontSize: 'inherit', color: '#9e9e9e' }}
-                  title={paragraph.startTimecode}
-                  onClick={() => onSeekAndPlay && onSeekAndPlay(paragraph.start)}
-                >
-                  {paragraph.startTimecode}
-                </code>
-              </Grid>
-            )}
-            {showSpeakers && (
-              <Grid size={{ xs: 8, sm: 9, md: 9, lg: 3, xl: 3 }} className={'text-truncate'}>
-                <Typography
-                  noWrap
-                  className={'text-truncate unselectable'}
-                  style={{ cursor: 'pointer', width: '100%', fontSize: 'inherit', color: '#9e9e9e' }}
-                  title={paragraph.speaker}
-                  onClick={() => onSetSpeakerName && onSetSpeakerName(paragraph)}
-                >
-                  {paragraph.speaker}
-                </Typography>
-              </Grid>
-            )}
-            <Grid
-              size={{
-                xs: 12,
-                sm: 12,
-                md: 12,
-                lg: 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0),
-                xl: 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0),
-              }}
-              className={'p-b-1'}
-            >
-              {words.map((word, wIdx) => renderWord(paragraph, pIdx, word, wIdx))}
-              {showAnnotations && paragraph.annotations && <AnnotationChips annotations={paragraph.annotations} />}
-            </Grid>
-          </Grid>
-        );
-      })}
-    </div>
-  );
-}
-
-WordLevelEditor.propTypes = {
-  value: PropTypes.array.isRequired,
-  setValue: PropTypes.func.isRequired,
-  isEditable: PropTypes.bool,
-  showSpeakers: PropTypes.bool,
-  showTimecodes: PropTypes.bool,
-  showAnnotations: PropTypes.bool,
-  currentTime: PropTypes.number,
-  followPlayback: PropTypes.bool,
-  onSeek: PropTypes.func,
-  onSeekAndPlay: PropTypes.func,
-  onSeekAndTogglePlay: PropTypes.func,
-  onContentChange: PropTypes.func,
-  onSetSpeakerName: PropTypes.func,
-  onShowRawSource: PropTypes.func,
-};
-
-// Per-segment annotation chips (topic / mood / sentiment / concept tags). Shared by
-// BOTH editing approaches (the Rigid word grid and the Loose freestyle paragraph).
+// Per-segment annotation chips (topic / mood / sentiment / concept tags), rendered
+// inside the shared TimedTextElement so they appear identically in both modes.
 function AnnotationChips({ annotations }) {
   if (!annotations) return null;
   return (
@@ -465,6 +172,74 @@ function AnnotationChips({ annotations }) {
 }
 AnnotationChips.propTypes = { annotations: PropTypes.object };
 
+// Strict-mode single-word editor: the inline editor from the old word grid (the input
+// in place, with small "Mute"/"Raw…" tools above it), floated at the double-clicked word
+// so it works over the read-only single Slate surface. Commits on Enter/blur; Esc cancels.
+function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, onCancel }) {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
+  const left = Math.max(8, Math.min(state.x, vw - 200));
+  const top = state.y;
+  // Near the viewport top the tools (normally above the input) would clip — flip them
+  // below, mirroring the old grid's first-paragraph handling.
+  const toolsBelow = top < 70;
+  return (
+    <span className="stw-edit-wrap" contentEditable={false} style={{ position: 'fixed', left, top, zIndex: 1400 }}>
+      <span
+        className="stw-edit-tools"
+        contentEditable={false}
+        style={toolsBelow ? { bottom: 'auto', top: '100%', marginTop: 3, marginBottom: 0 } : undefined}
+      >
+        <button
+          type="button"
+          className="stw-mute-btn"
+          aria-pressed={state.muted}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onToggleMute}
+          title={state.muted ? 'Unmute this word' : 'Mute this word (removed on export)'}
+        >
+          {state.muted ? 'Unmute' : 'Mute'}
+        </button>
+        {onShowRaw && (
+          <button
+            type="button"
+            className="stw-raw-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onShowRaw}
+            title="Edit the raw source document (JSON)"
+          >
+            Raw…
+          </button>
+        )}
+      </span>
+      <input
+        className="stw-word-input"
+        autoFocus
+        value={state.draft}
+        onChange={(e) => onDraft(e.target.value)}
+        onBlur={onSave}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onSave();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        size={Math.max(state.draft.length, 2)}
+      />
+    </span>
+  );
+}
+StrictWordPopover.propTypes = {
+  state: PropTypes.object,
+  onDraft: PropTypes.func,
+  onSave: PropTypes.func,
+  onToggleMute: PropTypes.func,
+  onShowRaw: PropTypes.func,
+  onCancel: PropTypes.func,
+};
+
 function SlateTranscriptEditorInner(props) {
   props = { ...DEFAULT_PROPS, ...props };
   const { settings, actions, presets, activePresetId } = usePreferences();
@@ -473,6 +248,8 @@ function SlateTranscriptEditorInner(props) {
   const [prefsOpen, setPrefsOpen] = useState(false);
   // Video|Files view tabs — only shown when the host supplies a `files` list.
   const [activeTab, setActiveTab] = useState('video');
+  // Collapse the left media column to give the transcript full width.
+  const [mediaCollapsed, setMediaCollapsed] = useState(false);
   const hasFiles = Array.isArray(props.files) && props.files.length > 0;
 
   // Editing is prop-seeded but toggled in-UI via the toolbar's Edit-Lock. Seed from
@@ -543,7 +320,7 @@ function SlateTranscriptEditorInner(props) {
   // it or the active profile has no sentence exporter (e.g. classic free-text).
   const wantsSentenceModel = Boolean(props.onSentenceModel);
   const emitSentenceModel = useMemo(() => {
-    const sentenceExporter = (profile.exporters || []).find((e) => e.id === 'json-rev-sentences');
+    const sentenceExporter = (profile.exporters || []).find((e) => typeof e.id === 'string' && e.id.endsWith('-sentences'));
     if (!wantsSentenceModel || !sentenceExporter) return null;
     return debounce(() => {
       const model = sentenceExporter.run();
@@ -612,10 +389,19 @@ function SlateTranscriptEditorInner(props) {
 
   useEffect(() => {
     if (props.transcriptData) {
-      const { value: importedValue } = profile.import(props.transcriptData);
-      setValue(importedValue);
-      importedValueRef.current = cloneValue(importedValue);
-      lastSavedValueRef.current = cloneValue(importedValue);
+      try {
+        const { value: importedValue } = profile.import(props.transcriptData);
+        setValue(importedValue);
+        importedValueRef.current = cloneValue(importedValue);
+        lastSavedValueRef.current = cloneValue(importedValue);
+        // a re-imported editing-session file carries user styles in its overlay
+        setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
+      } catch (e) {
+        // Unrecognized transcript (not rev.ai or WhisperX) is a hard error — surface it
+        // loudly and leave the editor empty rather than crashing the host React tree.
+        // eslint-disable-next-line no-console
+        console.error('[SlateTranscriptEditor] import failed:', e && e.message ? e.message : e);
+      }
     }
   }, []);
 
@@ -630,6 +416,7 @@ function SlateTranscriptEditorInner(props) {
     if (profile.versioning && profile.versioning.revertAll && profile.reproject) {
       profile.versioning.revertAll();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
     } else if (importedValueRef.current) {
       replaceSlateValue(cloneValue(importedValueRef.current));
     }
@@ -641,7 +428,9 @@ function SlateTranscriptEditorInner(props) {
   // handles interim results for worrking with a Live STT
   useEffect(() => {
     if (props.transcriptDataLive) {
-      const nodes = convertDpeToSlate(props.transcriptDataLive);
+      // Live chunks are rev.ai/WhisperX fragments — project them straight to Slate
+      // nodes for append (display-only; not threaded through the overlay/history).
+      const nodes = whisperModelToSlate(whisperToModel(props.transcriptDataLive), newHistory());
       // if the user is selecting the / typing the text
       // Transforms.insertNodes would insert the node at seleciton point
       // instead we check if they are in the editor
@@ -825,36 +614,6 @@ function SlateTranscriptEditorInner(props) {
   const showEditingModeSwitch = editingModes.length > 1 && !!profile.versioning;
   const onEditingModeChange = (m) => actions.setField('editing', 'editingMode', m);
 
-  // seek + play for the word-level editor (single click on a word)
-  // single-click: move the playhead to the word but do NOT change play state
-  const seekWord = (seconds) => {
-    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
-      mediaRef.current.currentTime = seconds;
-      if (props.handleAnalyticsEvents) {
-        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
-          fn: 'wordLevelSeek',
-          clickOrigin: 'word',
-          timeInSeconds: seconds,
-        });
-      }
-    }
-  };
-
-  // jump to a word/paragraph and start playing (used by the paragraph timecode click)
-  const seekAndPlayWord = (seconds) => {
-    if (mediaRef && mediaRef.current && typeof seconds === 'number') {
-      mediaRef.current.currentTime = seconds;
-      mediaRef.current.play();
-      if (props.handleAnalyticsEvents) {
-        props.handleAnalyticsEvents('ste_handle_timed_text_click', {
-          fn: 'wordLevelPlay',
-          clickOrigin: 'word',
-          timeInSeconds: seconds,
-        });
-      }
-    }
-  };
-
   // alt/option-click on a word: jump to it and toggle play/pause
   const seekAndTogglePlayWord = (seconds) => {
     if (mediaRef && mediaRef.current && typeof seconds === 'number') {
@@ -950,7 +709,10 @@ function SlateTranscriptEditorInner(props) {
     prevEditingModeRef.current = editingMode;
     if (commitFreestyleEdit) commitFreestyleEdit.flush();
     lastAlignedRef.current = new Map();
-    if (profile.versioning && profile.reproject) replaceSlateValue(profile.reproject());
+    if (profile.versioning && profile.reproject) {
+      replaceSlateValue(profile.reproject());
+      refreshStyles();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingMode]);
 
@@ -966,7 +728,22 @@ function SlateTranscriptEditorInner(props) {
   );
   const confidenceDecos = useMemo(() => buildConfidenceDecorations(value, confidenceSettings), [value, confidenceSettings]);
   // Estimated-timing (inserted) words in Freestyle mode — value-only (no playback recompute).
-  const provenanceDecos = useMemo(() => (isFreestyle ? buildProvenanceDecorations(value) : { enabled: false, byPara: [] }), [isFreestyle, value]);
+  // Estimated-timing (inserted) words underline in BOTH modes — a paragraph edited in
+  // Loose can carry estimated words that are still visible in Strict, so the display is
+  // identical regardless of the active mode.
+  const provenanceDecos = useMemo(() => buildProvenanceDecorations(value), [value]);
+
+  // (D) user styling — bold/italic/underline/highlight/note, anchored to word ids and
+  // rendered as decorations (never marks), so it can't corrupt word/timing data and
+  // composes with confidence/karaoke/provenance on the same leaf. `showStyling` only
+  // hides the rendering; the data (overlay.styles) is retained.
+  const showStyling = settings.display.showStyling !== false;
+  const [styleRanges, setStyleRanges] = useState([]);
+  const styleDecos = useMemo(
+    () => (showStyling ? buildStyleDecorations(value, styleRanges) : { enabled: false, byPara: [] }),
+    [showStyling, value, styleRanges]
+  );
+  const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
   const decorate = useCallback(
     ([node, path]) => {
@@ -1007,9 +784,28 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (D) user styling — bold / italic / underline / highlight / note
+      if (styleDecos.enabled) {
+        const paraDecos = styleDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            const range = { anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd } };
+            const m = d.mark;
+            if (m === 'bold') range.styleBold = true;
+            else if (m === 'italic') range.styleItalic = true;
+            else if (m === 'underline') range.styleUnderline = true;
+            else if (m && m.highlight) range.styleHighlight = m.highlight;
+            else if (m && typeof m.note === 'string') {
+              range.styleNote = m.note;
+              range.styleUnderline = true;
+            }
+            ranges.push(range);
+          });
+        }
+      }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -1031,11 +827,11 @@ function SlateTranscriptEditorInner(props) {
           return <DefaultElement {...props} />;
       }
     },
-    // showSpeakers/showTimecodes are closed over by TimedTextElement; without them
-    // here Slate keeps the stale closure and the classic editor ignores the toggles.
+    // showSpeakers/showTimecodes/showAnnotations are closed over by TimedTextElement;
+    // without them here Slate keeps the stale closure and the editor ignores the toggles.
     // isFreestyle/editable drive the per-sentence gutter rendered inside the element.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [showSpeakers, showTimecodes, isFreestyle, editable, value]
+    [showSpeakers, showTimecodes, showAnnotations, isFreestyle, editable, value]
   );
 
   // NOTE: activeWordIndex is intentionally in the dependency list even though it
@@ -1047,15 +843,26 @@ function SlateTranscriptEditorInner(props) {
     ({ attributes, children, leaf }) => {
       let className = leaf.currentWord ? 'timecode text current-word' : 'timecode text';
       if (leaf.provenance === 'estimated') className += ' stw-prov-estimated';
+      if (leaf.styleNote) className += ' stw-note';
       // active (karaoke) word keeps its yellow bg; otherwise paint the confidence wash
-      const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : undefined;
+      const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : {};
+      // (D) user styling marks — composed additively; a user highlight overrides the wash
+      if (leaf.styleBold) style.fontWeight = 700;
+      if (leaf.styleItalic) style.fontStyle = 'italic';
+      if (leaf.styleUnderline) style.textDecoration = style.textDecoration ? `${style.textDecoration} underline` : 'underline';
+      if (leaf.styleHighlight) {
+        style.backgroundColor = leaf.styleHighlight;
+        style.borderRadius = '2px';
+      }
+      const hasStyle = Object.keys(style).length > 0;
+      const title = leaf.styleNote || (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
       return (
         <span
-          onDoubleClick={handleTimedTextClick}
+          onDoubleClick={handleLeafDoubleClick}
           onClick={handleLeafAltClick}
           className={className}
-          style={style}
-          title={leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined}
+          style={hasStyle ? style : undefined}
+          title={title}
           data-start={children.props.parent.start}
           data-previous-timings={children.props.parent.previousTimings}
           data-confidence-band={leaf.confidenceBand || undefined}
@@ -1065,7 +872,11 @@ function SlateTranscriptEditorInner(props) {
         </span>
       );
     },
-    [activeWordIndex, confidenceDecos, provenanceDecos]
+    // wordLevelEditing/value keep the double-click + mute closures fresh across mode
+    // switches and edits (renderLeaf is memoized; without them it captures stale state).
+    // styleDecos gives renderLeaf a fresh identity when styling changes so leaves repaint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, wordLevelEditing, editable, value]
   );
 
   //
@@ -1312,10 +1123,149 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
-  // LOOSE-mode word gesture parity with the RIGID grid: a plain click places the text
-  // cursor (so you can type), Alt/Option-click seeks to the word + toggles play/pause
-  // (double-click → seek+play is handled by handleTimedTextClick on the leaf span).
+  // ── Strict (word) mode interaction ──────────────────────────────────────────
+  // Strict renders the SAME Slate <Editable> as Loose, but READ-ONLY: edits never
+  // flow through Slate typing. The only mode-specific gesture is double-click, which
+  // selects one word and opens a small popover for a single-word rewrite/mute; the
+  // commit goes through the count-preserving snapshot path. Ctrl/Cmd-click mutes.
+  const [strictEdit, setStrictEdit] = useState(null); // { pIdx, wIdx, draft, muted, wordKey, start, x, y } | null
+  const [selectedWordKey, setSelectedWordKey] = useState(null); // the Strict double-click target for styling
+  const styleIdRef = useRef(0);
+
+  // Resolve the word under a pointer event, decoration-safe (findEventRange maps DOM
+  // coordinates to a logical Slate point regardless of how decorations split the leaf).
+  const resolveWordFromEvent = (e) => {
+    let anchor = null;
+    try {
+      const range = ReactEditor.findEventRange(editor, e);
+      if (range && range.anchor) anchor = range.anchor;
+    } catch (err) {
+      anchor = editor.selection ? editor.selection.anchor : null;
+    }
+    if (!anchor || !Array.isArray(anchor.path)) return null;
+    const pIdx = anchor.path[0];
+    const para = value[pIdx];
+    const words = para && para.children && para.children[0] && Array.isArray(para.children[0].words) ? para.children[0].words : [];
+    if (!words.length) return null;
+    let acc = 0;
+    for (let i = 0; i < words.length; i += 1) {
+      const len = (typeof words[i].text === 'string' ? words[i].text : '').length;
+      if (anchor.offset <= acc + len) return { pIdx, wIdx: i, word: words[i] };
+      acc += len + 1; // + the joining space (leaf text = words.map(t).join(' '))
+    }
+    const last = words.length - 1;
+    return { pIdx, wIdx: last, word: words[last] };
+  };
+
+  // Rebuild the value with ONE word changed; leaf text uses the bare-word join (the
+  // offset convention). Count is preserved (rewrite/mute only) so the commit routes
+  // through the count-validated snapshot (handleWordLevelContentChange).
+  const commitStrictWord = (pIdx, wIdx, changes) => {
+    const newValue = value.map((para, pi) => {
+      if (pi !== pIdx) return para;
+      const child = para.children[0];
+      const words = child.words.map((w, wi) => (wi === wIdx ? { ...w, ...changes } : w));
+      const text = words.map((w) => (typeof w.text === 'string' ? w.text : '')).join(' ');
+      return { ...para, children: [{ ...child, words, text }] };
+    });
+    replaceSlateValue(newValue);
+    handleWordLevelContentChange(newValue);
+  };
+
+  const handleLeafDoubleClick = (e) => {
+    if (!wordLevelEditing) return; // LOOSE: let the browser do native word selection
+    if (editable === false) return;
+    e.preventDefault();
+    const resolved = resolveWordFromEvent(e);
+    if (!resolved) return;
+    const w = resolved.word;
+    setSelectedWordKey(w._key);
+    setStrictEdit({
+      pIdx: resolved.pIdx,
+      wIdx: resolved.wIdx,
+      draft: typeof w.text === 'string' ? w.text : '',
+      muted: w.muted === true,
+      wordKey: w._key,
+      start: w.start,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  // Ctrl/Cmd-click in Strict toggles mute on the clicked word. Returns true if it handled the event.
+  const handleLeafMute = (e) => {
+    if (!wordLevelEditing || editable === false) return false;
+    if (!(e.ctrlKey || e.metaKey)) return false;
+    const resolved = resolveWordFromEvent(e);
+    if (!resolved) return false;
+    e.preventDefault();
+    commitStrictWord(resolved.pIdx, resolved.wIdx, { muted: !resolved.word.muted });
+    return true;
+  };
+
+  const saveStrictEdit = () => {
+    if (!strictEdit) return;
+    const para = value[strictEdit.pIdx];
+    const cur = para && para.children && para.children[0] && para.children[0].words ? para.children[0].words[strictEdit.wIdx] : null;
+    if (cur && cur.text === strictEdit.draft) {
+      setStrictEdit(null); // unchanged (e.g. blur without editing) — just close, no commit/remount
+      return;
+    }
+    commitStrictWord(strictEdit.pIdx, strictEdit.wIdx, { text: strictEdit.draft });
+    setStrictEdit(null);
+  };
+
+  // ── User styling — bold / italic / underline / highlight / note ───────────────
+  // One action for both modes; the only difference is the selection source. Applying a
+  // mark adds a word-anchored style range to overlay.styles (a decoration — never a
+  // tree edit), so it is safe even on the read-only Strict surface.
+  const sameMark = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const applyStyleRanges = (newRanges, mark) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    const next = styleRanges.slice();
+    newRanges.forEach((r) => {
+      // toggle: an identical span+mark removes it; otherwise add
+      const idx = next.findIndex(
+        (s) => s.fromKey === r.fromKey && s.toKey === r.toKey && s.fromOffset === r.fromOffset && s.toOffset === r.toOffset && sameMark(s.mark, mark)
+      );
+      if (idx >= 0) next.splice(idx, 1);
+      else next.push({ id: `sty-${(styleIdRef.current += 1)}`, ...r, mark });
+    });
+    setStyleRanges(next);
+    profile.versioning.setStyles(next);
+    setIsContentIsModified(true);
+    setIsContentSaved(false);
+    if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+  };
+
+  const applyStyleToSelection = (mark) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    if (wordLevelEditing) {
+      // STRICT: style the double-click-selected word (whole word)
+      if (!selectedWordKey) return;
+      let word = null;
+      value.forEach((p) =>
+        ((p.children && p.children[0] && p.children[0].words) || []).forEach((w) => {
+          if (w._key === selectedWordKey) word = w;
+        })
+      );
+      if (!word) return;
+      applyStyleRanges([{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }], mark);
+    } else {
+      // LOOSE: style the native selection (split per paragraph)
+      const sel = editor.selection;
+      if (!sel || Range.isCollapsed(sel)) return;
+      if (commitFreestyleEdit) commitFreestyleEdit.flush();
+      const ranges = selectionToStyleRanges(editor.children, sel);
+      if (ranges.length) applyStyleRanges(ranges, mark);
+    }
+  };
+
+  // LOOSE-mode word gesture: a plain click places the text cursor (so you can type),
+  // Alt/Option-click seeks to the word + toggles play/pause. In Strict, Ctrl/Cmd-click
+  // mutes the clicked word (handled first).
   const handleLeafAltClick = (e) => {
+    if (handleLeafMute(e)) return;
     if (!e.altKey) return; // plain single click: let Slate place the caret
     const { startWord } = SlateHelpers.getSelectionNodes(editor, editor.selection);
     let start = startWord && typeof startWord.start === 'number' ? startWord.start : null;
@@ -1408,10 +1358,6 @@ function SlateTranscriptEditorInner(props) {
         tmpValue = await handleRestoreTimecodes();
       }
 
-      if (isContentModified && type === 'json-digitalpaperedit') {
-        tmpValue = await handleRestoreTimecodes();
-      }
-
       if (isContentModified && isCaptionType(type)) {
         tmpValue = await handleRestoreTimecodes();
       }
@@ -1447,8 +1393,14 @@ function SlateTranscriptEditorInner(props) {
   const handleSave = async () => {
     try {
       setIsProcessing(true);
-      const format = settings.editing.autoSaveContentType || 'digitalpaperedit';
-      const editorContnet = await handleExport({ type: `json-${format}`, isDownload: false });
+      // Save the faithful transcript JSON. Clamp the requested content type to one the
+      // active profile actually exports (rev.ai -> json-rev, WhisperX -> json-whisperx),
+      // defaulting to the profile's primary faithful exporter — no DPE save path remains.
+      const supported = (profile.exporters || []).map((e) => e.id);
+      const requested = settings.editing.autoSaveContentType ? `json-${settings.editing.autoSaveContentType}` : null;
+      const type = requested && supported.includes(requested) ? requested : supported[0] || 'json-slate';
+      const format = type.replace(/^json-/, '');
+      const editorContnet = await handleExport({ type, isDownload: false });
       if (props.handleAnalyticsEvents) {
         // handles if click cancel and doesn't set speaker name
         props.handleAnalyticsEvents('ste_handle_save', {
@@ -1499,6 +1451,7 @@ function SlateTranscriptEditorInner(props) {
       if (commitFreestyleEdit) commitFreestyleEdit.flush();
       profile.versioning.undo();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
       return;
     }
     editor.undo();
@@ -1509,6 +1462,7 @@ function SlateTranscriptEditorInner(props) {
       if (commitFreestyleEdit) commitFreestyleEdit.flush();
       profile.versioning.redo();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
       return;
     }
     editor.redo();
@@ -1522,6 +1476,8 @@ function SlateTranscriptEditorInner(props) {
   handleUndoRef.current = handleUndo;
   const handleRedoRef = useRef(handleRedo);
   handleRedoRef.current = handleRedo;
+  const applyStyleRef = useRef(applyStyleToSelection);
+  applyStyleRef.current = applyStyleToSelection;
   useEffect(() => {
     if (!profile.versioning) return undefined;
     const onKeyDown = (e) => {
@@ -1532,14 +1488,17 @@ function SlateTranscriptEditorInner(props) {
       const k = (e.key || '').toLowerCase();
       const isUndo = k === 'z' && !e.shiftKey;
       const isRedo = k === 'y' || (k === 'z' && e.shiftKey);
-      if (!isUndo && !isRedo) return;
-      // stop here so Slate's own ⌘Z history (Loose mode's <Editable>) doesn't ALSO
-      // fire and double-undo — we own undo/redo via the overlay history.
+      // ⌘B / ⌘I / ⌘U apply user styling to the current selection (both modes)
+      const styleMark = k === 'b' ? 'bold' : k === 'i' ? 'italic' : k === 'u' ? 'underline' : null;
+      if (!isUndo && !isRedo && !styleMark) return;
+      // stop here so Slate's own ⌘Z history / ⌘B bold (Loose mode's <Editable>) doesn't
+      // ALSO fire — we own undo/redo + styling via the overlay.
       e.preventDefault();
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       if (isUndo) handleUndoRef.current();
-      else handleRedoRef.current();
+      else if (isRedo) handleRedoRef.current();
+      else applyStyleRef.current(styleMark);
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
@@ -1821,12 +1780,15 @@ function SlateTranscriptEditorInner(props) {
             presets={presets}
             activePresetId={activePresetId}
             canStructuralEdit={editPolicy.allowsStructuralEdits}
-            canShowAnnotations={profile.id === 'whisperx'}
+            canShowAnnotations={!!editPolicy.supportsAnnotations}
             cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
             editingMode={editingMode}
             editingModes={editingModes}
             onEditingModeChange={onEditingModeChange}
             showEditingModeSwitch={showEditingModeSwitch}
+            canStyle={!!(profile.versioning && profile.versioning.setStyles)}
+            styleEnabled={!!(profile.versioning && profile.versioning.setStyles)}
+            onApplyStyle={applyStyleToSelection}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
             handleSave={handleSave}
@@ -1898,86 +1860,108 @@ function SlateTranscriptEditorInner(props) {
 
         <div style={{ display: hasFiles && activeTab !== 'video' ? 'none' : 'block' }}>
           <Grid container direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'stretch' }}>
-            <Grid
-              size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
-              container
-              sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
-            >
-              <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
-                <Grid container>
-                  <video
-                    style={{ backgroundColor: 'black' }}
-                    ref={mediaRef}
-                    src={props.mediaUrl}
-                    width={'100%'}
-                    // height="auto"
-                    controls
-                    playsInline
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                  ></video>
-                </Grid>
-                {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
-                <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
-                  <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
-                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
-                      −{seekStepSeconds}
+            {!mediaCollapsed && (
+              <Grid
+                size={{ xs: 12, sm: 4, md: 4, lg: 4, xl: 4 }}
+                container
+                sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
+              >
+                <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
+                  <Grid container sx={{ justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setMediaCollapsed(true)} style={MEDIA_TOGGLE_STYLE} title="Hide the media panel">
+                      ‹ Hide media
                     </button>
-                  </Tooltip>
-                  <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
-                    <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
-                      {isPlaying ? '❚❚' : '▶'}
-                    </button>
-                  </Tooltip>
-                  <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
-                    <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
-                      +{forwardStepSeconds}
-                    </button>
-                  </Tooltip>
-                  <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
-                  <span
-                    style={{
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: '#18181b',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {shortTimecode(currentTime)}
-                    <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
-                      {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                  </Grid>
+                  <Grid container>
+                    <video
+                      style={{ backgroundColor: 'black' }}
+                      ref={mediaRef}
+                      src={props.mediaUrl}
+                      width={'100%'}
+                      // height="auto"
+                      controls
+                      playsInline
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                    ></video>
+                  </Grid>
+                  {/* single-line transport (Hairline look): −10 / play / +30 · time · speed */}
+                  <Grid container sx={{ alignItems: 'center' }} style={{ gap: 10, flexWrap: 'nowrap', marginTop: 4 }}>
+                    <Tooltip title={<Typography variant="body1">{`Seek back ${seekStepSeconds} seconds`}</Typography>}>
+                      <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleSeekBack}>
+                        −{seekStepSeconds}
+                      </button>
+                    </Tooltip>
+                    <Tooltip title={<Typography variant="body1">Play / pause</Typography>}>
+                      <button type="button" style={PLAY_BTN_STYLE} onClick={handlePlayPause} aria-label="Play or pause">
+                        {isPlaying ? '❚❚' : '▶'}
+                      </button>
+                    </Tooltip>
+                    <Tooltip title={<Typography variant="body1">{`Fast forward ${forwardStepSeconds} seconds`}</Typography>}>
+                      <button type="button" style={CIRCLE_BTN_STYLE} onClick={handleFastForward}>
+                        +{forwardStepSeconds}
+                      </button>
+                    </Tooltip>
+                    <span style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px' }} />
+                    <span
+                      style={{
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        fontVariantNumeric: 'tabular-nums',
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: '#18181b',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {shortTimecode(currentTime)}
+                      <span style={{ fontWeight: 400, fontSize: 12.5, color: '#a1a1aa' }}>
+                        {duration ? ` / ${shortTimecode(duration)}` : ' / 00:00:00'}
+                      </span>
                     </span>
-                  </span>
-                  <select
-                    value={playbackRate}
-                    onChange={handleSetPlaybackRate}
-                    title="Playback speed"
-                    style={{
-                      marginLeft: 'auto',
-                      border: '1px solid #d4d4d8',
-                      borderRadius: 6,
-                      padding: '3px 6px',
-                      fontSize: 12,
-                      color: '#71717a',
-                      background: '#fff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
-                      <option key={index + playbackRateValue} value={playbackRateValue}>
-                        {playbackRateValue}×
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      value={playbackRate}
+                      onChange={handleSetPlaybackRate}
+                      title="Playback speed"
+                      style={{
+                        marginLeft: 'auto',
+                        border: '1px solid #d4d4d8',
+                        borderRadius: 6,
+                        padding: '3px 6px',
+                        fontSize: 12,
+                        color: '#71717a',
+                        background: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {PLAYBACK_RATE_VALUES.map((playbackRateValue, index) => (
+                        <option key={index + playbackRateValue} value={playbackRateValue}>
+                          {playbackRateValue}×
+                        </option>
+                      ))}
+                    </select>
+                  </Grid>
+                  {/* <Grid>{props.children}</Grid> */}
                 </Grid>
-                {/* <Grid>{props.children}</Grid> */}
+                <Grid>{props.children}</Grid>
               </Grid>
-              <Grid>{props.children}</Grid>
-            </Grid>
+            )}
 
-            <Grid size={{ xs: 12, sm: 8, md: 8, lg: 8, xl: 8 }}>
+            <Grid
+              size={{
+                xs: 12,
+                sm: mediaCollapsed ? 12 : 8,
+                md: mediaCollapsed ? 12 : 8,
+                lg: mediaCollapsed ? 12 : 8,
+                xl: mediaCollapsed ? 12 : 8,
+              }}
+            >
+              {mediaCollapsed && (
+                <div style={{ marginBottom: 6 }}>
+                  <button type="button" onClick={() => setMediaCollapsed(false)} style={MEDIA_TOGGLE_STYLE} title="Show the media panel">
+                    › Show media
+                  </button>
+                </div>
+              )}
               {value.length !== 0 ? (
                 <>
                   <Paper elevation={3}>
@@ -1985,55 +1969,59 @@ function SlateTranscriptEditorInner(props) {
                       className="editor-wrapper-container"
                       style={{ fontSize: settings.appearance.fontSize, lineHeight: settings.appearance.lineSpacing }}
                     >
-                      {wordLevelEditing ? (
-                        <WordLevelEditor
-                          value={value}
-                          setValue={setValue}
-                          confidenceOverlay={confidenceSettings}
-                          isEditable={editable}
-                          showSpeakers={showSpeakers}
-                          showTimecodes={showTimecodes}
-                          showAnnotations={showAnnotations}
-                          currentTime={currentTime}
-                          followPlayback={followPlayback}
-                          onSeek={seekWord}
-                          onSeekAndPlay={seekAndPlayWord}
-                          onSeekAndTogglePlay={seekAndTogglePlayWord}
-                          onContentChange={handleWordLevelContentChange}
-                          onSetSpeakerName={handleSetSpeakerName}
-                          onShowRawSource={props.onShowRawSource}
+                      {/* ONE Slate surface for BOTH modes. Strict (`wordLevelEditing`) is
+                          read-only — edits happen only via the double-click word popover —
+                          so the two modes differ solely in the double-click gesture. */}
+                      <Slate
+                        key={slateKey}
+                        editor={editor}
+                        initialValue={value}
+                        onChange={(newVal) => {
+                          setValue(newVal);
+                          if (wordLevelEditing) return; // Strict: commits go through the word popover, not typing
+                          if (isFreestyle) {
+                            // ignore caret-only changes; on a real edit, re-align (debounced)
+                            const astChange = editor.operations.some((op) => op.type !== 'set_selection');
+                            if (astChange) {
+                              setIsContentIsModified(true);
+                              setIsContentSaved(false);
+                              commitFreestyleEdit();
+                            }
+                            return;
+                          }
+                          if (props.handleAutoSaveChanges) {
+                            props.handleAutoSaveChanges(newVal);
+                            setIsContentSaved(true);
+                          }
+                        }}
+                      >
+                        <Editable
+                          readOnly={wordLevelEditing || !editable}
+                          renderElement={renderElement}
+                          renderLeaf={renderLeaf}
+                          decorate={decorate}
+                          onKeyDown={handleOnKeyDown}
                         />
-                      ) : (
-                        <Slate
-                          key={slateKey}
-                          editor={editor}
-                          initialValue={value}
-                          onChange={(newVal) => {
-                            setValue(newVal);
-                            if (isFreestyle) {
-                              // ignore caret-only changes; on a real edit, re-align (debounced)
-                              const astChange = editor.operations.some((op) => op.type !== 'set_selection');
-                              if (astChange) {
-                                setIsContentIsModified(true);
-                                setIsContentSaved(false);
-                                commitFreestyleEdit();
-                              }
-                              return;
-                            }
-                            if (props.handleAutoSaveChanges) {
-                              props.handleAutoSaveChanges(newVal);
-                              setIsContentSaved(true);
-                            }
+                      </Slate>
+                      {strictEdit && (
+                        <StrictWordPopover
+                          state={strictEdit}
+                          onDraft={(draft) => setStrictEdit((s) => (s ? { ...s, draft } : s))}
+                          onSave={saveStrictEdit}
+                          onToggleMute={() => {
+                            commitStrictWord(strictEdit.pIdx, strictEdit.wIdx, { muted: !strictEdit.muted });
+                            setStrictEdit(null);
                           }}
-                        >
-                          <Editable
-                            readOnly={!editable}
-                            renderElement={renderElement}
-                            renderLeaf={renderLeaf}
-                            decorate={decorate}
-                            onKeyDown={handleOnKeyDown}
-                          />
-                        </Slate>
+                          onShowRaw={
+                            props.onShowRawSource
+                              ? () => {
+                                  props.onShowRawSource({ key: strictEdit.wordKey, start: strictEdit.start });
+                                  setStrictEdit(null);
+                                }
+                              : null
+                          }
+                          onCancel={() => setStrictEdit(null)}
+                        />
                       )}
                     </section>
                   </Paper>
@@ -2049,7 +2037,7 @@ function SlateTranscriptEditorInner(props) {
         <PreferencesDialog
           open={prefsOpen}
           onClose={() => setPrefsOpen(false)}
-          profileId={profile.id}
+          profileFormat={profile.format}
           allowedModes={editingModes}
           editingMode={editingMode}
         />
@@ -2084,11 +2072,14 @@ function SlateTranscriptEditor(props) {
   // inner component keeps the original defaultPreferences so the values are a
   // freely-adjustable default rather than a host-controlled lock.
   const seededDefaultPreferences = useMemo(() => {
-    const cd = resolveProfile(merged.profile).confidenceDefaults;
+    const cd = whisperConfidenceDefaults(merged.transcriptData);
     if (!cd) return merged.defaultPreferences;
     const hostConf = (merged.defaultPreferences && merged.defaultPreferences.confidence) || {};
-    return { ...merged.defaultPreferences, confidence: { cutoff: cd.cutoff, floor: cd.floor, ...hostConf } };
-  }, [merged.profile, merged.defaultPreferences]);
+    return {
+      ...merged.defaultPreferences,
+      confidence: { cutoff: cd.cutoff, floor: cd.floor, sentenceCutoffDelta: cd.sentenceCutoffDelta, ...hostConf },
+    };
+  }, [merged.transcriptData, merged.defaultPreferences]);
   return (
     <PreferencesProvider
       seedProps={merged}

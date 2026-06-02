@@ -81,7 +81,11 @@ export const revModelToSlate = (model, history, options = {}) => {
       start,
       previousTimings: generatePreviousTimingsUpToCurrent(start),
       startTimecode: shortTimecode(start),
-      children: [{ text: buffer.map((w) => w.text + (w.punctAfter || '')).join(' '), words: buffer.slice() }],
+      // Leaf text MUST be `words.map(w => w.text).join(' ')` — the char-offset
+      // convention every decoration/word-map consumer assumes. `punctAfter` stays
+      // on the word objects (for faithful export) but is NOT glued into the text,
+      // or mid-paragraph punctuation would shift every later word's offset.
+      children: [{ text: buffer.map((w) => w.text).join(' '), words: buffer.slice() }],
     });
     buffer = [];
   };

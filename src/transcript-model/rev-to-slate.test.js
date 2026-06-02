@@ -34,8 +34,10 @@ describe('revModelToSlate', () => {
     expect(value.length).toBe(2);
     expect(value[0].speaker).toBe('Speaker 1');
     expect(value[1].speaker).toBe('Speaker 2');
-    expect(value[0].children[0].text).toBe('the cat sat.');
-    expect(value[1].children[0].text).toBe('and ran.');
+    // Leaf text is the bare word join (no glued punctuation) — the offset convention.
+    // `punctAfter` survives on the word objects for faithful export.
+    expect(value[0].children[0].text).toBe('the cat sat');
+    expect(value[1].children[0].text).toBe('and ran');
   });
 
   it('keeps word count constant; reflects overlay rewrite in display text', () => {
@@ -44,7 +46,7 @@ describe('revModelToSlate', () => {
     h = commit(h, setWordValue({}, '0:2', 'dog', 'cat')); // rewrite "cat"->"dog"
     const value = revModelToSlate(model, h);
     expect(value[0].children[0].words.length).toBe(3); // count unchanged
-    expect(value[0].children[0].text).toBe('the dog sat.');
+    expect(value[0].children[0].text).toBe('the dog sat');
     expect(value[0].children[0].words[1]._key).toBe('0:2');
   });
 

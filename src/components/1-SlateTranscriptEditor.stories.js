@@ -12,8 +12,8 @@ import '@fontsource/roboto/700.css';
 const AUDIO_URL = 'https://www.w3schools.com/tags/horse.ogg';
 const DEMO_MEDIA_URL_SOLEIO =
   'https://digital-paper-edit-demo.s3.eu-west-2.amazonaws.com/PBS-Frontline/The+Facebook+Dilemma+-+interviews/The+Facebook+Dilemma+-+Soleio+Cuervo-OIAUfZBd_7w.mp4';
-const DEMO_TITLE_SOLEIO = 'Soleio Interview, PBS Frontline';
-import DEMO_SOLEIO from '../sample-data/soleio-dpe.json';
+const DEMO_TITLE_SOLEIO = 'GEMS-01 — UZH annotated (WhisperX)';
+import DEMO_WHISPERX from '../sample-data/GEMS-01-UZH.json';
 
 // CSF3 + args/argTypes replace the SB5 addon-knobs controls; autodocs (preview.js)
 // replaces the removed addon-info.
@@ -22,12 +22,12 @@ export default {
   component: SlateTranscriptEditor,
   args: {
     mediaUrl: DEMO_MEDIA_URL_SOLEIO,
-    transcriptData: DEMO_SOLEIO,
+    transcriptData: DEMO_WHISPERX,
     handleSaveEditor: action('handleSaveEditor'),
     showTitle: false,
     showTimecodes: true,
     showSpeakers: true,
-    autoSaveContentType: 'digitalpaperedit',
+    autoSaveContentType: 'whisperx',
   },
   argTypes: {
     mediaUrl: { control: 'text' },
@@ -36,7 +36,7 @@ export default {
     showTimecodes: { control: 'boolean' },
     showSpeakers: { control: 'boolean' },
     isEditable: { control: 'boolean' },
-    autoSaveContentType: { control: 'select', options: ['digitalpaperedit', 'slate'] },
+    autoSaveContentType: { control: 'select', options: ['whisperx', 'slate'] },
     transcriptData: { control: false },
   },
 };
@@ -53,7 +53,7 @@ export const Demo = {
 };
 
 export const MinimalInitialization = {
-  args: { mediaUrl: DEMO_MEDIA_URL_SOLEIO, transcriptData: DEMO_SOLEIO },
+  args: { mediaUrl: DEMO_MEDIA_URL_SOLEIO, transcriptData: DEMO_WHISPERX },
 };
 
 export const OptionalTitle = {

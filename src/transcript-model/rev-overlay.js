@@ -187,6 +187,7 @@ export const projectRev = (original, overlay) => {
 
   // Pass 1: build Freestyle element replacements from the pristine clone (before any mutation).
   Object.keys(overlay || {}).forEach((key) => {
+    if (key === 'styles') return; // user-styling layer is dropped from faithful STT export
     const o = overlay[key];
     if (!o || o.kind !== 'freetext') return;
     const span = o.span || {};
@@ -202,6 +203,7 @@ export const projectRev = (original, overlay) => {
 
   // Pass 2: word-tier rewrites + mutes (skip monologues owned by a Freestyle rebuild).
   Object.keys(overlay || {}).forEach((key) => {
+    if (key === 'styles') return; // user-styling layer is dropped from faithful STT export
     const o = overlay[key];
     if (!o || o.kind === 'freetext' || (typeof o.value !== 'string' && !o.muted)) return; // no-op / freetext
     const sep = key.indexOf(':');

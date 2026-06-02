@@ -75,6 +75,20 @@ export const ConfidenceTab = () => {
         <Slider min={0} max={1} step={0.01} value={c.floor} onChange={(e, v) => set('floor', v)} aria-label="floor" />
       </Row>
 
+      <Row
+        label={`Sentence offset — +${(c.sentenceCutoffDelta ?? 0.1).toFixed(2)} above the word cutoff`}
+        help="Sentence means run higher than individual word scores (averaging dilutes the low words), so the whole heat band shifts up by this much in Sentence level. Raise it to flag more sentences."
+      >
+        <Slider
+          min={0}
+          max={0.5}
+          step={0.01}
+          value={c.sentenceCutoffDelta ?? 0.1}
+          onChange={(e, v) => set('sentenceCutoffDelta', v)}
+          aria-label="sentence offset"
+        />
+      </Row>
+
       <Row label="Sentence metric" help="Used in sentence level: mean confidence, or duration-weighted (longer-spoken words count more).">
         <Select size="small" value={c.sentenceMetric} onChange={(e) => set('sentenceMetric', e.target.value)}>
           <MenuItem value="mean">Mean</MenuItem>
@@ -230,18 +244,12 @@ export const EditingTab = ({ allowedModes, editingMode }) => {
 };
 EditingTab.propTypes = { allowedModes: PropTypes.arrayOf(PropTypes.string), editingMode: PropTypes.string };
 
-export const AboutResetTab = ({ profileId }) => {
+export const AboutResetTab = ({ profileFormat }) => {
   const { actions } = usePreferences();
   return (
     <div>
       <Row label="Transcript tier">
-        <Typography variant="body2">
-          {profileId === 'rigid'
-            ? 'Rigid (rev.ai, faithful)'
-            : profileId === 'whisperx'
-              ? 'WhisperX (faithful, annotated)'
-              : 'Classic (free-text DPE)'}
-        </Typography>
+        <Typography variant="body2">{profileFormat === 'whisperx' ? 'WhisperX (faithful, annotated)' : 'rev.ai (faithful)'}</Typography>
       </Row>
       <Divider style={{ margin: '12px 0' }} />
       <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -253,4 +261,4 @@ export const AboutResetTab = ({ profileId }) => {
     </div>
   );
 };
-AboutResetTab.propTypes = { profileId: PropTypes.string };
+AboutResetTab.propTypes = { profileFormat: PropTypes.string };

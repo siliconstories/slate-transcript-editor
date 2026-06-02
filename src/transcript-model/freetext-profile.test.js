@@ -1,5 +1,4 @@
-import { createRigidProfile } from './rigid-profile.js';
-import { createWhisperxProfile } from './whisperx-profile.js';
+import { createWhisperProfile } from './whisper-profile.js';
 import { alignParagraph } from './align-paragraph.js';
 import { tokenToLeafWord } from './freetext-to-slate.js';
 
@@ -12,7 +11,7 @@ const freestyleEdit = (profile, value, editedText) => {
   return [{ ...para, children: [{ ...para.children[0], text: words.map((w) => w.text).join(' '), words }] }, ...value.slice(1)];
 };
 
-describe('rigid profile — Freestyle round-trip', () => {
+describe('whisper profile (rev.ai) — Freestyle round-trip', () => {
   const REV = {
     monologues: [
       {
@@ -30,14 +29,14 @@ describe('rigid profile — Freestyle round-trip', () => {
   };
 
   it('stamps each paragraph with anchorKey + span on import', () => {
-    const p = createRigidProfile();
+    const p = createWhisperProfile();
     const { value } = p.import(REV);
     expect(value[0].anchorKey).toBe('0:0');
     expect(value[0].span).toEqual({ firstWordKey: '0:0', lastWordKey: '0:4', monoIdx: 0, elemStart: 0, elemEnd: 5 });
   });
 
   it('an inserted word commits via snapshotFreeText and the faithful export reflects it (conf 1.0); survivors keep timing', () => {
-    const p = createRigidProfile();
+    const p = createWhisperProfile();
     const { value } = p.import(REV);
     const edited = freestyleEdit(p, value, 'the big cat sat.');
     expect(p.versioning.snapshotFreeText(edited)).toBe(true);
@@ -49,7 +48,7 @@ describe('rigid profile — Freestyle round-trip', () => {
   });
 
   it('reproject renders the inserted word as estimated; revertAll restores the original', () => {
-    const p = createRigidProfile();
+    const p = createWhisperProfile();
     const { value } = p.import(REV);
     p.versioning.snapshotFreeText(freestyleEdit(p, value, 'the big cat sat.'));
 
@@ -66,7 +65,7 @@ describe('rigid profile — Freestyle round-trip', () => {
   });
 });
 
-describe('whisperx profile — Freestyle round-trip', () => {
+describe('whisper profile (whisperx) — Freestyle round-trip', () => {
   const w = (word, start, end, score, speaker) => ({ word, start, end, score, speaker });
   const segs = [
     {
@@ -80,7 +79,7 @@ describe('whisperx profile — Freestyle round-trip', () => {
   const WX = { segments: segs, word_segments: [...segs[0].words] };
 
   it('an inserted word commits and the faithful export rebuilds the segment (score 1.0); survivors keep timing+speaker', () => {
-    const p = createWhisperxProfile();
+    const p = createWhisperProfile();
     const { value } = p.import(WX);
     expect(value[0].span.segIdx).toBe(0);
 

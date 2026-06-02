@@ -55,8 +55,13 @@ export const buildConfidenceDecorations = (slateValue, settings) => {
   if (!Array.isArray(slateValue) || slateValue.length === 0) return empty;
   if (!hasAnyConfidence(slateValue)) return empty; // classic DPE => no-op
 
-  const { level = 'word', cutoff = 0.85, floor = 0.55, sentenceMetric = 'mean', highlightOpacity = 0.5 } = settings;
+  const { level = 'word', cutoff = 0.85, floor = 0.55, sentenceCutoffDelta = 0.1, sentenceMetric = 'mean', highlightOpacity = 0.5 } = settings;
   const styleOpts = { cutoff, floor, highlightOpacity };
+  // Sentence MEANS compress toward the corpus mean (averaging dilutes the low words),
+  // so a word-level cutoff flags almost no sentences. Shift the whole heat band UP by a
+  // configurable delta for sentence mode (user-tunable in Preferences → Confidence).
+  const clamp01 = (n) => Math.max(0, Math.min(1, n));
+  const sentStyleOpts = { cutoff: clamp01(cutoff + sentenceCutoffDelta), floor: clamp01(floor + sentenceCutoffDelta), highlightOpacity };
   const metricIdx = sentenceMetric === 'duration_weighted' ? 1 : 0;
 
   const byPara = slateValue.map((paragraph) => {
@@ -68,11 +73,11 @@ export const buildConfidenceDecorations = (slateValue, settings) => {
     if (level === 'sentence') {
       groupSlateWordsIntoSentences(words).forEach(({ wIdxStart, wIdxEnd, words: sWords }) => {
         const conf = confidenceOf(sWords)[metricIdx];
-        const style = confidenceToStyle(conf, styleOpts);
+        const style = confidenceToStyle(conf, sentStyleOpts);
         if (!style) return;
         const charStart = ranges[wIdxStart].charStart;
         const charEnd = ranges[wIdxEnd].charEnd;
-        if (charEnd > charStart) decos.push({ charStart, charEnd, confidenceStyle: style, confidenceBand: confidenceBand(conf, styleOpts) });
+        if (charEnd > charStart) decos.push({ charStart, charEnd, confidenceStyle: style, confidenceBand: confidenceBand(conf, sentStyleOpts) });
       });
       return decos;
     }

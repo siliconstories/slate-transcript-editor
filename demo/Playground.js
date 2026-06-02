@@ -1,32 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import SlateTranscriptEditor from '../src/components/index.js';
 import getMediaType from '../src/util/get-media-type';
-import KATE_DPE from '../src/sample-data/KateDarling-dpe.json';
-import SOLEIO_DPE from '../src/sample-data/soleio-dpe.json';
 import GEMS_STRICT from '../src/util/rev-to-sentences/__fixtures__/GEMS-01.json';
 import buildSentenceModel from '../src/util/rev-to-sentences';
 import { detectProfile } from '../src/transcript-model/profile';
 import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
 import { isWhisperxTranscript, whisperxToModel } from '../src/transcript-model/whisperx-overlay';
 import GEMS_UZH from '../src/sample-data/GEMS-01-UZH.json';
-import converSlateToDpe from '../src/util/export-adapters/slate-to-dpe';
 import RawSourceDialog from './RawSourceDialog.js';
 
-const SAMPLES = {
-  kate: {
-    label: 'Kate Darling (TED)',
-    title: 'TED Talk | Kate Darling - Why we have an emotional connection to robots',
-    mediaUrl: 'https://download.ted.com/talks/KateDarling_2018S-950k.mp4',
-    transcriptData: KATE_DPE,
-  },
-  soleio: {
-    label: 'Soleio (PBS Frontline)',
-    title: 'Soleio Interview, PBS Frontline',
-    mediaUrl:
-      'https://digital-paper-edit-demo.s3.eu-west-2.amazonaws.com/PBS-Frontline/The+Facebook+Dilemma+-+interviews/The+Facebook+Dilemma+-+Soleio+Cuervo-OIAUfZBd_7w.mp4',
-    transcriptData: SOLEIO_DPE,
-  },
-};
+// The two accepted import formats — rev.ai (monologues) and WhisperX (segments).
+const formatOf = (data) => (isWhisperxTranscript(data) ? 'whisperx' : isRevTranscript(data) ? 'revai' : null);
 
 // "20m:16s"-style length label (the spoken span the title used to show).
 const formatMinSec = (sec) => {
@@ -34,8 +18,7 @@ const formatMinSec = (sec) => {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}m:${String(s % 60).padStart(2, '0')}s`;
 };
 
-// Word count + spoken length (seconds), derived from the transcript itself so the
-// Files list can show stats for every document without loading each media file.
+// Word count + spoken length (seconds), derived from the transcript itself.
 const docStats = (data) => {
   let wordCount = 0;
   let minStart = Infinity;
@@ -59,55 +42,30 @@ const docStats = (data) => {
         span(w.start, w.end);
       })
     );
-  } else if (data && Array.isArray(data.words)) {
-    data.words.forEach((w) => {
-      if (typeof w.text !== 'string' || w.text.length === 0) return;
-      wordCount += 1;
-      span(w.start, w.end);
-    });
   }
   return { wordCount, duration: minStart < maxEnd ? maxEnd - minStart : 0 };
 };
 
 const docSublabel = (data) => {
-  const tier = isRevTranscript(data) ? 'rev.ai · rigid' : isWhisperxTranscript(data) ? 'WhisperX · whisperx' : 'DPE · classic';
+  const tier = isRevTranscript(data) ? 'rev.ai' : isWhisperxTranscript(data) ? 'WhisperX' : 'unknown';
   const { wordCount, duration } = docStats(data);
   return `${tier} · ${formatMinSec(duration)} · ${wordCount} words`;
 };
 
-// Seed documents: the bundled samples + the local strict-testing pair. Session
-// uploads append to this list (see Playground state). Each carries the full payload.
+// Seed documents: the GEMS-01 interview in BOTH accepted formats (rev.ai + WhisperX),
+// so you can compare the two STT formats on one clip. Uploads append to this list.
 const SEED_DOCUMENTS = [
   {
-    id: 'kate',
-    label: SAMPLES.kate.label,
-    sublabel: docSublabel(SAMPLES.kate.transcriptData),
-    mediaUrl: SAMPLES.kate.mediaUrl,
-    mediaName: SAMPLES.kate.mediaUrl.split('/').pop(),
-    transcriptData: SAMPLES.kate.transcriptData,
-    title: SAMPLES.kate.title,
-  },
-  {
-    id: 'soleio',
-    label: SAMPLES.soleio.label,
-    sublabel: docSublabel(SAMPLES.soleio.transcriptData),
-    mediaUrl: SAMPLES.soleio.mediaUrl,
-    mediaName: SAMPLES.soleio.mediaUrl.split('/').pop(),
-    transcriptData: SAMPLES.soleio.transcriptData,
-    title: SAMPLES.soleio.title,
-  },
-  {
     id: 'gems-strict',
-    label: 'rev.ai strict testing',
+    label: 'GEMS-01 (rev.ai)',
     sublabel: docSublabel(GEMS_STRICT),
     mediaUrl: '/strict-media/GEMS-01.mp4',
     mediaName: 'GEMS-01.mp4',
     transcriptData: GEMS_STRICT,
-    title: 'GEMS-01 — rev.ai strict testing',
+    title: 'GEMS-01 — rev.ai',
   },
   {
-    // Same GEMS-01 interview as the rev.ai seed, transcribed + annotated by WhisperX (UZH) —
-    // lets you compare the two STT formats (and the rigid vs whisperx tiers) on one clip.
+    // Same GEMS-01 interview, transcribed + annotated by WhisperX (UZH).
     id: 'gems-uzh',
     label: 'GEMS-01 (UZH · WhisperX)',
     sublabel: docSublabel(GEMS_UZH),
@@ -117,24 +75,6 @@ const SEED_DOCUMENTS = [
     title: 'GEMS-01 — UZH annotated (WhisperX)',
   },
 ];
-
-const isFiniteNumber = (n) => typeof n === 'number' && isFinite(n);
-
-// Returns an error string, or null when the object is a valid DPE transcript.
-const validateDpe = (data) => {
-  if (!data || typeof data !== 'object') return 'Transcript must be a JSON object.';
-  if (!Array.isArray(data.words) || data.words.length === 0) return 'Transcript is missing a non-empty "words" array.';
-  if (!Array.isArray(data.paragraphs) || data.paragraphs.length === 0) return 'Transcript is missing a non-empty "paragraphs" array.';
-  const w = data.words[0];
-  if (!isFiniteNumber(w.start) || !isFiniteNumber(w.end) || typeof w.text !== 'string') {
-    return 'Each word needs numeric "start"/"end" and a string "text".';
-  }
-  const p = data.paragraphs[0];
-  if (!isFiniteNumber(p.start) || !isFiniteNumber(p.end) || typeof p.speaker !== 'string') {
-    return 'Each paragraph needs numeric "start"/"end" and a string "speaker".';
-  }
-  return null;
-};
 
 const styles = {
   wrap: { fontFamily: 'Roboto, system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1em' },
@@ -179,9 +119,6 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   hint: { fontSize: 12, color: '#777' },
-  tier: { display: 'flex', gap: '0.6em', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.8em' },
-  badgeRigid: { background: '#1565c0', color: '#fff', borderRadius: 4, padding: '3px 8px', fontSize: 12, fontWeight: 600 },
-  badgeClassic: { background: '#616161', color: '#fff', borderRadius: 4, padding: '3px 8px', fontSize: 12, fontWeight: 600 },
 };
 
 function Playground() {
@@ -197,26 +134,23 @@ function Playground() {
   const [mountKey, setMountKey] = useState(0);
   const [loadOpen, setLoadOpen] = useState(true);
 
-  const [isEditable, setIsEditable] = useState(true);
-  const [showSpeakers, setShowSpeakers] = useState(true);
-  const [showTimecodes, setShowTimecodes] = useState(true);
-  const [showTitle, setShowTitle] = useState(true);
-  const [wordLevelEditing, setWordLevelEditing] = useState(true);
-  const [confidenceOverlay, setConfidenceOverlay] = useState(true);
-  const [confidenceLevel, setConfidenceLevel] = useState('word');
-  const [confidenceCutoff, setConfidenceCutoff] = useState(0.85);
+  const [isEditable] = useState(true);
+  const [showSpeakers] = useState(true);
+  const [showTimecodes] = useState(true);
+  const [showTitle] = useState(true);
+  const [confidenceOverlay] = useState(true);
+  const [confidenceLevel] = useState('word');
+  const [confidenceCutoff] = useState(0.85);
 
-  // The active transcript profile instance (classic for DPE, rigid for rev.ai).
-  // The editor now owns import / edit-capture / versioning / faithful export;
-  // the Playground just detects the tier and passes the instance down.
+  // The active transcript profile instance (the unified `whisper` profile). The editor
+  // owns import / edit-capture / versioning / faithful export; the Playground detects
+  // the source format from the data for its own labels and raw-source dialog.
   const [profileInst, setProfileInst] = useState(null);
-  const isRigid = profileInst ? profileInst.id === 'rigid' : false;
-  const isWhisperx = profileInst ? profileInst.id === 'whisperx' : false;
-  // Both rigid and whisperx are word-level-only tiers (mute/rewrite, no free typing).
-  const isWordLevel = profileInst && profileInst.editPolicy ? profileInst.editPolicy.wordLevelOnly === true : false;
+  const dataFormat = formatOf(transcriptData);
+  const isRev = dataFormat === 'revai';
+  const isWhisperx = dataFormat === 'whisperx';
 
-  // Corpus-level confidence (mean + duration-weighted) of the loaded transcript,
-  // to help pick a threshold. null for non-rev (DPE) transcripts.
+  // Corpus-level confidence (mean + duration-weighted) of the loaded transcript.
   const corpus = useMemo(() => {
     if (!transcriptData) return null;
     const model = buildSentenceModel(transcriptData);
@@ -239,7 +173,7 @@ function Playground() {
   const [rawText, setRawText] = useState('');
   const [rawLocator, setRawLocator] = useState(null);
 
-  // schema gate: must be a valid rev.ai ({ monologues }) or DPE ({ words, paragraphs }) doc
+  // schema gate: must be a valid rev.ai ({ monologues }) or WhisperX ({ segments, word_segments }) doc
   const validateRaw = (parsed) => {
     if (isRevTranscript(parsed)) {
       const allowed = ['text', 'punct', 'unknown'];
@@ -265,23 +199,14 @@ function Playground() {
         return `Invalid WhisperX data — ${e.message}`;
       }
     }
-    const dpeErr = validateDpe(parsed);
-    if (dpeErr) return `Not a rev.ai ({ monologues }), WhisperX ({ segments, word_segments }) or DPE ({ words, paragraphs }) document. ${dpeErr}`;
-    return null;
+    return 'Not a rev.ai ({ monologues }) or WhisperX ({ segments, word_segments }) document.';
   };
 
-  // current document as raw JSON: rigid -> faithful rev.ai (reflects mutes/rewrites);
-  // classic -> current DPE from the live Slate value, falling back to the loaded source.
+  // current document as raw JSON: the active profile's faithful exporter reflects
+  // mutes/rewrites; falls back to the loaded source before the first edit.
   const openRaw = (locator) => {
-    let obj;
-    // Faithful tiers (rigid/whisperx) expose a JSON exporter that reflects mutes/rewrites;
-    // classic falls back to the current DPE from the live Slate value.
     const faithful = profileInst && Array.isArray(profileInst.exporters) ? profileInst.exporters.find((e) => e.ext === 'json') : null;
-    if (faithful) {
-      obj = faithful.run() || transcriptData;
-    } else {
-      obj = liveValue ? converSlateToDpe(liveValue) : transcriptData;
-    }
+    const obj = faithful && faithful.run() ? faithful.run() : transcriptData;
     setRawText(JSON.stringify(obj, null, 2));
     setRawLocator(locator && (locator.key != null || typeof locator.start === 'number') ? locator : null);
     setRawOpen(true);
@@ -289,15 +214,19 @@ function Playground() {
 
   // Save in the raw editor: re-import the edited document as a fresh transcript
   const applyRaw = (parsed) => {
-    setProfileInst(detectProfile(parsed));
+    try {
+      setProfileInst(detectProfile(parsed));
+    } catch (e) {
+      setError(e.message);
+      return;
+    }
     setTranscriptData(parsed);
     setLiveValue(null);
     setRawOpen(false);
     remount();
   };
 
-  // Load a complete document (sample or uploaded) into both panes. The Files tab
-  // and the Load-section sample buttons both route through here.
+  // Load a complete document (sample or uploaded) into both panes.
   const selectDocument = (id) => {
     const doc = documents.find((d) => d.id === id);
     if (!doc) return;
@@ -305,7 +234,12 @@ function Playground() {
     setUrlField('');
     setMediaUrl(doc.mediaUrl);
     setMediaName(doc.mediaName);
-    setProfileInst(detectProfile(doc.transcriptData));
+    try {
+      setProfileInst(detectProfile(doc.transcriptData));
+    } catch (e) {
+      setError(e.message);
+      return;
+    }
     setTranscriptData(doc.transcriptData);
     setTranscriptName(doc.label);
     setTitle(doc.title);
@@ -318,7 +252,6 @@ function Playground() {
   };
 
   // Uploads arrive as separate media + transcript files; pair them into one document.
-  // When both pendings are present, synthesize a descriptor, append, and select it.
   useEffect(() => {
     if (!pendingMedia || !pendingTranscript) return;
     const id = `uploaded-${uploadCounter + 1}`;
@@ -335,12 +268,16 @@ function Playground() {
     setDocuments((docs) => [...docs, doc]);
     setPendingMedia(null);
     setPendingTranscript(null);
-    // select inline (selectDocument reads from `documents` which hasn't updated yet)
     setError('');
     setUrlField('');
     setMediaUrl(doc.mediaUrl);
     setMediaName(doc.mediaName);
-    setProfileInst(detectProfile(doc.transcriptData));
+    try {
+      setProfileInst(detectProfile(doc.transcriptData));
+    } catch (e) {
+      setError(e.message);
+      return;
+    }
     setTranscriptData(doc.transcriptData);
     setTranscriptName(doc.label);
     setTitle(doc.title);
@@ -374,16 +311,9 @@ function Playground() {
         setError(`Could not parse JSON: ${err.message}`);
         return;
       }
-      const detected = detectProfile(parsed);
-      // DPE must validate; rev.ai (rigid) and WhisperX are accepted as-is.
-      if (detected.id === 'classic') {
-        const dpeError = validateDpe(parsed);
-        if (dpeError) {
-          setError(
-            `Unsupported transcript format. Expected DPE ({ words, paragraphs }), rev.ai ({ monologues }) or WhisperX ({ segments, word_segments }). ${dpeError}`
-          );
-          return;
-        }
+      if (!formatOf(parsed)) {
+        setError('Unsupported transcript format. Expected rev.ai ({ monologues }) or WhisperX ({ segments, word_segments }).');
+        return;
       }
       setError('');
       setPendingTranscript({ data: parsed, title: file.name.replace(/\.[^/.]+$/, ''), name: file.name });
@@ -394,8 +324,7 @@ function Playground() {
 
   const ready = Boolean(mediaUrl) && Boolean(transcriptData);
 
-  // Collapse the Load & options panel once content is loaded. One-way (fires only
-  // when `ready` flips to true), so a manual re-open while loaded stays open.
+  // Collapse the Load & options panel once content is loaded.
   useEffect(() => {
     if (ready) setLoadOpen(false);
   }, [ready]);
@@ -404,9 +333,9 @@ function Playground() {
     <div style={styles.wrap}>
       <h2>Slate Transcript Editor — Playground</h2>
       <p style={styles.hint}>
-        Load a media file (video/audio) <strong>and</strong> a matching transcript in DPE JSON format (
-        <code>{'{ words: [...], paragraphs: [...] }'}</code>), then edit and export. This tool does not generate transcripts — it edits an existing
-        word-timed one.
+        Load a media file (video/audio) <strong>and</strong> a matching transcript in <code>rev.ai</code> ({'{ monologues: [...] }'}) or{' '}
+        <code>WhisperX</code> ({'{ segments: [...], word_segments: [...] }'}) JSON, then edit and export. This tool does not generate transcripts — it
+        edits an existing word-timed one.
       </p>
 
       <div style={styles.panel}>
@@ -417,71 +346,53 @@ function Playground() {
           <span style={{ fontSize: 12, fontWeight: 400, color: '#90a4ae' }}>{loadOpen ? '(click to collapse)' : '(click to expand)'}</span>
         </div>
         {loadOpen && (
-          <>
-            <div style={styles.row}>
-              <div style={styles.col}>
-                <span style={styles.label}>1 · Media</span>
-                <input type="file" accept="video/*,audio/*" onChange={handleMediaFile} />
-                <div style={{ display: 'flex', gap: '0.4em' }}>
-                  <input
-                    style={styles.urlInput}
-                    type="text"
-                    placeholder="…or paste a video/audio URL"
-                    value={urlField}
-                    onChange={(e) => setUrlField(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleMediaUrl();
-                    }}
-                  />
-                  <button style={styles.btn} onClick={handleMediaUrl}>
-                    Use URL
-                  </button>
-                </div>
-                {mediaName && (
-                  <span style={styles.ok}>
-                    ✓ {mediaName} <em>({getMediaType(mediaName)})</em>
-                  </span>
-                )}
+          <div style={styles.row}>
+            <div style={styles.col}>
+              <span style={styles.label}>1 · Media</span>
+              <input type="file" accept="video/*,audio/*" onChange={handleMediaFile} />
+              <div style={{ display: 'flex', gap: '0.4em' }}>
+                <input
+                  style={styles.urlInput}
+                  type="text"
+                  placeholder="…or paste a video/audio URL"
+                  value={urlField}
+                  onChange={(e) => setUrlField(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleMediaUrl();
+                  }}
+                />
+                <button style={styles.btn} onClick={handleMediaUrl}>
+                  Use URL
+                </button>
               </div>
-
-              <div style={styles.col}>
-                <span style={styles.label}>2 · Transcript (DPE JSON)</span>
-                <input type="file" accept="application/json,.json" onChange={handleTranscriptFile} />
-                {transcriptName && <span style={styles.ok}>✓ {transcriptName}</span>}
-              </div>
-
-              <div style={styles.col}>
-                <span style={styles.label}>Or open a document</span>
-                <div style={styles.docGrid}>
-                  {documents.map((d) => (
-                    <button
-                      key={d.id}
-                      style={d.id === activeFileId ? { ...styles.docBtn, borderColor: '#18181b', color: '#18181b' } : styles.docBtn}
-                      onClick={() => selectDocument(d.id)}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {mediaName && (
+                <span style={styles.ok}>
+                  ✓ {mediaName} <em>({getMediaType(mediaName)})</em>
+                </span>
+              )}
             </div>
 
-            {!isWordLevel && (
-              <div style={styles.toggles}>
-                <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
-                  <input
-                    type="checkbox"
-                    checked={wordLevelEditing}
-                    onChange={(e) => {
-                      setWordLevelEditing(e.target.checked);
-                      remount();
-                    }}
-                  />{' '}
-                  Word-level editing
-                </label>
+            <div style={styles.col}>
+              <span style={styles.label}>2 · Transcript (rev.ai / WhisperX JSON)</span>
+              <input type="file" accept="application/json,.json" onChange={handleTranscriptFile} />
+              {transcriptName && <span style={styles.ok}>✓ {transcriptName}</span>}
+            </div>
+
+            <div style={styles.col}>
+              <span style={styles.label}>Or open a document</span>
+              <div style={styles.docGrid}>
+                {documents.map((d) => (
+                  <button
+                    key={d.id}
+                    style={d.id === activeFileId ? { ...styles.docBtn, borderColor: '#18181b', color: '#18181b' } : styles.docBtn}
+                    onClick={() => selectDocument(d.id)}
+                  >
+                    {d.label}
+                  </button>
+                ))}
               </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
 
         {error && <div style={styles.error}>{error}</div>}
@@ -502,7 +413,6 @@ function Playground() {
           isEditable={isEditable}
           showSpeakers={showSpeakers}
           showTimecodes={showTimecodes}
-          wordLevelEditing={wordLevelEditing}
           onShowRawSource={openRaw}
           files={documents.map(({ id, label, sublabel }) => ({ id, label, sublabel }))}
           activeFileId={activeFileId}
@@ -517,8 +427,8 @@ function Playground() {
 
       {rawOpen && (
         <RawSourceDialog
-          title={isRigid ? 'Raw rev.ai source (JSON)' : isWhisperx ? 'Raw WhisperX source (JSON)' : 'Raw DPE source (JSON)'}
-          tier={isRigid ? 'rev' : isWhisperx ? 'whisperx' : 'dpe'}
+          title={isRev ? 'Raw rev.ai source (JSON)' : isWhisperx ? 'Raw WhisperX source (JSON)' : 'Raw source (JSON)'}
+          tier={isRev ? 'rev' : isWhisperx ? 'whisperx' : 'rev'}
           openTo={rawLocator}
           initialText={rawText}
           validate={validateRaw}
