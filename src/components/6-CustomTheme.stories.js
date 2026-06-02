@@ -19,7 +19,7 @@ export default {
 const DEMO_MEDIA_URL_SOLEIO =
   'https://digital-paper-edit-demo.s3.eu-west-2.amazonaws.com/PBS-Frontline/The+Facebook+Dilemma+-+interviews/The+Facebook+Dilemma+-+Soleio+Cuervo-OIAUfZBd_7w.mp4';
 const DEMO_TITLE_SOLEIO = 'Soleio Interview, PBS Frontline';
-import DEMO_SOLEIO from '../sample-data/soleio-dpe.json';
+import DEMO_WHISPERX from '../sample-data/GEMS-01-UZH.json';
 
 export const CustomTheme = {
   render: () => {
@@ -40,8 +40,8 @@ export const CustomTheme = {
               title={DEMO_TITLE_SOLEIO}
               mediaUrl={DEMO_MEDIA_URL_SOLEIO}
               handleSaveEditor={action('handleSaveEditor')}
-              autoSaveContentType={'digitalpaperedit'}
-              transcriptData={DEMO_SOLEIO}
+              autoSaveContentType={'whisperx'}
+              transcriptData={DEMO_WHISPERX}
             />
           </ThemeProvider>
         </StyledEngineProvider>
@@ -69,8 +69,8 @@ export const CustomThemeExampleTwo = {
               title={DEMO_TITLE_SOLEIO}
               mediaUrl={DEMO_MEDIA_URL_SOLEIO}
               handleSaveEditor={action('handleSaveEditor')}
-              autoSaveContentType={'digitalpaperedit'}
-              transcriptData={DEMO_SOLEIO}
+              autoSaveContentType={'whisperx'}
+              transcriptData={DEMO_WHISPERX}
             />
           </ThemeProvider>
         </StyledEngineProvider>

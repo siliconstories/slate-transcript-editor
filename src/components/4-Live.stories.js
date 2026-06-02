@@ -1,28 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { action } from 'storybook/actions';
 import SlateTranscriptEditor from './index.js';
+import GEMS_UZH from '../sample-data/GEMS-01-UZH.json';
 
 export default {
   title: 'Live',
   component: SlateTranscriptEditor,
 };
 
-const DEMO_MEDIA_URL_SOLEIO =
-  'https://digital-paper-edit-demo.s3.eu-west-2.amazonaws.com/PBS-Frontline/The+Facebook+Dilemma+-+interviews/The+Facebook+Dilemma+-+Soleio+Cuervo-OIAUfZBd_7w.mp4';
-import DEMO_SOLEIO_LIVE from '../sample-data/segmented-transcript-soleio-dpe.json';
+const GEMS_MEDIA_URL = '/strict-media/GEMS-01.mp4';
+
+// Build a valid WhisperX chunk ({ segments, word_segments }) from a slice of segments.
+const chunk = (segments) => ({ segments, word_segments: segments.flatMap((s) => s.words || []) });
+
+// Simulate a live stream by splitting the WhisperX transcript into an initial block
+// plus a few interim parts that arrive on a timer. Each part is a self-contained
+// WhisperX doc the editor projects to Slate nodes and appends (display-only).
+const SEGMENTS = GEMS_UZH.segments.slice(0, 9);
+const INITIAL = chunk(SEGMENTS.slice(0, 3));
+const LIVE_PARTS = [chunk(SEGMENTS.slice(3, 6)), chunk(SEGMENTS.slice(6, 9))];
 
 // Parent component to simulate results from a live STT stream.
 const Example = (props) => {
-  const [jsonData] = useState({});
   const [interimResults, setInterimResults] = useState({});
 
-  // https://travishorn.com/delaying-foreach-iterations-2ebd4b29ad30
-  const delayLoop = (fn, delay) => {
-    return (x, i) => {
-      setTimeout(() => {
-        fn(x);
-      }, i * delay);
-    };
+  const delayLoop = (fn, delay) => (x, i) => {
+    setTimeout(() => fn(x), i * delay);
   };
 
   useEffect(() => {
@@ -36,12 +39,13 @@ const Example = (props) => {
 
   return (
     <SlateTranscriptEditor
-      mediaUrl={DEMO_MEDIA_URL_SOLEIO}
+      mediaUrl={GEMS_MEDIA_URL}
       handleSaveEditor={action('handleSaveEditor')}
       handleAutoSaveChanges={action('handleAutoSaveChanges')}
-      autoSaveContentType={'digitalpaperedit'}
-      transcriptData={jsonData}
+      autoSaveContentType={'whisperx'}
+      transcriptData={INITIAL}
       transcriptDataLive={interimResults}
+      editingMode={'freestyle'}
       isEditable={props.isEditable}
       title={props.title}
       showTitle={true}
@@ -55,8 +59,8 @@ export const NotEditable = {
   render: () => (
     <Example
       isEditable={false}
-      transcriptInParts={DEMO_SOLEIO_LIVE}
-      title={'Simulated a live STT interim results via a timer and segmented STT json, NOT editable'}
+      transcriptInParts={LIVE_PARTS}
+      title={'Simulated live STT interim results via a timer + segmented WhisperX JSON, NOT editable'}
     />
   ),
 };
@@ -65,8 +69,8 @@ export const Editable = {
   render: () => (
     <Example
       isEditable={true}
-      transcriptInParts={DEMO_SOLEIO_LIVE}
-      title={'Simulated a live STT interim results via a timer and segmented STT json, editable'}
+      transcriptInParts={LIVE_PARTS}
+      title={'Simulated live STT interim results via a timer + segmented WhisperX JSON, editable'}
     />
   ),
 };
