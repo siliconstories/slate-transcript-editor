@@ -449,6 +449,10 @@ export function EditingToolbar({
   setEditable,
   settings,
   actions,
+  presets,
+  activePresetId,
+  canShowAnnotations,
+  cutoffOptions,
   canStructuralEdit,
   editingMode,
   editingModes,
@@ -464,6 +468,11 @@ export function EditingToolbar({
   handleInsertMusicNote,
   handleReplaceText,
 }) {
+  const display = settings.display;
+  const conf = settings.confidence;
+  const setDisplay = (key, val) => actions.setField('display', key, val);
+  const setConf = (key, val) => actions.setField('confidence', key, val);
+  const activePreset = (presets || []).find((p) => p.id === activePresetId);
   const fontSize = settings.appearance.fontSize;
   const setFontSize = (next) => actions.setField('appearance', 'fontSize', Math.min(28, Math.max(11, next)));
   return (
@@ -508,6 +517,31 @@ export function EditingToolbar({
         </>
       )}
 
+      <span style={S.groupGap} />
+      <DisplayPopover
+        display={display}
+        conf={conf}
+        cutoffOptions={cutoffOptions}
+        canShowAnnotations={canShowAnnotations}
+        setDisplay={setDisplay}
+        setConf={setConf}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconBtn icon={I.presets} framed title={activePreset ? `Display presets — current: ${activePreset.name}` : 'Display presets'} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLabel>Display presets</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={activePresetId || ''} onValueChange={(id) => actions.selectPreset(id)}>
+            {(presets || []).map((p) => (
+              <DropdownMenuRadioItem key={p.id} value={p.id}>
+                {p.name}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <span style={S.spring} />
 
       {/* Font-size stepper — resizes the transcript text live (clamped 11–28); a view
@@ -523,12 +557,6 @@ export function EditingToolbar({
 
 export default function EditorToolbar({
   editable,
-  settings,
-  actions,
-  presets,
-  activePresetId,
-  canShowAnnotations,
-  cutoffOptions,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -542,47 +570,11 @@ export default function EditorToolbar({
   const [revertOpen, setRevertOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  const display = settings.display;
-  const conf = settings.confidence;
-  const setDisplay = (key, val) => actions.setField('display', key, val);
-  const setConf = (key, val) => actions.setField('confidence', key, val);
-
   const dirty = !isContentSaved;
   const runExport = (args) => handleExport({ ...args, isDownload: true });
-  const activePreset = (presets || []).find((p) => p.id === activePresetId);
 
   return (
     <div className="stte-ui stte-toolbar-scroll" style={S.bar}>
-      <DisplayPopover
-        display={display}
-        conf={conf}
-        cutoffOptions={cutoffOptions}
-        canShowAnnotations={canShowAnnotations}
-        setDisplay={setDisplay}
-        setConf={setConf}
-      />
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <TextButton
-            kind="outline"
-            label="Presets"
-            chevron
-            title={activePreset ? `Display presets — current: ${activePreset.name}` : 'Display presets'}
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuLabel>Display presets</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={activePresetId || ''} onValueChange={(id) => actions.selectPreset(id)}>
-            {(presets || []).map((p) => (
-              <DropdownMenuRadioItem key={p.id} value={p.id}>
-                {p.name}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       <span style={S.spring} />
 
       {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}

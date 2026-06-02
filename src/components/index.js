@@ -210,9 +210,16 @@ function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, on
           </button>
         )}
       </span>
+      {/* Hidden sizer drives the input width so it auto-fits the text exactly — no
+          char-count padding, so the field stays tight to the word and only grows if the
+          edited text genuinely grows. */}
+      <span aria-hidden="true" className="stw-word-sizer">
+        {state.draft || ' '}
+      </span>
       <input
         className="stw-word-input"
         autoFocus
+        size={1}
         value={state.draft}
         onChange={(e) => onDraft(e.target.value)}
         onBlur={onSave}
@@ -225,8 +232,6 @@ function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, on
             onCancel();
           }
         }}
-        size={Math.max(state.draft.length, 2)}
-        style={state.width ? { minWidth: state.width } : undefined}
       />
     </span>
   );
@@ -1797,16 +1802,39 @@ function SlateTranscriptEditorInner(props) {
               .stw-muted:hover {
                 text-decoration: line-through underline;
               }
-              .stw-word-input {
-                font: inherit;
-                border: 1px solid #1976d2;
-                border-radius: 2px;
-                padding: 0 2px;
-                background: #fff;
-              }
+              /* In-place word editor: the input sits exactly over the word (same font, no
+                 border/padding) so nothing shifts; an inline-grid sizer keeps it tight to
+                 the text. The wrap carries an opaque tint that hides the word beneath and
+                 signals editing without taking layout space. */
               .stw-edit-wrap {
                 position: relative;
-                display: inline-block;
+                display: inline-grid;
+                background: #e8f0fe;
+                border-radius: 2px;
+                box-shadow: inset 0 -1.5px 0 #1976d2;
+              }
+              .stw-word-sizer,
+              .stw-word-input {
+                grid-area: 1 / 1;
+                font: inherit;
+                line-height: inherit;
+                letter-spacing: inherit;
+                padding: 0;
+                margin: 0;
+              }
+              .stw-word-sizer {
+                visibility: hidden;
+                white-space: pre;
+              }
+              .stw-word-input {
+                width: 100%;
+                min-width: 0;
+                border: none;
+                background: transparent;
+                color: inherit;
+                outline: none;
+                box-sizing: border-box;
+                caret-color: #1976d2;
               }
               .stw-edit-tools {
                 position: absolute;
@@ -1884,30 +1912,27 @@ function SlateTranscriptEditorInner(props) {
               }
           `}
         </style>
-        {props.title && (
-          <div style={{ marginBottom: '0.6em' }}>
-            <Typography variant="h5">{props.title}</Typography>
+        {/* Title and the primary (display/file) toolbar share one row. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: '0.75em', flex: '0 0 auto', zIndex: 20, background: '#fff' }}>
+          {props.title && (
+            <Typography variant="h5" noWrap sx={{ flex: '0 0 auto', m: 0 }}>
+              {props.title}
+            </Typography>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <EditorToolbar
+              editable={editable}
+              isProcessing={isProcessing}
+              isContentSaved={isContentSaved}
+              handleSave={handleSave}
+              handleExport={handleExport}
+              exporters={profile.exporters}
+              onRevertToSaved={handleRevertToSaved}
+              onRevertToImported={handleRevertToImported}
+              onOpenPreferences={() => setPrefsOpen(true)}
+              onShowRawSource={props.onShowRawSource}
+            />
           </div>
-        )}
-        <div style={{ marginBottom: '0.75em', flex: '0 0 auto', zIndex: 20, background: '#fff' }}>
-          <EditorToolbar
-            editable={editable}
-            settings={settings}
-            actions={actions}
-            presets={presets}
-            activePresetId={activePresetId}
-            canShowAnnotations={!!editPolicy.supportsAnnotations}
-            cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
-            isProcessing={isProcessing}
-            isContentSaved={isContentSaved}
-            handleSave={handleSave}
-            handleExport={handleExport}
-            exporters={profile.exporters}
-            onRevertToSaved={handleRevertToSaved}
-            onRevertToImported={handleRevertToImported}
-            onOpenPreferences={() => setPrefsOpen(true)}
-            onShowRawSource={props.onShowRawSource}
-          />
         </div>
 
         {hasFiles && (
@@ -1978,7 +2003,7 @@ function SlateTranscriptEditorInner(props) {
                 sx={{ flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch' }}
               >
                 <Grid container spacing={2} sx={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'stretch' }}>
-                  <Grid container sx={{ justifyContent: 'flex-end' }}>
+                  <Grid container sx={{ justifyContent: 'flex-start' }}>
                     <button type="button" onClick={() => setMediaCollapsed(true)} style={MEDIA_TOGGLE_STYLE} title="Hide the media panel">
                       ‹ Hide media
                     </button>
@@ -2082,6 +2107,10 @@ function SlateTranscriptEditorInner(props) {
                       setEditable={setEditable}
                       settings={settings}
                       actions={actions}
+                      presets={presets}
+                      activePresetId={activePresetId}
+                      canShowAnnotations={!!editPolicy.supportsAnnotations}
+                      cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
                       canStructuralEdit={editPolicy.allowsStructuralEdits}
                       editingMode={editingMode}
                       editingModes={editingModes}
