@@ -18,7 +18,13 @@ describe('classic profile', () => {
 
   it('allows every edit and defers export/versioning to the editor defaults', () => {
     const p = createClassicProfile();
-    expect(p.editPolicy).toEqual({ allowsStructuralEdits: true, allowsFreeText: true, wordLevelOnly: false });
+    expect(p.editPolicy).toEqual({
+      allowsStructuralEdits: true,
+      allowsFreeText: true,
+      wordLevelOnly: false,
+      modes: ['freestyle', 'word'],
+      defaultMode: 'freestyle',
+    });
     expect(p.exporters).toBeNull();
     expect(p.versioning).toBeNull();
   });

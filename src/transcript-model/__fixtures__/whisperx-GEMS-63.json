@@ -1,0 +1,1546 @@
+{
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 11.971,
+      "text": "Wenn ich mit einer Kollegin oder einer Kollegin nicht auskomme oder nicht auskomme oder nicht auskomme, ja genau,",
+      "words": [
+        {
+          "word": "Wenn",
+          "start": 0.0,
+          "end": 2.082,
+          "score": 0.661,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ich",
+          "start": 2.122,
+          "end": 2.302,
+          "score": 0.522,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "mit",
+          "start": 2.322,
+          "end": 2.462,
+          "score": 0.926,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "einer",
+          "start": 2.522,
+          "end": 2.763,
+          "score": 0.669,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "Kollegin",
+          "start": 2.803,
+          "end": 3.183,
+          "score": 0.767,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "oder",
+          "start": 3.323,
+          "end": 3.403,
+          "score": 0.016,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "einer",
+          "start": 3.423,
+          "end": 3.523,
+          "score": 0.161,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "Kollegin",
+          "start": 3.563,
+          "end": 4.024,
+          "score": 0.809,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "nicht",
+          "start": 4.064,
+          "end": 4.324,
+          "score": 0.127,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "auskomme",
+          "start": 4.344,
+          "end": 5.645,
+          "score": 0.841,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "oder",
+          "start": 5.685,
+          "end": 6.026,
+          "score": 0.743,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "nicht",
+          "start": 6.046,
+          "end": 6.746,
+          "score": 0.15,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "auskomme",
+          "start": 6.766,
+          "end": 8.908,
+          "score": 0.713,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "oder",
+          "start": 8.949,
+          "end": 9.129,
+          "score": 0.767,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "nicht",
+          "start": 9.149,
+          "end": 9.529,
+          "score": 0.149,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "auskomme,",
+          "start": 9.549,
+          "end": 10.79,
+          "score": 0.467,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ja",
+          "start": 10.81,
+          "end": 10.93,
+          "score": 0.646,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "genau,",
+          "start": 10.95,
+          "end": 11.971,
+          "score": 0.747,
+          "speaker": "SPEAKER_00"
+        }
+      ],
+      "speaker": "SPEAKER_00",
+      "detected_language": "de",
+      "detected_language_probability": 0.9297,
+      "annotations": {
+        "topic_id_segment": "ensemble_team_chemistry",
+        "topic_score_segment": 0.862,
+        "topic_keywords_matched_segment": [
+          "kolleg",
+          "kollegin"
+        ],
+        "concept_tags_segment": {
+          "glossary": [],
+          "free": [
+            "Kollegin"
+          ]
+        },
+        "sentiment_segment": {
+          "label": "neutral",
+          "score": -0.016,
+          "avg": -0.004,
+          "matched": 4
+        },
+        "mood_segment": {
+          "primary": "trust",
+          "primary_de": "Vertrauen",
+          "secondary": null,
+          "scores": {
+            "anger": 0,
+            "anticipation": 0,
+            "disgust": 0,
+            "fear": 0,
+            "joy": 0,
+            "sadness": 0,
+            "surprise": 0,
+            "trust": 1
+          },
+          "matched": 3
+        },
+        "sentences": [
+          {
+            "text": "Wenn ich mit einer Kollegin oder einer Kollegin nicht auskomme oder nicht auskomme oder nicht auskomme, ja genau,",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.862,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": [
+                "Kollegin"
+              ]
+            },
+            "sentiment": {
+              "label": "neutral",
+              "score": -0.016,
+              "avg": -0.004,
+              "matched": 4
+            },
+            "mood": {
+              "primary": "trust",
+              "primary_de": "Vertrauen",
+              "secondary": null,
+              "scores": {
+                "anger": 0,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 0,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 0,
+                "trust": 1
+              },
+              "matched": 3
+            },
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          }
+        ],
+        "chunk_id": 0,
+        "chunk_topic_id": "ensemble_team_chemistry",
+        "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+        "chunk_topic_keywords": [
+          "kolleg",
+          "kollegin"
+        ]
+      }
+    },
+    {
+      "start": 12.011,
+      "end": 23.442,
+      "text": "dann… Früher habe ich noch versucht, einen Weg zu finden, damit man sich wieder verständigen",
+      "words": [
+        {
+          "word": "dann…",
+          "start": 12.011,
+          "end": 15.695,
+          "score": 0.76,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "Früher",
+          "start": 15.735,
+          "end": 16.035,
+          "score": 0.584,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "habe",
+          "start": 16.055,
+          "end": 16.195,
+          "score": 0.356,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ich",
+          "start": 16.215,
+          "end": 16.316,
+          "score": 0.267,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "noch",
+          "start": 16.336,
+          "end": 16.916,
+          "score": 0.393,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "versucht,",
+          "start": 16.936,
+          "end": 20.9,
+          "score": 0.374,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "einen",
+          "start": 20.94,
+          "end": 21.04,
+          "score": 0.0,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "Weg",
+          "start": 21.06,
+          "end": 21.38,
+          "score": 0.652,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "zu",
+          "start": 21.4,
+          "end": 21.44,
+          "score": 0.005,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "finden,",
+          "start": 21.46,
+          "end": 21.901,
+          "score": 0.822,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "damit",
+          "start": 21.921,
+          "end": 22.061,
+          "score": 0.342,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "man",
+          "start": 22.081,
+          "end": 22.221,
+          "score": 0.248,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "sich",
+          "start": 22.261,
+          "end": 22.381,
+          "score": 0.645,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "wieder",
+          "start": 22.421,
+          "end": 22.602,
+          "score": 0.915,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "verständigen",
+          "start": 22.762,
+          "end": 23.442,
+          "score": 0.796,
+          "speaker": "SPEAKER_00"
+        }
+      ],
+      "speaker": "SPEAKER_00",
+      "detected_language": "de",
+      "detected_language_probability": 0.9297,
+      "annotations": {
+        "topic_id_segment": "ensemble_team_chemistry",
+        "topic_score_segment": 0.0,
+        "topic_keywords_matched_segment": [
+          "kolleg",
+          "kollegin"
+        ],
+        "concept_tags_segment": {
+          "glossary": [],
+          "free": [
+            "Früher"
+          ]
+        },
+        "sentiment_segment": {
+          "label": "neutral",
+          "score": 0.0,
+          "matched": 0
+        },
+        "mood_segment": {
+          "primary": "neutral",
+          "primary_de": "neutral",
+          "scores": {
+            "anger": 0,
+            "anticipation": 0,
+            "disgust": 0,
+            "fear": 0,
+            "joy": 0,
+            "sadness": 0,
+            "surprise": 0,
+            "trust": 0
+          },
+          "matched": 0
+        },
+        "sentences": [
+          {
+            "text": "dann…",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.0,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": []
+            },
+            "sentiment": {
+              "label": "neutral",
+              "score": 0.0,
+              "matched": 0
+            },
+            "mood": {
+              "primary": "neutral",
+              "primary_de": "neutral",
+              "scores": {
+                "anger": 0,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 0,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 0,
+                "trust": 0
+              },
+              "matched": 0
+            },
+            "topic_inferred_from_context": true,
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          },
+          {
+            "text": "Früher habe ich noch versucht, einen Weg zu finden, damit man sich wieder verständigen",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.0,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": [
+                "Früher"
+              ]
+            },
+            "sentiment": {
+              "label": "neutral",
+              "score": 0.0,
+              "matched": 0
+            },
+            "mood": {
+              "primary": "neutral",
+              "primary_de": "neutral",
+              "scores": {
+                "anger": 0,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 0,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 0,
+                "trust": 0
+              },
+              "matched": 0
+            },
+            "topic_inferred_from_context": true,
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          }
+        ],
+        "topic_inferred_from_context": true,
+        "chunk_id": 0,
+        "chunk_topic_id": "ensemble_team_chemistry",
+        "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+        "chunk_topic_keywords": [
+          "kolleg",
+          "kollegin"
+        ]
+      }
+    },
+    {
+      "start": 25.584,
+      "end": 42.02,
+      "text": "kann, weil mir das so ans Herz ist, und ich habe das alles immer viel zu nahe genommen, wenn es nicht funktioniertierte, und das konnte mich wahnsinnig, persönlich genommen, als ich jung war, und heute ist es halt … let them.",
+      "words": [
+        {
+          "word": "kann,",
+          "start": 25.584,
+          "end": 25.684,
+          "score": 0.002,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "weil",
+          "start": 25.704,
+          "end": 25.785,
+          "score": 0.126,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "mir",
+          "start": 25.805,
+          "end": 25.925,
+          "score": 0.538,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "das",
+          "start": 25.945,
+          "end": 26.065,
+          "score": 0.475,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "so",
+          "start": 26.085,
+          "end": 26.365,
+          "score": 0.594,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ans",
+          "start": 26.385,
+          "end": 26.445,
+          "score": 0.005,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "Herz",
+          "start": 26.465,
+          "end": 26.705,
+          "score": 0.574,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ist,",
+          "start": 26.725,
+          "end": 26.846,
+          "score": 0.478,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "und",
+          "start": 26.886,
+          "end": 27.006,
+          "score": 0.855,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ich",
+          "start": 27.066,
+          "end": 27.486,
+          "score": 0.734,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "habe",
+          "start": 27.506,
+          "end": 27.606,
+          "score": 0.478,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "das",
+          "start": 27.626,
+          "end": 27.726,
+          "score": 0.879,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "alles",
+          "start": 27.766,
+          "end": 27.927,
+          "score": 0.31,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "immer",
+          "start": 27.967,
+          "end": 28.167,
+          "score": 0.326,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "viel",
+          "start": 28.207,
+          "end": 28.407,
+          "score": 0.638,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "zu",
+          "start": 28.427,
+          "end": 28.527,
+          "score": 0.376,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "nahe",
+          "start": 28.547,
+          "end": 28.807,
+          "score": 0.431,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "genommen,",
+          "start": 28.827,
+          "end": 29.608,
+          "score": 0.357,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "wenn",
+          "start": 29.628,
+          "end": 29.748,
+          "score": 0.826,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "es",
+          "start": 29.808,
+          "end": 29.888,
+          "score": 0.594,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "nicht",
+          "start": 29.908,
+          "end": 30.089,
+          "score": 0.573,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "funktioniertierte,",
+          "start": 30.149,
+          "end": 31.57,
+          "score": 0.659,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "und",
+          "start": 31.61,
+          "end": 32.091,
+          "score": 0.874,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "das",
+          "start": 32.111,
+          "end": 32.171,
+          "score": 0.0,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "konnte",
+          "start": 32.191,
+          "end": 32.311,
+          "score": 0.022,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "mich",
+          "start": 32.331,
+          "end": 32.411,
+          "score": 0.393,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "wahnsinnig,",
+          "start": 32.431,
+          "end": 33.092,
+          "score": 0.629,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "persönlich",
+          "start": 33.392,
+          "end": 33.872,
+          "score": 0.793,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "genommen,",
+          "start": 33.892,
+          "end": 35.113,
+          "score": 0.559,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "als",
+          "start": 35.153,
+          "end": 35.254,
+          "score": 0.204,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ich",
+          "start": 35.274,
+          "end": 35.354,
+          "score": 0.399,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "jung",
+          "start": 35.374,
+          "end": 35.714,
+          "score": 0.802,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "war,",
+          "start": 35.994,
+          "end": 37.496,
+          "score": 0.454,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "und",
+          "start": 37.556,
+          "end": 37.836,
+          "score": 0.923,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "heute",
+          "start": 37.876,
+          "end": 41.54,
+          "score": 0.79,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "ist",
+          "start": 41.56,
+          "end": 41.62,
+          "score": 0.01,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "es",
+          "start": 41.64,
+          "end": 41.68,
+          "score": 0.007,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "halt",
+          "start": 41.7,
+          "end": 41.78,
+          "score": 0.008,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "…",
+          "start": 41.8,
+          "end": 41.82,
+          "score": 0.001,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "let",
+          "start": 41.84,
+          "end": 41.9,
+          "score": 0.024,
+          "speaker": "SPEAKER_00"
+        },
+        {
+          "word": "them.",
+          "start": 41.92,
+          "end": 42.02,
+          "score": 0.201,
+          "speaker": "SPEAKER_00"
+        }
+      ],
+      "speaker": "SPEAKER_00",
+      "detected_language": "de",
+      "detected_language_probability": 0.9297,
+      "annotations": {
+        "topic_id_segment": "ensemble_team_chemistry",
+        "topic_score_segment": 0.0,
+        "topic_keywords_matched_segment": [
+          "kolleg",
+          "kollegin"
+        ],
+        "concept_tags_segment": {
+          "glossary": [],
+          "free": [
+            "Herz"
+          ]
+        },
+        "sentiment_segment": {
+          "label": "positive",
+          "score": 0.2219,
+          "avg": 0.111,
+          "matched": 2
+        },
+        "mood_segment": {
+          "primary": "fear",
+          "primary_de": "Angst",
+          "secondary": "anger",
+          "scores": {
+            "anger": 1,
+            "anticipation": 0,
+            "disgust": 0,
+            "fear": 1,
+            "joy": 0,
+            "sadness": 0,
+            "surprise": 0,
+            "trust": 1
+          },
+          "matched": 3
+        },
+        "sentences": [
+          {
+            "text": "kann, weil mir das so ans Herz ist, und ich habe das alles immer viel zu nahe genommen, wenn es nicht funktioniertierte, und das konnte mich wahnsinnig, persönlich genommen, als ich jung war, und heute ist es halt …",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.0,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": [
+                "Herz"
+              ]
+            },
+            "sentiment": {
+              "label": "positive",
+              "score": 0.2219,
+              "avg": 0.111,
+              "matched": 2
+            },
+            "mood": {
+              "primary": "fear",
+              "primary_de": "Angst",
+              "secondary": "anger",
+              "scores": {
+                "anger": 1,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 1,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 0,
+                "trust": 1
+              },
+              "matched": 3
+            },
+            "topic_inferred_from_context": true,
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          },
+          {
+            "text": "let them.",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.0,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": []
+            },
+            "sentiment": {
+              "label": "neutral",
+              "score": 0.0,
+              "matched": 0
+            },
+            "mood": {
+              "primary": "neutral",
+              "primary_de": "neutral",
+              "scores": {
+                "anger": 0,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 0,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 0,
+                "trust": 0
+              },
+              "matched": 0
+            },
+            "topic_inferred_from_context": true,
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          }
+        ],
+        "topic_inferred_from_context": true,
+        "chunk_id": 0,
+        "chunk_topic_id": "ensemble_team_chemistry",
+        "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+        "chunk_topic_keywords": [
+          "kolleg",
+          "kollegin"
+        ]
+      }
+    },
+    {
+      "start": 54.0,
+      "end": 55.0,
+      "text": "Ich kann nur mich ändern, ich kann dich nicht ändern, ich mache mein Ding, ich bin da, ich bin für das gecastet worden.»",
+      "words": [],
+      "chars": null,
+      "speaker": "SPEAKER_00",
+      "detected_language": "de",
+      "detected_language_probability": null,
+      "annotations": {
+        "topic_id_segment": "ensemble_team_chemistry",
+        "topic_score_segment": 0.0,
+        "topic_keywords_matched_segment": [
+          "kolleg",
+          "kollegin"
+        ],
+        "concept_tags_segment": {
+          "glossary": [],
+          "free": [
+            "Ding"
+          ]
+        },
+        "sentiment_segment": {
+          "label": "neutral",
+          "score": 0.0,
+          "matched": 0
+        },
+        "mood_segment": {
+          "primary": "surprise",
+          "primary_de": "Überraschung",
+          "secondary": null,
+          "scores": {
+            "anger": 0,
+            "anticipation": 0,
+            "disgust": 0,
+            "fear": 0,
+            "joy": 0,
+            "sadness": 0,
+            "surprise": 2,
+            "trust": 0
+          },
+          "matched": 2
+        },
+        "sentences": [
+          {
+            "text": "Ich kann nur mich ändern, ich kann dich nicht ändern, ich mache mein Ding, ich bin da, ich bin für das gecastet worden.»",
+            "topic_id": "ensemble_team_chemistry",
+            "topic_score": 0.0,
+            "topic_keywords_matched": [
+              "kolleg",
+              "kollegin"
+            ],
+            "concept_tags": {
+              "glossary": [],
+              "free": [
+                "Ding"
+              ]
+            },
+            "sentiment": {
+              "label": "neutral",
+              "score": 0.0,
+              "matched": 0
+            },
+            "mood": {
+              "primary": "surprise",
+              "primary_de": "Überraschung",
+              "secondary": null,
+              "scores": {
+                "anger": 0,
+                "anticipation": 0,
+                "disgust": 0,
+                "fear": 0,
+                "joy": 0,
+                "sadness": 0,
+                "surprise": 2,
+                "trust": 0
+              },
+              "matched": 2
+            },
+            "topic_inferred_from_context": true,
+            "chunk_id": 0,
+            "chunk_topic_id": "ensemble_team_chemistry",
+            "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+            "chunk_topic_keywords": [
+              "kolleg",
+              "kollegin"
+            ]
+          }
+        ],
+        "topic_inferred_from_context": true,
+        "chunk_id": 0,
+        "chunk_topic_id": "ensemble_team_chemistry",
+        "chunk_topic_label": "Ensemble, crew & on-set chemistry",
+        "chunk_topic_keywords": [
+          "kolleg",
+          "kollegin"
+        ]
+      }
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Wenn",
+      "start": 0.0,
+      "end": 2.082,
+      "score": 0.661,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ich",
+      "start": 2.122,
+      "end": 2.302,
+      "score": 0.522,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "mit",
+      "start": 2.322,
+      "end": 2.462,
+      "score": 0.926,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "einer",
+      "start": 2.522,
+      "end": 2.763,
+      "score": 0.669,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "Kollegin",
+      "start": 2.803,
+      "end": 3.183,
+      "score": 0.767,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "oder",
+      "start": 3.323,
+      "end": 3.403,
+      "score": 0.016,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "einer",
+      "start": 3.423,
+      "end": 3.523,
+      "score": 0.161,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "Kollegin",
+      "start": 3.563,
+      "end": 4.024,
+      "score": 0.809,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "nicht",
+      "start": 4.064,
+      "end": 4.324,
+      "score": 0.127,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "auskomme",
+      "start": 4.344,
+      "end": 5.645,
+      "score": 0.841,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "oder",
+      "start": 5.685,
+      "end": 6.026,
+      "score": 0.743,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "nicht",
+      "start": 6.046,
+      "end": 6.746,
+      "score": 0.15,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "auskomme",
+      "start": 6.766,
+      "end": 8.908,
+      "score": 0.713,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "oder",
+      "start": 8.949,
+      "end": 9.129,
+      "score": 0.767,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "nicht",
+      "start": 9.149,
+      "end": 9.529,
+      "score": 0.149,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "auskomme,",
+      "start": 9.549,
+      "end": 10.79,
+      "score": 0.467,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ja",
+      "start": 10.81,
+      "end": 10.93,
+      "score": 0.646,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "genau,",
+      "start": 10.95,
+      "end": 11.971,
+      "score": 0.747,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "dann…",
+      "start": 12.011,
+      "end": 15.695,
+      "score": 0.76,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "Früher",
+      "start": 15.735,
+      "end": 16.035,
+      "score": 0.584,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "habe",
+      "start": 16.055,
+      "end": 16.195,
+      "score": 0.356,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ich",
+      "start": 16.215,
+      "end": 16.316,
+      "score": 0.267,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "noch",
+      "start": 16.336,
+      "end": 16.916,
+      "score": 0.393,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "versucht,",
+      "start": 16.936,
+      "end": 20.9,
+      "score": 0.374,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "einen",
+      "start": 20.94,
+      "end": 21.04,
+      "score": 0.0,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "Weg",
+      "start": 21.06,
+      "end": 21.38,
+      "score": 0.652,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "zu",
+      "start": 21.4,
+      "end": 21.44,
+      "score": 0.005,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "finden,",
+      "start": 21.46,
+      "end": 21.901,
+      "score": 0.822,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "damit",
+      "start": 21.921,
+      "end": 22.061,
+      "score": 0.342,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "man",
+      "start": 22.081,
+      "end": 22.221,
+      "score": 0.248,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "sich",
+      "start": 22.261,
+      "end": 22.381,
+      "score": 0.645,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "wieder",
+      "start": 22.421,
+      "end": 22.602,
+      "score": 0.915,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "verständigen",
+      "start": 22.762,
+      "end": 23.442,
+      "score": 0.796,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "kann,",
+      "start": 25.584,
+      "end": 25.684,
+      "score": 0.002,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "weil",
+      "start": 25.704,
+      "end": 25.785,
+      "score": 0.126,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "mir",
+      "start": 25.805,
+      "end": 25.925,
+      "score": 0.538,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "das",
+      "start": 25.945,
+      "end": 26.065,
+      "score": 0.475,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "so",
+      "start": 26.085,
+      "end": 26.365,
+      "score": 0.594,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ans",
+      "start": 26.385,
+      "end": 26.445,
+      "score": 0.005,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "Herz",
+      "start": 26.465,
+      "end": 26.705,
+      "score": 0.574,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ist,",
+      "start": 26.725,
+      "end": 26.846,
+      "score": 0.478,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "und",
+      "start": 26.886,
+      "end": 27.006,
+      "score": 0.855,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ich",
+      "start": 27.066,
+      "end": 27.486,
+      "score": 0.734,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "habe",
+      "start": 27.506,
+      "end": 27.606,
+      "score": 0.478,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "das",
+      "start": 27.626,
+      "end": 27.726,
+      "score": 0.879,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "alles",
+      "start": 27.766,
+      "end": 27.927,
+      "score": 0.31,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "immer",
+      "start": 27.967,
+      "end": 28.167,
+      "score": 0.326,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "viel",
+      "start": 28.207,
+      "end": 28.407,
+      "score": 0.638,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "zu",
+      "start": 28.427,
+      "end": 28.527,
+      "score": 0.376,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "nahe",
+      "start": 28.547,
+      "end": 28.807,
+      "score": 0.431,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "genommen,",
+      "start": 28.827,
+      "end": 29.608,
+      "score": 0.357,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "wenn",
+      "start": 29.628,
+      "end": 29.748,
+      "score": 0.826,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "es",
+      "start": 29.808,
+      "end": 29.888,
+      "score": 0.594,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "nicht",
+      "start": 29.908,
+      "end": 30.089,
+      "score": 0.573,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "funktioniertierte,",
+      "start": 30.149,
+      "end": 31.57,
+      "score": 0.659,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "und",
+      "start": 31.61,
+      "end": 32.091,
+      "score": 0.874,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "das",
+      "start": 32.111,
+      "end": 32.171,
+      "score": 0.0,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "konnte",
+      "start": 32.191,
+      "end": 32.311,
+      "score": 0.022,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "mich",
+      "start": 32.331,
+      "end": 32.411,
+      "score": 0.393,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "wahnsinnig,",
+      "start": 32.431,
+      "end": 33.092,
+      "score": 0.629,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "persönlich",
+      "start": 33.392,
+      "end": 33.872,
+      "score": 0.793,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "genommen,",
+      "start": 33.892,
+      "end": 35.113,
+      "score": 0.559,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "als",
+      "start": 35.153,
+      "end": 35.254,
+      "score": 0.204,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ich",
+      "start": 35.274,
+      "end": 35.354,
+      "score": 0.399,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "jung",
+      "start": 35.374,
+      "end": 35.714,
+      "score": 0.802,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "war,",
+      "start": 35.994,
+      "end": 37.496,
+      "score": 0.454,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "und",
+      "start": 37.556,
+      "end": 37.836,
+      "score": 0.923,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "heute",
+      "start": 37.876,
+      "end": 41.54,
+      "score": 0.79,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "ist",
+      "start": 41.56,
+      "end": 41.62,
+      "score": 0.01,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "es",
+      "start": 41.64,
+      "end": 41.68,
+      "score": 0.007,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "halt",
+      "start": 41.7,
+      "end": 41.78,
+      "score": 0.008,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "…",
+      "start": 41.8,
+      "end": 41.82,
+      "score": 0.001,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "let",
+      "start": 41.84,
+      "end": 41.9,
+      "score": 0.024,
+      "speaker": "SPEAKER_00"
+    },
+    {
+      "word": "them.",
+      "start": 41.92,
+      "end": 42.02,
+      "score": 0.201,
+      "speaker": "SPEAKER_00"
+    }
+  ],
+  "annotation_metadata": {
+    "annotator": "cineminds-pipeline-v1",
+    "topic_taxonomy_version": "1.0",
+    "n_segments": 4,
+    "n_chunks": 1,
+    "chunks": [
+      {
+        "topic_id": "ensemble_team_chemistry",
+        "topic_label": "Ensemble, crew & on-set chemistry",
+        "segment_indices": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "start": 0.0,
+        "end": 55.0,
+        "text_concat": "Wenn ich mit einer Kollegin oder einer Kollegin nicht auskomme oder nicht auskomme oder nicht auskomme, ja genau, dann… Früher habe ich noch versucht, einen Weg zu finden, damit man sich wieder verständigen kann, weil mir das so ans Herz ist, und ich habe das alles immer viel zu nahe genommen, wenn es nicht funktioniertierte, und das konnte mich wahnsinnig, persönlich genommen, als ich jung war, und heute ist es halt … let them. Ich kann nur mich ändern, ich kann dich nicht ändern, ich mache mein Ding, ich bin da, ich bin für das gecastet worden.»",
+        "chunk_id": 0,
+        "topic_keywords_union": [
+          "kolleg",
+          "kollegin"
+        ]
+      }
+    ]
+  }
+}

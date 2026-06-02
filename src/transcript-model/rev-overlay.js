@@ -97,6 +97,82 @@ export const revToModel = (revJson) => {
  * @param {Object<string,{value?:string,muted?:boolean}>} overlay
  * @returns {object} a new rev.ai transcript
  */
+const LEAD_PUNCT = /^[^\p{L}\p{N}]+/u;
+const TRAIL_PUNCT = /[^\p{L}\p{N}]+$/u;
+
+/** Split a freestyle token value into leading punctuation, a bare word core, and trailing punctuation. */
+const splitTokenPunct = (value) => {
+  let lead = '';
+  let core = String(value == null ? '' : value);
+  let trail = '';
+  const lm = core.match(LEAD_PUNCT);
+  if (lm) {
+    lead = lm[0];
+    core = core.slice(lead.length);
+  }
+  const tm = core.match(TRAIL_PUNCT);
+  if (tm) {
+    trail = tm[0];
+    core = core.slice(0, core.length - trail.length);
+  }
+  return { lead, core, trail };
+};
+
+/** Build the rev text element for one freestyle token's bare word core. */
+const revTextElement = (out, token, core) => {
+  if (token.ref != null) {
+    const sep = token.ref.indexOf(':');
+    const mi = Number(token.ref.slice(0, sep));
+    const ei = Number(token.ref.slice(sep + 1));
+    const orig = out.monologues[mi] && out.monologues[mi].elements ? out.monologues[mi].elements[ei] : null;
+    if (orig && orig.type === 'text' && core === orig.value) return clone(orig); // unchanged: byte-faithful
+    // survivor recased/respelled: keep the ORIGINAL timing, bump confidence (rewrite convention)
+    const el = { type: 'text', value: core };
+    if (orig && typeof orig.ts === 'number') el.ts = orig.ts;
+    if (orig && typeof orig.end_ts === 'number') el.end_ts = orig.end_ts;
+    el.confidence = 1.0;
+    return el;
+  }
+  const el = { type: 'text', value: core, confidence: 1.0 };
+  if (typeof token.start === 'number') el.ts = token.start;
+  if (typeof token.end === 'number') el.end_ts = token.end;
+  return el;
+};
+
+/** Rebuild a paragraph's rev elements from its (non-muted) freestyle tokens. */
+const buildRevElements = (out, tokens, emitTrailingSpace) => {
+  const live = tokens.filter((t) => !t.muted);
+  const els = [];
+  live.forEach((token, i) => {
+    const { lead, core, trail } = splitTokenPunct(token.value);
+    if (lead) els.push({ type: 'punct', value: lead });
+    if (core !== '') els.push(revTextElement(out, token, core));
+    if (trail) els.push({ type: 'punct', value: trail });
+    if (i !== live.length - 1) els.push({ type: 'punct', value: ' ' });
+  });
+  if (emitTrailingSpace && live.length) els.push({ type: 'punct', value: ' ' });
+  return els;
+};
+
+/** Whether the monologue has another text element after `elemEnd` (i.e. a following paragraph). */
+const hasTextElementAfter = (out, monoIdx, elemEnd) => {
+  const els = out.monologues[monoIdx] && out.monologues[monoIdx].elements;
+  if (!Array.isArray(els)) return false;
+  for (let i = elemEnd + 1; i < els.length; i += 1) if (els[i] && els[i].type === 'text') return true;
+  return false;
+};
+
+/**
+ * Faithful rev.ai export. Word-tier entries (`"<monoIdx>:<elemIdx>"`) rewrite/mute
+ * in place exactly as before. Freestyle entries (`"para:<monoIdx>:<elemIdx>"`,
+ * `{kind:'freetext',tokens,span}`) REBUILD a paragraph's element sub-array from its
+ * token list (so words can be inserted/deleted): survivors keep their original
+ * timing (+confidence when truly unchanged), inserted words get interpolated timing
+ * + confidence 1.0, punctuation is split back into `punct` elements, and a single
+ * space separates words. Splices are computed against ORIGINAL indices and applied
+ * right-to-left per monologue so earlier anchors stay valid. Untouched paragraphs are
+ * never rebuilt → byte-identical. Throws if a word-tier anchor does not resolve.
+ */
 export const projectRev = (original, overlay) => {
   const out = clone(original);
   const isPunct = (e) => Boolean(e) && e.type === 'punct';
@@ -106,13 +182,32 @@ export const projectRev = (original, overlay) => {
     if (!removals.has(monoIdx)) removals.set(monoIdx, new Set());
     removals.get(monoIdx).add(idx);
   };
+  const splices = new Map(); // monoIdx -> [{elemStart, elemEnd, els}]
+  const freetextMonos = new Set();
 
+  // Pass 1: build Freestyle element replacements from the pristine clone (before any mutation).
   Object.keys(overlay || {}).forEach((key) => {
     const o = overlay[key];
-    if (!o || (typeof o.value !== 'string' && !o.muted)) return; // no-op entry
+    if (!o || o.kind !== 'freetext') return;
+    const span = o.span || {};
+    const monoIdx = typeof span.monoIdx === 'number' ? span.monoIdx : Number(key.slice('para:'.length).split(':')[0]);
+    const elemStart = typeof span.elemStart === 'number' ? span.elemStart : null;
+    const elemEnd = typeof span.elemEnd === 'number' ? span.elemEnd : null;
+    if (elemStart == null || elemEnd == null) return;
+    freetextMonos.add(monoIdx);
+    const els = buildRevElements(out, Array.isArray(o.tokens) ? o.tokens : [], hasTextElementAfter(out, monoIdx, elemEnd));
+    if (!splices.has(monoIdx)) splices.set(monoIdx, []);
+    splices.get(monoIdx).push({ elemStart, elemEnd, els });
+  });
+
+  // Pass 2: word-tier rewrites + mutes (skip monologues owned by a Freestyle rebuild).
+  Object.keys(overlay || {}).forEach((key) => {
+    const o = overlay[key];
+    if (!o || o.kind === 'freetext' || (typeof o.value !== 'string' && !o.muted)) return; // no-op / freetext
     const sep = key.indexOf(':');
     const monoIdx = Number(key.slice(0, sep));
     const elemIdx = Number(key.slice(sep + 1));
+    if (freetextMonos.has(monoIdx)) return;
     const mono = out.monologues[monoIdx];
     const elements = mono && Array.isArray(mono.elements) ? mono.elements : null;
     const el = elements ? elements[elemIdx] : null;
@@ -145,65 +240,38 @@ export const projectRev = (original, overlay) => {
       mono.elements = mono.elements.filter((_, idx) => !set.has(idx));
     }
   });
+
+  // Apply Freestyle splices right-to-left so earlier element indices stay valid.
+  splices.forEach((list, monoIdx) => {
+    const mono = out.monologues[monoIdx];
+    if (!mono || !Array.isArray(mono.elements)) return;
+    list.sort((a, b) => b.elemStart - a.elemStart);
+    list.forEach(({ elemStart, elemEnd, els }) => {
+      mono.elements.splice(elemStart, elemEnd - elemStart + 1, ...els);
+    });
+  });
+
   return out;
 };
 
-// ---- overlay edit helpers (pure; overlay is a sparse plain object) ----
-
-/** Set/clear a rewrite for a word. Passing the original value clears the entry. */
-export const setWordValue = (overlay, key, newValue, originalValue) => {
-  const next = { ...overlay };
-  const entry = { ...(next[key] || {}) };
-  if (typeof newValue === 'string' && newValue !== originalValue) {
-    entry.value = newValue;
-  } else {
-    delete entry.value;
-  }
-  if (Object.keys(entry).length === 0) delete next[key];
-  else next[key] = entry;
-  return next;
-};
-
-/** Toggle/clear mute for a word. */
-export const setWordMuted = (overlay, key, muted) => {
-  const next = { ...overlay };
-  const entry = { ...(next[key] || {}) };
-  if (muted) entry.muted = true;
-  else delete entry.muted;
-  if (Object.keys(entry).length === 0) delete next[key];
-  else next[key] = entry;
-  return next;
-};
-
-/** Revert a single word to its imported state. */
-export const revertWord = (overlay, key) => {
-  const next = { ...overlay };
-  delete next[key];
-  return next;
-};
-
-// ---- snapshot history (sparse-overlay snapshots, capped) ----
-
-export const HISTORY_CAP = 100;
-
-export const newHistory = () => ({ stack: [{}], cursor: 0 });
-
-/** Commit a new overlay state, truncating any redo tail; FIFO-capped. */
-export const commit = (history, overlay) => {
-  const kept = history.stack.slice(0, history.cursor + 1);
-  kept.push(clone(overlay));
-  const capped = kept.length > HISTORY_CAP ? kept.slice(kept.length - HISTORY_CAP) : kept;
-  return { stack: capped, cursor: capped.length - 1 };
-};
-
-export const canUndo = (history) => history.cursor > 0;
-export const canRedo = (history) => history.cursor < history.stack.length - 1;
-
-export const undo = (history) => (canUndo(history) ? { ...history, cursor: history.cursor - 1 } : history);
-export const redo = (history) => (canRedo(history) ? { ...history, cursor: history.cursor + 1 } : history);
-
-/** Current overlay at the cursor. */
-export const currentOverlay = (history) => history.stack[history.cursor] || {};
+// ---- overlay edit helpers + snapshot history ----
+// These are format-agnostic (they operate on a sparse overlay keyed by an anchor
+// string, with no rev.ai knowledge), so they live in `overlay-history.js` and are
+// shared with the whisperx tier. Re-exported here to keep this module's existing
+// import surface unchanged.
+export {
+  setWordValue,
+  setWordMuted,
+  revertWord,
+  HISTORY_CAP,
+  newHistory,
+  commit,
+  canUndo,
+  canRedo,
+  undo,
+  redo,
+  currentOverlay,
+} from './overlay-history';
 
 /**
  * Derive a fresh overlay by diffing the editor's current Slate value against the

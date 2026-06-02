@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import subtitlesExportOptionsList from '../../util/export-adapters/subtitles-generator/list.js';
 import {
   DropdownMenu,
@@ -49,10 +49,9 @@ const C = {
 const S = {
   bar: {
     display: 'flex',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     alignItems: 'center',
-    gap: 6,
-    rowGap: 6,
+    gap: 8,
     padding: '7px 10px',
     borderBottom: `1px solid ${C.line}`,
     background: C.bg,
@@ -123,11 +122,35 @@ const S = {
     outline: 'none',
     flex: '0 0 auto',
   },
+  popover: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 6,
+    background: C.bg,
+    border: `1px solid ${C.line2}`,
+    borderRadius: 8,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    padding: 12,
+    zIndex: 50,
+    minWidth: 248,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  popLabel: { fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.faint, marginBottom: 6 },
+  groupGap: { width: 12, flex: '0 0 auto' }, // breathing room between logical toolbar groups (no divider line)
 };
 
-function FlatToggle({ label, active, onClick }) {
+function FlatToggle({ label, active, onClick, disabled, title }) {
   return (
-    <button type="button" className="stte-hover-text" onClick={onClick} style={S.toggle(active)}>
+    <button
+      type="button"
+      className="stte-hover-text"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={title}
+      style={{ ...S.toggle(active && !disabled), ...(disabled ? { opacity: 0.4, cursor: 'default' } : null) }}
+    >
       {label}
     </button>
   );
@@ -194,6 +217,101 @@ function WordSentenceSwitch({ value, onChange }) {
   );
 }
 
+// Editing-mode switch (strict tiers only): "Mode:" + Rigid | Loose pills.
+// 'word' (fixed word count: seek/mute/rewrite) reads as "Rigid"; 'freestyle'
+// (free-text, timestamps re-align) reads as "Loose".
+const EDITING_MODE_LABELS = { word: 'Rigid', freestyle: 'Loose', paragraph: 'Paragraph' };
+const EDITING_MODE_TITLES = {
+  word: 'Rigid — per-word seek, mute, and rewrite (word count fixed)',
+  freestyle: 'Loose — free-text editing; timestamps re-align on the original words',
+};
+function EditingModeSwitch({ value, modes, onChange }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }} role="group" aria-label="Editing mode">
+      <span style={{ fontSize: 12, fontWeight: 600, color: C.muted, whiteSpace: 'nowrap' }}>Mode:</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {(modes || ['word', 'freestyle']).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className="stte-hover-text"
+            onClick={() => onChange && onChange(m)}
+            aria-pressed={value === m}
+            title={EDITING_MODE_TITLES[m] || ''}
+            style={S.toggle(value === m)}
+          >
+            {EDITING_MODE_LABELS[m] || m}
+          </button>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+// Anchored "Display" popover: the Show toggles + confidence sub-controls, lifted
+// off the toolbar to keep it on one line. Self-contained (open state + click-outside).
+function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setDisplay, setConf }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  return (
+    <span ref={ref} style={{ position: 'relative', flex: '0 0 auto' }}>
+      <TextButton kind="outline" label="Display" chevron onClick={() => setOpen((o) => !o)} aria-expanded={open} />
+      {open && (
+        <div className="stte-ui" style={S.popover} role="dialog" aria-label="Display options">
+          <div style={S.popLabel}>Show</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <FlatToggle label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
+            <FlatToggle label="Timecodes" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
+            <FlatToggle
+              label="Annotations"
+              active={display.showAnnotations}
+              disabled={!canShowAnnotations}
+              title={
+                canShowAnnotations
+                  ? 'Show per-segment topic / mood / sentiment chips'
+                  : 'Segment annotations are only available for WhisperX transcripts'
+              }
+              onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
+            />
+            <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
+          </div>
+          <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: conf.overlay ? 1 : 0.4, pointerEvents: conf.overlay ? 'auto' : 'none' }}
+          >
+            <select
+              value={String(conf.cutoff)}
+              onChange={(e) => setConf('cutoff', Number(e.target.value))}
+              title="Confidence threshold"
+              style={{ ...S.select, color: C.text }}
+            >
+              {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
+                <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
+              ))}
+            </select>
+            <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
 export default function EditorToolbar({
   editable,
   setEditable,
@@ -202,6 +320,12 @@ export default function EditorToolbar({
   presets,
   activePresetId,
   canStructuralEdit,
+  canShowAnnotations,
+  cutoffOptions,
+  editingMode,
+  editingModes,
+  onEditingModeChange,
+  showEditingModeSwitch,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -227,6 +351,7 @@ export default function EditorToolbar({
 
   const dirty = !isContentSaved;
   const runExport = (args) => handleExport({ ...args, isDownload: true });
+  const activePreset = (presets || []).find((p) => p.id === activePresetId);
 
   return (
     <div className="stte-ui stte-toolbar-scroll" style={S.bar}>
@@ -238,43 +363,29 @@ export default function EditorToolbar({
         onClick={() => setEditable(!editable)}
       />
 
-      <span style={S.divider} />
-      <span style={S.showLabel}>Show</span>
-      <FlatToggle label="Title" active={display.showTitle} onClick={() => setDisplay('showTitle', !display.showTitle)} />
-      <FlatToggle label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
-      <FlatToggle label="TC" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
-      <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
+      {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
 
-      {/* confidence sub-controls — always present (stable layout), dimmed when off */}
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          flex: '0 0 auto',
-          opacity: conf.overlay ? 1 : 0.4,
-          pointerEvents: conf.overlay ? 'auto' : 'none',
-        }}
-      >
-        <select value={String(conf.cutoff)} onChange={(e) => setConf('cutoff', Number(e.target.value))} title="Confidence threshold" style={S.select}>
-          <option value="0.75">≤ 0.75</option>
-          <option value="0.8">≤ 0.80</option>
-          <option value="0.85">≤ 0.85</option>
-        </select>
-        <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
-      </span>
+      <span style={S.groupGap} />
+      <DisplayPopover
+        display={display}
+        conf={conf}
+        cutoffOptions={cutoffOptions}
+        canShowAnnotations={canShowAnnotations}
+        setDisplay={setDisplay}
+        setConf={setConf}
+      />
 
-      <span style={S.divider} />
-      <IconBtn icon={I.undo} title="Undo" framed onClick={handleUndo} disabled={!editable} />
-      <IconBtn icon={I.redo} title="Redo" framed onClick={handleRedo} disabled={!editable} />
-
-      <span style={S.divider} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <TextButton kind="outline" label="View" chevron />
+          <TextButton
+            kind="outline"
+            label="Presets"
+            chevron
+            title={activePreset ? `Display presets — current: ${activePreset.name}` : 'Display presets'}
+          />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuLabel>View presets</DropdownMenuLabel>
+          <DropdownMenuLabel>Display presets</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={activePresetId || ''} onValueChange={(id) => actions.selectPreset(id)}>
             {(presets || []).map((p) => (
               <DropdownMenuRadioItem key={p.id} value={p.id}>
@@ -284,6 +395,12 @@ export default function EditorToolbar({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <span style={S.groupGap} />
+      <IconBtn icon={I.undo} title="Undo (⌘Z)" framed onClick={handleUndo} disabled={!editable} />
+      <IconBtn icon={I.redo} title="Redo (⌘Y)" framed onClick={handleRedo} disabled={!editable} />
+
+      <span style={S.groupGap} />
 
       {canStructuralEdit && (
         <DropdownMenu>
@@ -310,10 +427,10 @@ export default function EditorToolbar({
 
       {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}
       <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
-      <TextButton kind="primary" icon={I.save} label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
+      <TextButton kind="primary" label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <TextButton kind="outline" icon={I.export} label="Export" chevron />
+          <TextButton kind="outline" label="Export" chevron />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
           <DropdownMenuLabel>Text</DropdownMenuLabel>
@@ -357,8 +474,9 @@ export default function EditorToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <IconBtn icon={I.prefs} title="Preferences" onClick={onOpenPreferences} />
-      <IconBtn icon={I.info} title="How does this work?" onClick={() => setInfoOpen(true)} />
+      <span style={S.groupGap} />
+      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
+      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
 
       <Dialog open={revertOpen} onOpenChange={setRevertOpen}>
         <DialogContent className="w-[min(440px,92vw)]">
