@@ -1166,9 +1166,15 @@ function SlateTranscriptEditorInner(props) {
   };
 
   const sentenceMetricIdx = settings.confidence.sentenceMetric === 'duration_weighted' ? 1 : 0;
+  // The badge judges the sentence MEAN, which compresses toward the corpus mean — so it must
+  // use the SAME delta-shifted threshold as the sentence-mode heat overlay
+  // (buildConfidenceDecorations' sentStyleOpts). Without the shift the inflated mean stays above
+  // the raw word cutoff and the badge reads green while the word overlay flags the sentence.
+  const sentenceCutoffDelta = typeof settings.confidence.sentenceCutoffDelta === 'number' ? settings.confidence.sentenceCutoffDelta : 0.1;
+  const clampConf = (n) => Math.max(0, Math.min(1, n));
   const confStyleOpts = {
-    cutoff: settings.confidence.cutoff,
-    floor: settings.confidence.floor,
+    cutoff: clampConf(settings.confidence.cutoff + sentenceCutoffDelta),
+    floor: clampConf(settings.confidence.floor + sentenceCutoffDelta),
     highlightOpacity: settings.appearance.highlightOpacity,
   };
 
