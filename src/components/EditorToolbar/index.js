@@ -305,6 +305,7 @@ function ShowRow({ label, active, disabled, title, onClick }) {
         color: disabled ? C.faint : C.text,
         opacity: disabled ? 0.55 : 1,
         textAlign: 'left',
+        whiteSpace: 'nowrap',
       }}
     >
       <span
@@ -386,11 +387,17 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               title="Show inline comment bubbles on commented words"
               onClick={() => setDisplay('showComments', !(display.showComments !== false))}
             />
+            <ShowRow
+              label="Entity"
+              active={display.showEntities !== false}
+              title="Show entity markers (dotted underline)"
+              onClick={() => setDisplay('showEntities', !(display.showEntities !== false))}
+            />
           </div>
           {/* Confidence — set apart from the Show toggles, with its options grouped under it */}
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
             <div style={S.popLabel}>Confidence</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 16, justifyContent: 'start' }}>
               <ShowRow
                 label="Heat overlay"
                 active={conf.overlay}

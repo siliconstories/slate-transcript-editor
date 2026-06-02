@@ -182,7 +182,11 @@ function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, on
   // above the input) would clip — flip them below, mirroring the old grid's first-row handling.
   const toolsBelow = state.top < 28;
   return (
-    <span className="stw-edit-wrap" contentEditable={false} style={{ position: 'absolute', left: state.left, top: state.top, zIndex: 1400 }}>
+    <span
+      className="stw-edit-wrap"
+      contentEditable={false}
+      style={{ position: 'absolute', left: state.left, top: state.top, zIndex: 1400, lineHeight: state.height ? `${state.height}px` : undefined }}
+    >
       <span
         className="stw-edit-tools"
         contentEditable={false}
@@ -811,17 +815,24 @@ function SlateTranscriptEditorInner(props) {
   // mark with its own "Comments" show toggle — so we split the ranges by kind and build two
   // decoration sets from the one source (no separate persistence).
   const showComments = settings.display.showComments !== false;
+  // Entities (the `{ link }` mark) get their own show toggle, split off the styling set.
+  const showEntities = settings.display.showEntities !== false;
   const [styleRanges, setStyleRanges] = useState([]);
   const isCommentRange = (r) => !!(r && r.mark && typeof r.mark.comment === 'string');
+  const isEntityRange = (r) => !!(r && r.mark && typeof r.mark.link === 'string');
   const styleDecos = useMemo(
     () =>
       showStyling
         ? buildStyleDecorations(
             value,
-            styleRanges.filter((r) => !isCommentRange(r))
+            styleRanges.filter((r) => !isCommentRange(r) && !isEntityRange(r))
           )
         : { enabled: false, byPara: [] },
     [showStyling, value, styleRanges]
+  );
+  const entityDecos = useMemo(
+    () => (showEntities ? buildStyleDecorations(value, styleRanges.filter(isEntityRange)) : { enabled: false, byPara: [] }),
+    [showEntities, value, styleRanges]
   );
   const commentDecos = useMemo(
     () => (showComments ? buildStyleDecorations(value, styleRanges.filter(isCommentRange)) : { enabled: false, byPara: [] }),
@@ -905,6 +916,17 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (D2) entity markers — own show toggle, rendered as the dotted entity underline
+      if (entityDecos.enabled) {
+        const paraDecos = entityDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            if (d.mark && typeof d.mark.link === 'string') {
+              ranges.push({ anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd }, styleLink: d.mark.link });
+            }
+          });
+        }
+      }
       // (E) track changes — revised words
       if (revisedDecos.enabled) {
         const paraDecos = revisedDecos.byPara[pIdx];
@@ -927,7 +949,7 @@ function SlateTranscriptEditorInner(props) {
       }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, commentDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos, entityDecos, revisedDecos, commentDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -1058,7 +1080,7 @@ function SlateTranscriptEditorInner(props) {
     // switches and edits (renderLeaf is memoized; without them it captures stale state).
     // styleDecos gives renderLeaf a fresh identity when styling changes so leaves repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, revisedDecos, commentDecos, wordLevelEditing, editable, value]
+    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, entityDecos, revisedDecos, commentDecos, wordLevelEditing, editable, value]
   );
 
   //
@@ -1245,7 +1267,7 @@ function SlateTranscriptEditorInner(props) {
         )}
         <Grid size={{ xs: 12, sm: 12, md: 12, lg: textLg, xl: textXl }} className={'p-b-1 mx-auto'}>
           {props.children}
-          {isFreestyle && <SentenceGutter element={props.element} />}
+          {showSentenceConfidence && <SentenceGutter element={props.element} />}
           {showAnnotations && props.element.annotations && <AnnotationChips annotations={props.element.annotations} />}
         </Grid>
       </Grid>
