@@ -1035,7 +1035,6 @@ function SlateTranscriptEditorInner(props) {
         (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
       return (
         <span
-          onDoubleClick={handleLeafDoubleClick}
           onClick={handleLeafAltClick}
           className={className}
           style={hasStyle ? style : undefined}
@@ -1409,12 +1408,15 @@ function SlateTranscriptEditorInner(props) {
     };
   };
 
-  const handleLeafDoubleClick = (e) => {
-    if (!wordLevelEditing) return; // LOOSE: let the browser do native word selection
-    if (editable === false) return;
-    e.preventDefault();
+  // Cmd/Ctrl-click in Strict opens the single-word editor (rewrite + Mute live inside it).
+  // Double-click is left to the browser so a word selects natively, like everywhere else.
+  // Returns true if it handled the event.
+  const handleLeafCmdEdit = (e) => {
+    if (!wordLevelEditing || editable === false) return false;
+    if (!(e.ctrlKey || e.metaKey)) return false;
     const resolved = resolveWordFromEvent(e);
-    if (!resolved) return;
+    if (!resolved) return false;
+    e.preventDefault();
     const w = resolved.word;
     setSelectedWordKey(w._key);
     const rect = wordRectInContainer(resolved.pIdx, resolved.wIdx);
@@ -1430,16 +1432,6 @@ function SlateTranscriptEditorInner(props) {
       width: rect ? rect.width : 0,
       height: rect ? rect.height : 0,
     });
-  };
-
-  // Ctrl/Cmd-click in Strict toggles mute on the clicked word. Returns true if it handled the event.
-  const handleLeafMute = (e) => {
-    if (!wordLevelEditing || editable === false) return false;
-    if (!(e.ctrlKey || e.metaKey)) return false;
-    const resolved = resolveWordFromEvent(e);
-    if (!resolved) return false;
-    e.preventDefault();
-    commitStrictWord(resolved.pIdx, resolved.wIdx, { muted: !resolved.word.muted });
     return true;
   };
 
@@ -1482,22 +1474,11 @@ function SlateTranscriptEditorInner(props) {
     persistStyles(next);
   };
 
-  // Word-anchored ranges for the current selection — Strict: the double-clicked word;
-  // Loose: the native text selection (split per paragraph). Shared by styling + comments.
+  // Word-anchored ranges for the current selection — a real text selection in EITHER mode
+  // (Loose's `editor.selection`, or the native DOM selection on the read-only Strict surface
+  // where a double-clicked word is a browser selection). Falls back to the single clicked word
+  // in Strict when there's no selection. Shared by styling + comments.
   const currentSelectionRanges = () => {
-    if (wordLevelEditing) {
-      if (!selectedWordKey) return [];
-      let word = null;
-      value.forEach((p) =>
-        ((p.children && p.children[0] && p.children[0].words) || []).forEach((w) => {
-          if (w._key === selectedWordKey) word = w;
-        })
-      );
-      if (!word) return [];
-      return [{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }];
-    }
-    // Prefer Slate's selection; fall back to the live DOM selection (Slate's `editor.selection`
-    // can lag a fresh native selection, and styling/commenting is triggered from the toolbar).
     let slateRange = editor.selection && !Range.isCollapsed(editor.selection) ? editor.selection : null;
     if (!slateRange && typeof window !== 'undefined') {
       const ds = window.getSelection();
@@ -1509,9 +1490,21 @@ function SlateTranscriptEditorInner(props) {
         }
       }
     }
-    if (!slateRange) return [];
-    if (commitFreestyleEdit) commitFreestyleEdit.flush();
-    return selectionToStyleRanges(editor.children, slateRange);
+    if (slateRange) {
+      if (commitFreestyleEdit) commitFreestyleEdit.flush();
+      return selectionToStyleRanges(editor.children, slateRange);
+    }
+    // Strict fallback: no text selection → the last word clicked (selectedWordKey).
+    if (wordLevelEditing && selectedWordKey) {
+      let word = null;
+      value.forEach((p) =>
+        ((p.children && p.children[0] && p.children[0].words) || []).forEach((w) => {
+          if (w._key === selectedWordKey) word = w;
+        })
+      );
+      if (word) return [{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }];
+    }
+    return [];
   };
 
   const applyStyleToSelection = (mark) => {
@@ -1554,8 +1547,13 @@ function SlateTranscriptEditorInner(props) {
     if (!profile.versioning || !profile.versioning.setStyles) return;
     const targets = currentSelectionRanges();
     if (!targets.length) return;
+    // Anchor below the live selection if there is one; else below the clicked word (Strict).
     let pos = { left: 8, top: 8 };
-    if (wordLevelEditing) {
+    const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+    const dr = sel && sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0).getBoundingClientRect() : null;
+    if (dr) {
+      pos = rectInScroll(dr);
+    } else if (wordLevelEditing && selectedWordKey) {
       let found = null;
       value.forEach((p, pi) =>
         ((p.children && p.children[0] && p.children[0].words) || []).forEach((w, wi) => {
@@ -1566,10 +1564,6 @@ function SlateTranscriptEditorInner(props) {
         const r = wordRectInContainer(found.pi, found.wi);
         if (r) pos = { left: r.left, top: r.top + r.height };
       }
-    } else {
-      const sel = typeof window !== 'undefined' ? window.getSelection() : null;
-      const dr = sel && sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0).getBoundingClientRect() : null;
-      pos = rectInScroll(dr);
     }
     setCommentEdit({ mode: 'new', draft: '', author: props.commentAuthor || 'You', time: Date.now(), targets, left: pos.left, top: pos.top });
   };
@@ -1598,7 +1592,7 @@ function SlateTranscriptEditorInner(props) {
     // track the clicked word so the toolbar can reflect ITS marks (active B/I/U/H/E)
     const clicked = resolveWordFromEvent(e);
     if (clicked && clicked.word && clicked.word._key != null) setSelectedWordKey(clicked.word._key);
-    if (handleLeafMute(e)) return;
+    if (handleLeafCmdEdit(e)) return;
     if (!e.altKey) return; // plain single click: let Slate place the caret
     const { startWord } = SlateHelpers.getSelectionNodes(editor, editor.selection);
     let start = startWord && typeof startWord.start === 'number' ? startWord.start : null;

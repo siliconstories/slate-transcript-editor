@@ -13,6 +13,11 @@ function Section({ heading, children }) {
 }
 
 export default function InfoDialog({ open, onOpenChange }) {
+  // Modifier-key names follow the platform so the hints read right on macOS vs Windows/Linux.
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
+  const MOD = isMac ? '⌘' : 'Ctrl';
+  const ALT = isMac ? '⌥ Option' : 'Alt';
+  const SHIFT = isMac ? '⇧' : 'Shift';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(760px,92vw)]">
@@ -21,18 +26,24 @@ export default function InfoDialog({ open, onOpenChange }) {
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto pr-1">
           <Section heading="Playing & seeking">
-            Double-click a word or timecode to jump there. Alt/Option-click a word to play/pause from it. Seek back and forward with the round buttons
-            under the monitor, and change playback speed. Optionally pause the media while typing (Preferences → Playback).
+            Double-click a timecode to jump there. {ALT}-click a word to play/pause from it. Seek back and forward with the round buttons under the
+            monitor, and change playback speed. Optionally pause the media while typing (Preferences → Playback).
           </Section>
-          <Section heading="Editing">
-            Unlock editing with the lock button. Start typing to edit text; Ctrl/Cmd-click a word to mute it (muted words are removed from exports).
-            Hit Enter between words to split a paragraph. Click a speaker to rename. Undo/redo with ⌘Z / ⌘⇧Z. Save regularly; Revert restores the last
-            saved or the originally imported version.
+          <Section heading="Selecting & formatting">
+            Double-click a word to select it — or drag to select a phrase — then format from the toolbar: Bold ({MOD}B), Italic ({MOD}I), Underline (
+            {MOD}U), Highlight, and Entity. Select a span and click Comment to attach a note; click a comment bubble to edit or delete it. Show or
+            hide each layer in the Display menu.
           </Section>
-          <Section heading="Confidence overlay">
-            Low-confidence words are highlighted. Toggle Confidence in the toolbar, switch the Word/Sentence level, and set the threshold (≤ 0.75
-            loose · 0.80 balanced · 0.85 strict — 0.85 ≈ the bottom ~15% of model confidence). Consecutive flagged words read as one continuous
-            highlighter stroke. The View menu switches saved view presets.
+          <Section heading="Editing words">
+            Unlock editing with the lock button. In <strong>Word (Strict)</strong> mode the word count stays fixed — {MOD}-click a word to edit or
+            mute it (muted words are removed from exports). In <strong>Loose</strong> mode, just type to edit the text and the timecodes re-align; hit
+            Enter between words to split a paragraph. Click a speaker to rename. Undo/redo with {MOD}Z / {MOD}
+            {SHIFT}Z. Save regularly; Revert restores the last saved or the originally imported version.
+          </Section>
+          <Section heading="Confidence & sentence status">
+            Low-confidence words are washed in colour (Display → Heat overlay); switch the Word/Sentence level and the threshold (≤ 0.75 loose · 0.80
+            balanced · 0.85 strict). The per-sentence gutter (Display → Sentence Status) shows a confidence dot, an estimated-timing mark, and a
+            revert button for each sentence. The Presets icon switches saved view presets.
           </Section>
           <Section heading="Tools">
             The ⋯ Tools menu (editable, free-text transcripts) lets you insert [INAUDIBLE], a ♪ music note, or replace the whole text with an accurate
