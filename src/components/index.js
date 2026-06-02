@@ -1283,10 +1283,6 @@ function SlateTranscriptEditorInner(props) {
         tmpValue = await handleRestoreTimecodes();
       }
 
-      if (isContentModified && type === 'json-digitalpaperedit') {
-        tmpValue = await handleRestoreTimecodes();
-      }
-
       if (isContentModified && isCaptionType(type)) {
         tmpValue = await handleRestoreTimecodes();
       }
@@ -1322,8 +1318,14 @@ function SlateTranscriptEditorInner(props) {
   const handleSave = async () => {
     try {
       setIsProcessing(true);
-      const format = settings.editing.autoSaveContentType || 'digitalpaperedit';
-      const editorContnet = await handleExport({ type: `json-${format}`, isDownload: false });
+      // Save the faithful transcript JSON. Clamp the requested content type to one the
+      // active profile actually exports (rev.ai -> json-rev, WhisperX -> json-whisperx),
+      // defaulting to the profile's primary faithful exporter — no DPE save path remains.
+      const supported = (profile.exporters || []).map((e) => e.id);
+      const requested = settings.editing.autoSaveContentType ? `json-${settings.editing.autoSaveContentType}` : null;
+      const type = requested && supported.includes(requested) ? requested : supported[0] || 'json-slate';
+      const format = type.replace(/^json-/, '');
+      const editorContnet = await handleExport({ type, isDownload: false });
       if (props.handleAnalyticsEvents) {
         // handles if click cancel and doesn't set speaker name
         props.handleAnalyticsEvents('ste_handle_save', {
