@@ -138,6 +138,7 @@ const S = {
     flexDirection: 'column',
   },
   popLabel: { fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.faint, marginBottom: 6 },
+  groupGap: { width: 12, flex: '0 0 auto' }, // breathing room between logical toolbar groups (no divider line)
 };
 
 function FlatToggle({ label, active, onClick, disabled, title }) {
@@ -364,6 +365,7 @@ export default function EditorToolbar({
 
       {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
 
+      <span style={S.groupGap} />
       <DisplayPopover
         display={display}
         conf={conf}
@@ -394,8 +396,11 @@ export default function EditorToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <IconBtn icon={I.undo} title="Undo" framed onClick={handleUndo} disabled={!editable} />
-      <IconBtn icon={I.redo} title="Redo" framed onClick={handleRedo} disabled={!editable} />
+      <span style={S.groupGap} />
+      <IconBtn icon={I.undo} title="Undo (⌘Z)" framed onClick={handleUndo} disabled={!editable} />
+      <IconBtn icon={I.redo} title="Redo (⌘Y)" framed onClick={handleRedo} disabled={!editable} />
+
+      <span style={S.groupGap} />
 
       {canStructuralEdit && (
         <DropdownMenu>
@@ -422,10 +427,10 @@ export default function EditorToolbar({
 
       {onShowRawSource && <TextButton kind="ghost" label="Raw…" onClick={() => onShowRawSource()} />}
       <TextButton kind="ghost" label="Revert" disabled={!editable} onClick={() => setRevertOpen(true)} />
-      <TextButton kind="primary" icon={I.save} label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
+      <TextButton kind="primary" label="Save" disabled={!editable || !dirty || isProcessing} onClick={handleSave} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <TextButton kind="outline" icon={I.export} label="Export" chevron />
+          <TextButton kind="outline" label="Export" chevron />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
           <DropdownMenuLabel>Text</DropdownMenuLabel>
@@ -469,8 +474,9 @@ export default function EditorToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <IconBtn icon={I.prefs} title="Preferences" onClick={onOpenPreferences} />
-      <IconBtn icon={I.info} title="How does this work?" onClick={() => setInfoOpen(true)} />
+      <span style={S.groupGap} />
+      <TextButton kind="ghost" label="Settings" onClick={onOpenPreferences} />
+      <TextButton kind="ghost" label="Help" onClick={() => setInfoOpen(true)} />
 
       <Dialog open={revertOpen} onOpenChange={setRevertOpen}>
         <DialogContent className="w-[min(440px,92vw)]">
