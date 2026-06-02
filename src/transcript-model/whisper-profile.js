@@ -43,11 +43,9 @@ const WHISPERX_CONFIDENCE_DEFAULTS = {
   cutoff: 0.3,
   floor: 0.08,
   cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55],
-  // Sentence MEANS run ~0.15 higher than word scores (averaging compresses toward the
-  // mean), so the sentence overlay needs its own, higher cutoff or it flags ~nothing.
-  sentenceCutoff: 0.5,
-  sentenceFloor: 0.3,
-  sentenceCutoffOptions: [0.4, 0.45, 0.5, 0.55, 0.6],
+  // Sentence MEANS run ~0.2 higher than word scores (averaging compresses toward the
+  // mean), so the sentence overlay shifts the heat band up by this delta (user-tunable).
+  sentenceCutoffDelta: 0.2,
 };
 
 /**

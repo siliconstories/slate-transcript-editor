@@ -106,7 +106,7 @@ describe('whisper profile — single tier, two source formats', () => {
       expect(value[0].annotations.topicLabel).toBe('Career path');
       expect(p.confidenceDefaults).toMatchObject({ cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] });
       // sentence overlay gets its own, higher cutoff (sentence means run higher than word scores)
-      expect(p.confidenceDefaults.sentenceCutoff).toBe(0.5);
+      expect(p.confidenceDefaults.sentenceCutoffDelta).toBe(0.2);
       expect(p.exporters.map((e) => e.id)).toEqual(['json-whisperx', 'ste-session']);
     });
 

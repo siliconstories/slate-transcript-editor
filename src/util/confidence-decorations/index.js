@@ -55,16 +55,13 @@ export const buildConfidenceDecorations = (slateValue, settings) => {
   if (!Array.isArray(slateValue) || slateValue.length === 0) return empty;
   if (!hasAnyConfidence(slateValue)) return empty; // classic DPE => no-op
 
-  const { level = 'word', cutoff = 0.85, floor = 0.55, sentenceCutoff, sentenceFloor, sentenceMetric = 'mean', highlightOpacity = 0.5 } = settings;
+  const { level = 'word', cutoff = 0.85, floor = 0.55, sentenceCutoffDelta = 0.1, sentenceMetric = 'mean', highlightOpacity = 0.5 } = settings;
   const styleOpts = { cutoff, floor, highlightOpacity };
   // Sentence MEANS compress toward the corpus mean (averaging dilutes the low words),
-  // so a word-level cutoff flags almost no sentences. Use a separate, higher sentence
-  // cutoff/floor when provided (falls back to the word cutoff for back-compat).
-  const sentStyleOpts = {
-    cutoff: typeof sentenceCutoff === 'number' ? sentenceCutoff : cutoff,
-    floor: typeof sentenceFloor === 'number' ? sentenceFloor : floor,
-    highlightOpacity,
-  };
+  // so a word-level cutoff flags almost no sentences. Shift the whole heat band UP by a
+  // configurable delta for sentence mode (user-tunable in Preferences → Confidence).
+  const clamp01 = (n) => Math.max(0, Math.min(1, n));
+  const sentStyleOpts = { cutoff: clamp01(cutoff + sentenceCutoffDelta), floor: clamp01(floor + sentenceCutoffDelta), highlightOpacity };
   const metricIdx = sentenceMetric === 'duration_weighted' ? 1 : 0;
 
   const byPara = slateValue.map((paragraph) => {

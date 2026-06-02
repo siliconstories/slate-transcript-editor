@@ -172,37 +172,51 @@ function AnnotationChips({ annotations }) {
 }
 AnnotationChips.propTypes = { annotations: PropTypes.object };
 
-// Strict-mode single-word editor: a small floating popover anchored at the double-click
-// point. Lives OUTSIDE the Slate tree (position:fixed) so it never fights normalization
-// and works over the read-only Strict surface. Commits a rewrite/mute for one word.
+// Strict-mode single-word editor: the inline editor from the old word grid (the input
+// in place, with small "Mute"/"Raw…" tools above it), floated at the double-clicked word
+// so it works over the read-only single Slate surface. Commits on Enter/blur; Esc cancels.
 function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, onCancel }) {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
-  const left = Math.max(8, Math.min(state.x, vw - 300));
-  const top = state.y + 14;
+  const left = Math.max(8, Math.min(state.x, vw - 200));
+  const top = state.y;
+  // Near the viewport top the tools (normally above the input) would clip — flip them
+  // below, mirroring the old grid's first-paragraph handling.
+  const toolsBelow = top < 70;
   return (
-    <div
-      className="stw-strict-popover"
-      contentEditable={false}
-      style={{
-        position: 'fixed',
-        left,
-        top,
-        zIndex: 1400,
-        background: '#fff',
-        border: '1px solid #cfcfcf',
-        borderRadius: 6,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-        padding: 8,
-        display: 'flex',
-        gap: 6,
-        alignItems: 'center',
-      }}
-    >
+    <span className="stw-edit-wrap" contentEditable={false} style={{ position: 'fixed', left, top, zIndex: 1400 }}>
+      <span
+        className="stw-edit-tools"
+        contentEditable={false}
+        style={toolsBelow ? { bottom: 'auto', top: '100%', marginTop: 3, marginBottom: 0 } : undefined}
+      >
+        <button
+          type="button"
+          className="stw-mute-btn"
+          aria-pressed={state.muted}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onToggleMute}
+          title={state.muted ? 'Unmute this word' : 'Mute this word (removed on export)'}
+        >
+          {state.muted ? 'Unmute' : 'Mute'}
+        </button>
+        {onShowRaw && (
+          <button
+            type="button"
+            className="stw-raw-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onShowRaw}
+            title="Edit the raw source document (JSON)"
+          >
+            Raw…
+          </button>
+        )}
+      </span>
       <input
         className="stw-word-input"
         autoFocus
         value={state.draft}
         onChange={(e) => onDraft(e.target.value)}
+        onBlur={onSave}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -212,37 +226,9 @@ function StrictWordPopover({ state, onDraft, onSave, onToggleMute, onShowRaw, on
             onCancel();
           }
         }}
-        size={Math.max(state.draft.length, 4)}
-        style={{ fontSize: 'inherit', padding: '2px 6px' }}
+        size={Math.max(state.draft.length, 2)}
       />
-      <button
-        type="button"
-        className="stw-mute-btn"
-        aria-pressed={state.muted}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={onToggleMute}
-        title={state.muted ? 'Unmute this word' : 'Mute this word (removed on export)'}
-      >
-        {state.muted ? 'Unmute' : 'Mute'}
-      </button>
-      {onShowRaw && (
-        <button
-          type="button"
-          className="stw-raw-btn"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onShowRaw}
-          title="Edit the raw source document (JSON)"
-        >
-          Raw…
-        </button>
-      )}
-      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onSave}>
-        Save
-      </button>
-      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onCancel}>
-        Cancel
-      </button>
-    </div>
+    </span>
   );
 }
 StrictWordPopover.propTypes = {
@@ -1219,6 +1205,12 @@ function SlateTranscriptEditorInner(props) {
 
   const saveStrictEdit = () => {
     if (!strictEdit) return;
+    const para = value[strictEdit.pIdx];
+    const cur = para && para.children && para.children[0] && para.children[0].words ? para.children[0].words[strictEdit.wIdx] : null;
+    if (cur && cur.text === strictEdit.draft) {
+      setStrictEdit(null); // unchanged (e.g. blur without editing) — just close, no commit/remount
+      return;
+    }
     commitStrictWord(strictEdit.pIdx, strictEdit.wIdx, { text: strictEdit.draft });
     setStrictEdit(null);
   };
@@ -1790,7 +1782,6 @@ function SlateTranscriptEditorInner(props) {
             canStructuralEdit={editPolicy.allowsStructuralEdits}
             canShowAnnotations={!!editPolicy.supportsAnnotations}
             cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
-            sentenceCutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.sentenceCutoffOptions) || [0.85, 0.9, 0.95]}
             editingMode={editingMode}
             editingModes={editingModes}
             onEditingModeChange={onEditingModeChange}
@@ -2086,7 +2077,7 @@ function SlateTranscriptEditor(props) {
     const hostConf = (merged.defaultPreferences && merged.defaultPreferences.confidence) || {};
     return {
       ...merged.defaultPreferences,
-      confidence: { cutoff: cd.cutoff, floor: cd.floor, sentenceCutoff: cd.sentenceCutoff, sentenceFloor: cd.sentenceFloor, ...hostConf },
+      confidence: { cutoff: cd.cutoff, floor: cd.floor, sentenceCutoffDelta: cd.sentenceCutoffDelta, ...hostConf },
     };
   }, [merged.transcriptData, merged.defaultPreferences]);
   return (

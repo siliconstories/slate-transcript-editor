@@ -60,8 +60,8 @@ const S = {
   spring: { flex: 1, minWidth: 8 },
   toggle: (active) => ({
     cursor: 'pointer',
-    border: `1px solid ${active ? C.text : C.line2}`,
-    background: active ? C.soft : C.bg,
+    border: '1px solid transparent',
+    background: active ? C.soft : 'transparent',
     fontFamily: 'inherit',
     fontSize: 13,
     lineHeight: 1,
@@ -77,8 +77,8 @@ const S = {
     width: 28,
     height: 28,
     borderRadius: 6,
-    border: `1px solid ${framed ? C.line2 : 'transparent'}`,
-    background: framed ? C.bg : 'transparent',
+    border: '1px solid transparent',
+    background: framed ? C.soft : 'transparent',
     color: C.muted,
     cursor: 'pointer',
     display: 'inline-flex',
@@ -101,8 +101,8 @@ const S = {
       whiteSpace: 'nowrap',
       flex: '0 0 auto',
     };
-    if (kind === 'primary') return { ...base, background: C.primary, color: C.primaryFg, border: `1px solid ${C.primary}` };
-    if (kind === 'outline') return { ...base, background: C.bg, color: C.text, border: `1px solid ${C.line2}` };
+    if (kind === 'primary') return { ...base, background: C.primary, color: C.primaryFg, border: '1px solid transparent' };
+    if (kind === 'outline') return { ...base, background: 'transparent', color: C.text, border: '1px solid transparent' };
     return { ...base, background: 'transparent', color: C.muted, border: '1px solid transparent' }; // ghost
   },
   select: {
@@ -251,9 +251,9 @@ function EditingModeSwitch({ value, modes, onChange }) {
 // selection (one word in Strict, an arbitrary range in Loose). Shared by both modes.
 function StyleGroup({ enabled, onApply }) {
   const base = {
-    border: '1px solid #cfcfcf',
+    border: '1px solid transparent',
     borderRadius: 4,
-    background: '#fff',
+    background: 'transparent',
     minWidth: 22,
     height: 22,
     fontSize: 12,
@@ -284,11 +284,7 @@ function StyleGroup({ enabled, onApply }) {
 
 // Anchored "Display" popover: the Show toggles + confidence sub-controls, lifted
 // off the toolbar to keep it on one line. Self-contained (open state + click-outside).
-function DisplayPopover({ display, conf, cutoffOptions, sentenceCutoffOptions, canShowAnnotations, setDisplay, setConf }) {
-  const isSentence = conf.level === 'sentence';
-  const activeCutoffKey = isSentence ? 'sentenceCutoff' : 'cutoff';
-  const activeCutoff = isSentence ? (typeof conf.sentenceCutoff === 'number' ? conf.sentenceCutoff : conf.cutoff) : conf.cutoff;
-  const activeOptions = isSentence ? sentenceCutoffOptions || [0.85, 0.9, 0.95] : cutoffOptions || [0.75, 0.8, 0.85];
+function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setDisplay, setConf }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -339,12 +335,12 @@ function DisplayPopover({ display, conf, cutoffOptions, sentenceCutoffOptions, c
             style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: conf.overlay ? 1 : 0.4, pointerEvents: conf.overlay ? 'auto' : 'none' }}
           >
             <select
-              value={String(activeCutoff)}
-              onChange={(e) => setConf(activeCutoffKey, Number(e.target.value))}
-              title={isSentence ? 'Sentence confidence threshold' : 'Word confidence threshold'}
+              value={String(conf.cutoff)}
+              onChange={(e) => setConf('cutoff', Number(e.target.value))}
+              title="Word confidence threshold (sentence offset is in Preferences → Confidence)"
               style={{ ...S.select, color: C.text }}
             >
-              {activeOptions.map((v) => (
+              {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
                 <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
               ))}
             </select>
@@ -366,7 +362,6 @@ export default function EditorToolbar({
   canStructuralEdit,
   canShowAnnotations,
   cutoffOptions,
-  sentenceCutoffOptions,
   editingMode,
   editingModes,
   onEditingModeChange,
@@ -420,7 +415,6 @@ export default function EditorToolbar({
         display={display}
         conf={conf}
         cutoffOptions={cutoffOptions}
-        sentenceCutoffOptions={sentenceCutoffOptions}
         canShowAnnotations={canShowAnnotations}
         setDisplay={setDisplay}
         setConf={setConf}
