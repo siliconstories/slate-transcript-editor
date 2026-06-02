@@ -883,15 +883,14 @@ function SlateTranscriptEditorInner(props) {
       if (leaf.styleLink != null) {
         style.color = '#6d28d9';
         style.textDecoration = style.textDecoration ? `${style.textDecoration} underline` : 'underline';
-        style.textDecorationStyle = 'dashed';
+        style.textDecorationStyle = 'dotted';
         style.cursor = 'pointer';
         entityTitle = leaf.styleLink ? `Entity → ${leaf.styleLink}` : 'Entity (not yet linked)';
       }
-      // (E) track changes — revised words: amber=rewritten, green=inserted, strike=muted
+      // (E) track changes — revised words: amber TEXT=edited, green=inserted, strike=muted
       let revisedTitle;
       if (leaf.revised === 'rewritten') {
-        style.backgroundColor = 'rgba(245, 158, 11, 0.22)';
-        style.borderRadius = '2px';
+        style.color = '#b45309'; // edited text shown as colour (amber)
         revisedTitle = 'Revised — text edited';
       } else if (leaf.revised === 'inserted') {
         style.backgroundColor = 'rgba(34, 197, 94, 0.22)';

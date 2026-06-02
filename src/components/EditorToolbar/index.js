@@ -50,8 +50,9 @@ const S = {
     alignItems: 'center',
     gap: 8,
     padding: '7px 10px',
-    // loose hairline below the toolbar — a single light rule separating it from the content
-    borderBottom: '1px solid #e0e0e0',
+    // no rule directly below the toolbar — the Video|Files tab strip below carries the
+    // single header hairline, so the toolbar + tabs read as one unit.
+    borderBottom: 'none',
     background: C.bg,
     fontFamily: 'Inter, Roboto, system-ui, sans-serif',
     color: C.text,
