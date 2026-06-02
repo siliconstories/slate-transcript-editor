@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slate Transcript Editor — typography studies</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700&display=swap" rel="stylesheet" />
+
+    <style>
+      :root {
+        /* hairline / zinc tokens — lifted verbatim from src/components/index.js */
+        --text: #18181b;
+        --muted: #71717a;
+        --faint: #a1a1aa;
+        --line: #e4e4e7;
+        --line2: #d4d4d8;
+        --bg: #ffffff;
+        --soft: #f4f4f5;
+        --primary: #18181b;
+        --primaryFg: #ffffff;
+        --karaoke: #fff59d;
+        --estimated: #c4b5fd;
+        --entity: #6d28d9;
+        --edited: #b45309;
+        --editblue: #1976d2;
+        --highlight: #fde68a;
+        --tc: #a1a1aa;
+
+        /* the only things a tab swaps */
+        --ui-font: 'Inter', system-ui, sans-serif;
+        --mono-font: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #fafafa;
+        color: var(--text);
+      }
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* ───────────────────────── tab bar (chrome — stays in a constant font) ── */
+      .tabbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 20px;
+        height: 52px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: saturate(1.4) blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      .brand {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .brand b {
+        color: var(--text);
+        font-weight: 700;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+      }
+      .tab {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        padding: 6px 11px;
+        border-radius: 7px;
+        line-height: 1;
+        position: relative;
+        transition:
+          color 0.12s,
+          background 0.12s;
+      }
+      .tab:hover {
+        color: var(--text);
+        background: var(--soft);
+      }
+      .tab.active {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .tab.active::after {
+        content: '';
+        position: absolute;
+        left: 11px;
+        right: 11px;
+        bottom: -15px;
+        height: 2px;
+        background: var(--text);
+        border-radius: 2px;
+      }
+      .meta {
+        margin-left: auto;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        text-align: right;
+        white-space: nowrap;
+      }
+      .meta-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .meta-desc {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .meta-tags {
+        display: flex;
+        gap: 6px;
+      }
+      .pill {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border: 1px solid var(--line2);
+        border-radius: 999px;
+        padding: 3px 8px;
+        line-height: 1;
+      }
+      .pill.axis {
+        color: var(--text);
+        border-color: var(--text);
+      }
+      @media (max-width: 1080px) {
+        .meta-desc,
+        .brand {
+          display: none;
+        }
+      }
+
+      /* ───────────────────────── the stage — font under test lives here ─────── */
+      .stage {
+        font-family: var(--ui-font);
+      }
+      .app {
+        max-width: 1080px;
+        margin: 26px auto 60px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 1px 2px rgba(24, 24, 27, 0.04),
+          0 12px 36px -18px rgba(24, 24, 27, 0.18);
+      }
+
+      /* toolbars */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .toolbar.editing {
+        background: #fcfcfd;
+      }
+      .spacer {
+        flex: 1 1 auto;
+      }
+      .divider {
+        width: 1px;
+        height: 18px;
+        background: var(--line);
+        margin: 0 2px;
+      }
+
+      .btn {
+        appearance: none;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text);
+      }
+      .btn:hover {
+        background: var(--soft);
+      }
+      .btn.ghostline {
+        border-color: var(--line2);
+        color: var(--muted);
+      }
+      .btn.ghostline:hover {
+        color: var(--text);
+      }
+      .btn.primary {
+        background: var(--primary);
+        color: var(--primaryFg);
+        font-weight: 600;
+      }
+      .btn.primary:hover {
+        background: #000;
+      }
+      .iconbtn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+      }
+      .iconbtn:hover {
+        background: var(--soft);
+        color: var(--text);
+      }
+      .caps {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      /* segmented Strict / Loose */
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--line2);
+        border-radius: 7px;
+        overflow: hidden;
+        height: 28px;
+      }
+      .seg button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--muted);
+        padding: 0 12px;
+      }
+      .seg button.on {
+        background: var(--text);
+        color: #fff;
+      }
+
+      /* style buttons B I U E */
+      .styb {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .styb:hover {
+        background: var(--soft);
+      }
+      .styb.b {
+        font-weight: 700;
+      }
+      .styb.i {
+        font-style: italic;
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+      .styb.u {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .styb.e {
+        font-weight: 700;
+        color: var(--entity);
+      }
+      .swatch {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        background: var(--highlight);
+        border: 1px solid #e6cf6a;
+      }
+
+      .fontsize {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .fontsize .val {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        min-width: 34px;
+        text-align: center;
+        font-family: var(--mono-font);
+      }
+
+      /* ───────────────────────── transcript ────────────────────────────────── */
+      .transcript {
+        padding: 30px 36px 22px;
+      }
+      .doc-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 14px;
+        margin-bottom: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .doc-title .sub {
+        font-weight: 400;
+        color: var(--faint);
+        font-size: 12px;
+      }
+
+      .para {
+        display: grid;
+        grid-template-columns: 62px 116px 1fr;
+        gap: 14px;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .tc {
+        font-family: var(--mono-font);
+        font-size: 11.5px;
+        color: var(--tc);
+        padding-top: 5px;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+      }
+      .tc:hover {
+        color: var(--muted);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .spk {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding-top: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+      }
+      .body {
+        font-size: 17px;
+        line-height: 1.62;
+        color: var(--text);
+        font-weight: 400;
+      }
+
+      .w {
+        border-radius: 2px;
+      }
+      .w.current {
+        background: var(--karaoke);
+        box-shadow: 0 0 0 1px var(--karaoke);
+      }
+      .w.est {
+        border-bottom: 1.5px dotted var(--estimated);
+      }
+      .w.entity {
+        color: var(--entity);
+        border-bottom: 1px dotted var(--entity);
+        cursor: pointer;
+      }
+      .w.edited {
+        color: var(--edited);
+      }
+      .w.lowconf {
+        background: rgba(220, 38, 38, 0.08);
+        border-radius: 3px;
+      }
+      .w.muted-out {
+        color: #b91c1c;
+        text-decoration: line-through;
+        text-decoration-color: rgba(185, 28, 28, 0.6);
+      }
+      .w.hl {
+        background: var(--highlight);
+        border-radius: 2px;
+      }
+
+      /* sentence gutter dot (freestyle/loose) */
+      .gutter {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      .conf-badge {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        display: inline-block;
+      }
+      .conf-badge.hi {
+        background: #86efac;
+      }
+      .conf-badge.mid {
+        background: #fde68a;
+      }
+      .conf-badge.lo {
+        background: #fca5a5;
+      }
+
+      /* ───────────────────────── media cluster ─────────────────────────────── */
+      .mediabar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 36px;
+        border-top: 1px solid var(--line);
+        background: #fcfcfd;
+      }
+      .play {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 0;
+        background: var(--text);
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding-left: 2px;
+      }
+      .circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1px solid var(--line2);
+        background: #fff;
+        color: var(--text);
+        font-family: var(--mono-font);
+        font-weight: 700;
+        font-size: 11px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mtime {
+        font-family: var(--mono-font);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+      }
+      .track {
+        flex: 1 1 auto;
+        height: 4px;
+        border-radius: 3px;
+        background: var(--line);
+        position: relative;
+      }
+      .track::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 34%;
+        background: var(--text);
+        border-radius: 3px;
+      }
+      .track::after {
+        content: '';
+        position: absolute;
+        left: 34%;
+        top: 50%;
+        width: 11px;
+        height: 11px;
+        margin: -6px 0 0 -5px;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid var(--line2);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      }
+      .mtoggle {
+        border: 1px solid var(--line2);
+        background: #fff;
+        color: var(--muted);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      /* ───────────────────────── specimen strip ────────────────────────────── */
+      .specimen {
+        padding: 26px 36px 34px;
+        border-top: 1px solid var(--line);
+        background: #fbfbfc;
+      }
+      .spec-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin-bottom: 16px;
+      }
+      .spec-hero {
+        font-size: 42px;
+        line-height: 1.05;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        margin-bottom: 18px;
+      }
+      .spec-hero .light {
+        font-weight: 300;
+        color: var(--muted);
+      }
+      .spec-glyphs {
+        font-size: 18px;
+        line-height: 1.9;
+        color: var(--text);
+        letter-spacing: 0.01em;
+      }
+      .spec-glyphs .dim {
+        color: var(--faint);
+      }
+      .spec-figs {
+        font-family: var(--mono-font);
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 6px;
+        font-variant-numeric: tabular-nums;
+      }
+      .weights {
+        display: flex;
+        gap: 26px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+      .weights span {
+        font-size: 20px;
+        color: var(--text);
+      }
+      .w300 {
+        font-weight: 300;
+      }
+      .w400 {
+        font-weight: 400;
+      }
+      .w500 {
+        font-weight: 500;
+      }
+      .w600 {
+        font-weight: 600;
+      }
+      .w700 {
+        font-weight: 700;
+      }
+      .weights small {
+        display: block;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+        font-family: var(--mono-font);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="tabbar">
+      <div class="brand"><b>SLATE</b> · TYPE STUDIES</div>
+      <nav class="tabs" id="tabs"></nav>
+      <div class="meta">
+        <span class="meta-name" id="mName">Inter</span>
+        <span class="meta-desc" id="mDesc"></span>
+        <span class="meta-tags"><span class="pill" id="mSrc"></span><span class="pill axis" id="mAxis"></span></span>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+      <div class="app">
+        <!-- main toolbar -->
+        <div class="toolbar main">
+          <button class="iconbtn" title="Lock editing">🔒</button>
+          <button class="btn">Settings</button>
+          <button class="btn">Help</button>
+          <span class="spacer"></span>
+          <button class="btn primary">Save</button>
+          <button class="btn ghostline">Revert</button>
+          <button class="btn ghostline">Export ▾</button>
+        </div>
+
+        <!-- editing toolbar -->
+        <div class="toolbar editing">
+          <div class="seg"><button class="on">Strict</button><button>Loose</button></div>
+          <span class="divider"></span>
+          <button class="styb b">B</button>
+          <button class="styb i">I</button>
+          <button class="styb u">U</button>
+          <button class="iconbtn" title="Highlight"><span class="swatch"></span></button>
+          <button class="styb e" title="Entity">E</button>
+          <span class="divider"></span>
+          <button class="iconbtn" title="Undo">↶</button>
+          <button class="iconbtn" title="Redo">↷</button>
+          <span class="divider"></span>
+          <button class="btn">Tools ▾</button>
+          <button class="btn">Display ▾</button>
+          <span class="spacer"></span>
+          <div class="fontsize">
+            <span class="caps">Size</span>
+            <button class="iconbtn">A−</button>
+            <span class="val">17</span>
+            <button class="iconbtn">A+</button>
+          </div>
+        </div>
+
+        <!-- transcript -->
+        <div class="transcript">
+          <div class="doc-title">GEMS-01-UZH · Interview<span class="sub">de · WhisperX · 04:31</span></div>
+
+          <div class="para">
+            <div class="tc">00:00:01</div>
+            <div class="spk">Speaker 00</div>
+            <div class="body">
+              <span class="w">Ich </span><span class="w">wollte </span><span class="w est">ursprünglich </span><span class="w">eine </span
+              ><span class="w current">Opernsängerin </span><span class="w">werden, </span><span class="w">das </span
+              ><span class="w edited">genierte </span><span class="w">mich </span><span class="w">ein </span><span class="w">wenig, </span
+              ><span class="w">aber </span><span class="w">es </span><span class="w">ist </span><span class="w">tatsächlich </span
+              ><span class="w">so, </span><span class="w">weil </span><span class="w">mein </span><span class="w">Vater </span
+              ><span class="w">zu </span><span class="w">Hause </span><span class="w">immer </span><span class="w">Schallplatten </span
+              ><span class="w">hörte.</span>
+              <span class="gutter"><span class="conf-badge hi"></span></span>
+            </div>
+          </div>
+
+          <div class="para">
+            <div class="tc">00:00:18</div>
+            <div class="spk">Speaker 01</div>
+            <div class="body">
+              <span class="w">Und </span><span class="w">er </span><span class="w">war </span><span class="w">ein </span
+              ><span class="w">grosser </span><span class="w">Fan </span><span class="w">von </span><span class="w entity">Maria </span
+              ><span class="w entity">Callas, </span><span class="w">nicht </span><span class="w">wahr? </span><span class="w">Das </span
+              ><span class="w">hat </span><span class="w lowconf">vermutlich </span><span class="w">vieles </span><span class="w">geprägt </span
+              ><span class="w">in </span><span class="w">diesen </span><span class="w">Jahren.</span>
+              <span class="gutter"><span class="conf-badge mid"></span></span>
+            </div>
+          </div>
+
+          <div class="para">
+            <div class="tc">00:00:34</div>
+            <div class="spk">Speaker 00</div>
+            <div class="body">
+              <span class="w">Genau, </span><span class="w">und </span><span class="w">ich </span><span class="w">wäre </span
+              ><span class="w">eben </span><span class="w">auch </span><span class="w">gerne </span><span class="w">so </span
+              ><span class="w">eine </span><span class="w est">geworden, </span><span class="w muted-out">ähm, </span><span class="w">aber </span
+              ><span class="w">das </span><span class="w">Leben </span><span class="w hl">spielt </span><span class="w hl">manchmal </span
+              ><span class="w">anders.</span>
+              <span class="gutter"><span class="conf-badge lo"></span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- media cluster -->
+        <div class="mediabar">
+          <button class="play" title="Play">▶</button>
+          <button class="circle" title="−10s">−10</button>
+          <button class="circle" title="+10s">+10</button>
+          <span class="mtime">00:12 / 04:31</span>
+          <div class="track"></div>
+          <button class="mtoggle">1.0×</button>
+        </div>
+
+        <!-- specimen -->
+        <div class="specimen">
+          <div class="spec-label" id="specLabel">Specimen — Inter</div>
+          <div class="spec-hero">Helvetica-style, <span class="light">very Swiss.</span></div>
+          <div class="spec-glyphs">
+            ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
+            abcdefghijklmnopqrstuvwxyz <span class="dim">äöü ßéà çñ</span><br />
+            <span class="spec-figs">0123456789 &nbsp; &amp; @ # % · — “quotes” ‘ti’ (fi) [00:00:01]</span>
+          </div>
+          <div class="weights">
+            <span><span class="w300">Grotesk</span><small>300</small></span>
+            <span><span class="w400">Grotesk</span><small>400</small></span>
+            <span><span class="w500">Grotesk</span><small>500</small></span>
+            <span><span class="w600">Grotesk</span><small>600</small></span>
+            <span><span class="w700">Grotesk</span><small>700</small></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const FONTS = [
+        {
+          tab: 'Inter',
+          name: 'Inter',
+          ui: "'Inter'",
+          mono: "'JetBrains Mono'",
+          src: 'Google Fonts',
+          axis: 'very Swiss',
+          desc: 'Modern UI standard — hyper-legible neo-grotesque',
+        },
+        {
+          tab: 'Switzer',
+          name: 'Switzer',
+          ui: "'Switzer'",
+          mono: "'JetBrains Mono'",
+          src: 'Fontshare',
+          axis: 'very Swiss',
+          desc: 'Direct Helvetica heir, a touch warmer',
+        },
+        {
+          tab: 'Geist',
+          name: 'Geist',
+          ui: "'Geist'",
+          mono: "'Geist Mono'",
+          src: 'Google Fonts',
+          axis: 'very Swiss',
+          desc: 'Crisp, technical, contemporary grotesque',
+        },
+        {
+          tab: 'Schibsted',
+          name: 'Schibsted Grotesk',
+          ui: "'Schibsted Grotesk'",
+          mono: "'JetBrains Mono'",
+          src: 'Google Fonts',
+          axis: 'a little character',
+          desc: 'Editorial grotesque — Swiss bones with flair',
+        },
+        {
+          tab: 'Space Grotesk',
+          name: 'Space Grotesk',
+          ui: "'Space Grotesk'",
+          mono: "'Space Mono'",
+          src: 'Google Fonts',
+          axis: 'character-forward',
+          desc: 'Distinctive — proportional grotesque with personality',
+        },
+        {
+          tab: 'Hanken',
+          name: 'Hanken Grotesk',
+          ui: "'Hanken Grotesk'",
+          mono: "'JetBrains Mono'",
+          src: 'Google Fonts',
+          axis: 'warm character',
+          desc: 'Rounder, friendlier humanist grotesque',
+        },
+      ];
+
+      const FALLBACK = ', system-ui, -apple-system, sans-serif';
+      const MONO_FB = ', ui-monospace, Menlo, monospace';
+
+      const tabsEl = document.getElementById('tabs');
+      const root = document.documentElement;
+
+      function select(i) {
+        const f = FONTS[i];
+        root.style.setProperty('--ui-font', f.ui + FALLBACK);
+        root.style.setProperty('--mono-font', f.mono + MONO_FB);
+        document.getElementById('mName').textContent = f.name;
+        document.getElementById('mDesc').textContent = '— ' + f.desc;
+        document.getElementById('mSrc').textContent = f.src;
+        document.getElementById('mAxis').textContent = f.axis;
+        document.getElementById('specLabel').textContent = 'Specimen — ' + f.name;
+        [...tabsEl.children].forEach((b, bi) => b.classList.toggle('active', bi === i));
+      }
+
+      FONTS.forEach((f, i) => {
+        const b = document.createElement('button');
+        b.className = 'tab';
+        b.textContent = f.tab;
+        b.addEventListener('click', () => select(i));
+        tabsEl.appendChild(b);
+      });
+
+      select(0);
+    </script>
+  </body>
+</html>
