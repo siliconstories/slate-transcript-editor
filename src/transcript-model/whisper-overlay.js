@@ -16,6 +16,7 @@
  */
 import { isRevTranscript, revToModel, projectRev, overlayFromSlate as revOverlayFromSlate } from './rev-overlay';
 import { isWhisperxTranscript, whisperxToModel, projectWhisperx, overlayFromSlate as whisperxOverlayFromSlate } from './whisperx-overlay';
+import { isSessionFile } from './session-format';
 
 export {
   newHistory,
@@ -31,8 +32,8 @@ export {
   HISTORY_CAP,
 } from './overlay-history';
 
-/** Accept ONLY rev.ai or WhisperX. Everything else is rejected at import. */
-export const isWhisperTranscript = (parsed) => isWhisperxTranscript(parsed) || isRevTranscript(parsed);
+/** Accept rev.ai, WhisperX, or a saved editing-session file. Everything else is rejected. */
+export const isWhisperTranscript = (parsed) => isSessionFile(parsed) || isWhisperxTranscript(parsed) || isRevTranscript(parsed);
 
 /**
  * Build the unified immutable model, tagging it with its source `format`. WhisperX

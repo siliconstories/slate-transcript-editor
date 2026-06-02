@@ -66,7 +66,7 @@ describe('whisper profile — single tier, two source formats', () => {
       expect(value[0].children[0].text).toBe('the cat sat'); // NOT glued — no DPE round-trip
       expect(p.format).toBe('revai');
       expect(p.confidenceDefaults).toBeUndefined();
-      expect(p.exporters.map((e) => e.id)).toEqual(['json-rev', 'json-rev-sentences']);
+      expect(p.exporters.map((e) => e.id)).toEqual(['json-rev', 'json-rev-sentences', 'ste-session']);
     });
 
     it('zero-overlay export round-trips byte-identical to the original (lossless covenant)', () => {
@@ -105,7 +105,7 @@ describe('whisper profile — single tier, two source formats', () => {
       expect(value[0].children[0].words[0]._key).toBe('0:0');
       expect(value[0].annotations.topicLabel).toBe('Career path');
       expect(p.confidenceDefaults).toEqual({ cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] });
-      expect(p.exporters.map((e) => e.id)).toEqual(['json-whisperx']);
+      expect(p.exporters.map((e) => e.id)).toEqual(['json-whisperx', 'ste-session']);
     });
 
     it('zero-overlay export round-trips byte-identical to the original (lossless covenant)', () => {

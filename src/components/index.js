@@ -38,6 +38,8 @@ import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
 import buildProvenanceDecorations from '../util/provenance-decorations';
+import buildStyleDecorations from '../util/style-decorations';
+import selectionToStyleRanges from '../util/selection-to-style-range';
 import { alignParagraph } from '../transcript-model/align-paragraph';
 import { tokenToLeafWord } from '../transcript-model/freetext-to-slate';
 import { confidenceOf, groupSlateWordsIntoSentences } from '../util/rev-to-sentences';
@@ -393,6 +395,8 @@ function SlateTranscriptEditorInner(props) {
         setValue(importedValue);
         importedValueRef.current = cloneValue(importedValue);
         lastSavedValueRef.current = cloneValue(importedValue);
+        // a re-imported editing-session file carries user styles in its overlay
+        setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
       } catch (e) {
         // Unrecognized transcript (not rev.ai or WhisperX) is a hard error — surface it
         // loudly and leave the editor empty rather than crashing the host React tree.
@@ -413,6 +417,7 @@ function SlateTranscriptEditorInner(props) {
     if (profile.versioning && profile.versioning.revertAll && profile.reproject) {
       profile.versioning.revertAll();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
     } else if (importedValueRef.current) {
       replaceSlateValue(cloneValue(importedValueRef.current));
     }
@@ -735,7 +740,10 @@ function SlateTranscriptEditorInner(props) {
     prevEditingModeRef.current = editingMode;
     if (commitFreestyleEdit) commitFreestyleEdit.flush();
     lastAlignedRef.current = new Map();
-    if (profile.versioning && profile.reproject) replaceSlateValue(profile.reproject());
+    if (profile.versioning && profile.reproject) {
+      replaceSlateValue(profile.reproject());
+      refreshStyles();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingMode]);
 
@@ -755,6 +763,18 @@ function SlateTranscriptEditorInner(props) {
   // Loose can carry estimated words that are still visible in Strict, so the display is
   // identical regardless of the active mode.
   const provenanceDecos = useMemo(() => buildProvenanceDecorations(value), [value]);
+
+  // (D) user styling — bold/italic/underline/highlight/note, anchored to word ids and
+  // rendered as decorations (never marks), so it can't corrupt word/timing data and
+  // composes with confidence/karaoke/provenance on the same leaf. `showStyling` only
+  // hides the rendering; the data (overlay.styles) is retained.
+  const showStyling = settings.display.showStyling !== false;
+  const [styleRanges, setStyleRanges] = useState([]);
+  const styleDecos = useMemo(
+    () => (showStyling ? buildStyleDecorations(value, styleRanges) : { enabled: false, byPara: [] }),
+    [showStyling, value, styleRanges]
+  );
+  const refreshStyles = () => setStyleRanges(profile.versioning && profile.versioning.getStyles ? profile.versioning.getStyles() : []);
 
   const decorate = useCallback(
     ([node, path]) => {
@@ -795,9 +815,28 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (D) user styling — bold / italic / underline / highlight / note
+      if (styleDecos.enabled) {
+        const paraDecos = styleDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            const range = { anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd } };
+            const m = d.mark;
+            if (m === 'bold') range.styleBold = true;
+            else if (m === 'italic') range.styleItalic = true;
+            else if (m === 'underline') range.styleUnderline = true;
+            else if (m && m.highlight) range.styleHighlight = m.highlight;
+            else if (m && typeof m.note === 'string') {
+              range.styleNote = m.note;
+              range.styleUnderline = true;
+            }
+            ranges.push(range);
+          });
+        }
+      }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos, styleDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -835,15 +874,26 @@ function SlateTranscriptEditorInner(props) {
     ({ attributes, children, leaf }) => {
       let className = leaf.currentWord ? 'timecode text current-word' : 'timecode text';
       if (leaf.provenance === 'estimated') className += ' stw-prov-estimated';
+      if (leaf.styleNote) className += ' stw-note';
       // active (karaoke) word keeps its yellow bg; otherwise paint the confidence wash
-      const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : undefined;
+      const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : {};
+      // (D) user styling marks — composed additively; a user highlight overrides the wash
+      if (leaf.styleBold) style.fontWeight = 700;
+      if (leaf.styleItalic) style.fontStyle = 'italic';
+      if (leaf.styleUnderline) style.textDecoration = style.textDecoration ? `${style.textDecoration} underline` : 'underline';
+      if (leaf.styleHighlight) {
+        style.backgroundColor = leaf.styleHighlight;
+        style.borderRadius = '2px';
+      }
+      const hasStyle = Object.keys(style).length > 0;
+      const title = leaf.styleNote || (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
       return (
         <span
           onDoubleClick={handleLeafDoubleClick}
           onClick={handleLeafAltClick}
           className={className}
-          style={style}
-          title={leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined}
+          style={hasStyle ? style : undefined}
+          title={title}
           data-start={children.props.parent.start}
           data-previous-timings={children.props.parent.previousTimings}
           data-confidence-band={leaf.confidenceBand || undefined}
@@ -855,8 +905,9 @@ function SlateTranscriptEditorInner(props) {
     },
     // wordLevelEditing/value keep the double-click + mute closures fresh across mode
     // switches and edits (renderLeaf is memoized; without them it captures stale state).
+    // styleDecos gives renderLeaf a fresh identity when styling changes so leaves repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeWordIndex, confidenceDecos, provenanceDecos, wordLevelEditing, editable, value]
+    [activeWordIndex, confidenceDecos, provenanceDecos, styleDecos, wordLevelEditing, editable, value]
   );
 
   //
@@ -1109,6 +1160,8 @@ function SlateTranscriptEditorInner(props) {
   // selects one word and opens a small popover for a single-word rewrite/mute; the
   // commit goes through the count-preserving snapshot path. Ctrl/Cmd-click mutes.
   const [strictEdit, setStrictEdit] = useState(null); // { pIdx, wIdx, draft, muted, wordKey, start, x, y } | null
+  const [selectedWordKey, setSelectedWordKey] = useState(null); // the Strict double-click target for styling
+  const styleIdRef = useRef(0);
 
   // Resolve the word under a pointer event, decoration-safe (findEventRange maps DOM
   // coordinates to a logical Slate point regardless of how decorations split the leaf).
@@ -1157,6 +1210,7 @@ function SlateTranscriptEditorInner(props) {
     const resolved = resolveWordFromEvent(e);
     if (!resolved) return;
     const w = resolved.word;
+    setSelectedWordKey(w._key);
     setStrictEdit({
       pIdx: resolved.pIdx,
       wIdx: resolved.wIdx,
@@ -1185,6 +1239,54 @@ function SlateTranscriptEditorInner(props) {
     commitStrictWord(strictEdit.pIdx, strictEdit.wIdx, { text: strictEdit.draft });
     setStrictEdit(null);
   };
+
+  // ── User styling — bold / italic / underline / highlight / note ───────────────
+  // One action for both modes; the only difference is the selection source. Applying a
+  // mark adds a word-anchored style range to overlay.styles (a decoration — never a
+  // tree edit), so it is safe even on the read-only Strict surface.
+  const sameMark = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const applyStyleRanges = (newRanges, mark) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    const next = styleRanges.slice();
+    newRanges.forEach((r) => {
+      // toggle: an identical span+mark removes it; otherwise add
+      const idx = next.findIndex(
+        (s) => s.fromKey === r.fromKey && s.toKey === r.toKey && s.fromOffset === r.fromOffset && s.toOffset === r.toOffset && sameMark(s.mark, mark)
+      );
+      if (idx >= 0) next.splice(idx, 1);
+      else next.push({ id: `sty-${(styleIdRef.current += 1)}`, ...r, mark });
+    });
+    setStyleRanges(next);
+    profile.versioning.setStyles(next);
+    setIsContentIsModified(true);
+    setIsContentSaved(false);
+    if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+  };
+
+  const applyStyleToSelection = (mark) => {
+    if (!profile.versioning || !profile.versioning.setStyles) return;
+    if (wordLevelEditing) {
+      // STRICT: style the double-click-selected word (whole word)
+      if (!selectedWordKey) return;
+      let word = null;
+      value.forEach((p) =>
+        ((p.children && p.children[0] && p.children[0].words) || []).forEach((w) => {
+          if (w._key === selectedWordKey) word = w;
+        })
+      );
+      if (!word) return;
+      applyStyleRanges([{ fromKey: selectedWordKey, fromOffset: 0, toKey: selectedWordKey, toOffset: (word.text || '').length }], mark);
+    } else {
+      // LOOSE: style the native selection (split per paragraph)
+      const sel = editor.selection;
+      if (!sel || Range.isCollapsed(sel)) return;
+      if (commitFreestyleEdit) commitFreestyleEdit.flush();
+      const ranges = selectionToStyleRanges(editor.children, sel);
+      if (ranges.length) applyStyleRanges(ranges, mark);
+    }
+  };
+
+  const canStyleNow = wordLevelEditing ? selectedWordKey != null : Boolean(editor.selection && !Range.isCollapsed(editor.selection));
 
   // LOOSE-mode word gesture: a plain click places the text cursor (so you can type),
   // Alt/Option-click seeks to the word + toggles play/pause. In Strict, Ctrl/Cmd-click
@@ -1376,6 +1478,7 @@ function SlateTranscriptEditorInner(props) {
       if (commitFreestyleEdit) commitFreestyleEdit.flush();
       profile.versioning.undo();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
       return;
     }
     editor.undo();
@@ -1386,6 +1489,7 @@ function SlateTranscriptEditorInner(props) {
       if (commitFreestyleEdit) commitFreestyleEdit.flush();
       profile.versioning.redo();
       replaceSlateValue(profile.reproject());
+      refreshStyles();
       return;
     }
     editor.redo();
@@ -1399,6 +1503,8 @@ function SlateTranscriptEditorInner(props) {
   handleUndoRef.current = handleUndo;
   const handleRedoRef = useRef(handleRedo);
   handleRedoRef.current = handleRedo;
+  const applyStyleRef = useRef(applyStyleToSelection);
+  applyStyleRef.current = applyStyleToSelection;
   useEffect(() => {
     if (!profile.versioning) return undefined;
     const onKeyDown = (e) => {
@@ -1409,14 +1515,17 @@ function SlateTranscriptEditorInner(props) {
       const k = (e.key || '').toLowerCase();
       const isUndo = k === 'z' && !e.shiftKey;
       const isRedo = k === 'y' || (k === 'z' && e.shiftKey);
-      if (!isUndo && !isRedo) return;
-      // stop here so Slate's own ⌘Z history (Loose mode's <Editable>) doesn't ALSO
-      // fire and double-undo — we own undo/redo via the overlay history.
+      // ⌘B / ⌘I / ⌘U apply user styling to the current selection (both modes)
+      const styleMark = k === 'b' ? 'bold' : k === 'i' ? 'italic' : k === 'u' ? 'underline' : null;
+      if (!isUndo && !isRedo && !styleMark) return;
+      // stop here so Slate's own ⌘Z history / ⌘B bold (Loose mode's <Editable>) doesn't
+      // ALSO fire — we own undo/redo + styling via the overlay.
       e.preventDefault();
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       if (isUndo) handleUndoRef.current();
-      else handleRedoRef.current();
+      else if (isRedo) handleRedoRef.current();
+      else applyStyleRef.current(styleMark);
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
@@ -1704,6 +1813,9 @@ function SlateTranscriptEditorInner(props) {
             editingModes={editingModes}
             onEditingModeChange={onEditingModeChange}
             showEditingModeSwitch={showEditingModeSwitch}
+            canStyle={!!(profile.versioning && profile.versioning.setStyles)}
+            styleEnabled={canStyleNow}
+            onApplyStyle={applyStyleToSelection}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
             handleSave={handleSave}

@@ -14,7 +14,7 @@ export const STORAGE_KEY = 'slate-transcript-editor:preferences:v1';
 export const PRESET_GROUPS = ['display', 'appearance', 'confidence'];
 
 export const DEFAULT_SETTINGS = {
-  display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false },
+  display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false, showStyling: true },
   appearance: { fontSize: 15, lineSpacing: 1.5, highlightOpacity: 0.5 },
   confidence: { overlay: true, level: 'word', cutoff: 0.85, floor: 0.55, sentenceMetric: 'mean' },
   playback: { followPlayback: true, playbackSpeed: 1, seekStepSeconds: 10, forwardStepSeconds: 30 },
@@ -97,7 +97,7 @@ export const BUILTIN_PRESETS = [
     name: 'Proofreading',
     builtIn: true,
     bundle: {
-      display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false },
+      display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false, showStyling: true },
       appearance: { fontSize: 15, lineSpacing: 1.5, highlightOpacity: 0.55 },
       confidence: { overlay: true, level: 'word', cutoff: 0.85, floor: 0.55, sentenceMetric: 'mean' },
     },
@@ -107,7 +107,7 @@ export const BUILTIN_PRESETS = [
     name: 'Clean reading',
     builtIn: true,
     bundle: {
-      display: { showSpeakers: true, showTimecodes: false, showTitle: false, showAnnotations: false },
+      display: { showSpeakers: true, showTimecodes: false, showTitle: false, showAnnotations: false, showStyling: true },
       appearance: { fontSize: 18, lineSpacing: 1.7, highlightOpacity: 0.5 },
       confidence: { overlay: false, level: 'word', cutoff: 0.85, floor: 0.55, sentenceMetric: 'mean' },
     },
@@ -117,7 +117,7 @@ export const BUILTIN_PRESETS = [
     name: 'Sentence review',
     builtIn: true,
     bundle: {
-      display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false },
+      display: { showSpeakers: true, showTimecodes: true, showTitle: false, showAnnotations: false, showStyling: true },
       appearance: { fontSize: 15, lineSpacing: 1.6, highlightOpacity: 0.5 },
       confidence: { overlay: true, level: 'sentence', cutoff: 0.85, floor: 0.55, sentenceMetric: 'mean' },
     },

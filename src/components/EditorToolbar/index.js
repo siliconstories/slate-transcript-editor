@@ -250,6 +250,41 @@ function EditingModeSwitch({ value, modes, onChange }) {
   );
 }
 
+// User-styling buttons: bold / italic / underline / highlight, applied to the current
+// selection (one word in Strict, an arbitrary range in Loose). Shared by both modes.
+function StyleGroup({ enabled, onApply }) {
+  const base = {
+    border: '1px solid #cfcfcf',
+    borderRadius: 4,
+    background: '#fff',
+    minWidth: 22,
+    height: 22,
+    fontSize: 12,
+    lineHeight: 1,
+    padding: '0 4px',
+  };
+  const btn = (label, mark, extra, title) => (
+    <button
+      type="button"
+      disabled={!enabled}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => onApply(mark)}
+      title={title}
+      style={{ ...base, ...extra, opacity: enabled ? 1 : 0.4, cursor: enabled ? 'pointer' : 'default' }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <span style={{ display: 'inline-flex', gap: 2, alignItems: 'center' }} title="Apply styling to the selection">
+      {btn('B', 'bold', { fontWeight: 700 }, 'Bold (⌘B)')}
+      {btn('I', 'italic', { fontStyle: 'italic' }, 'Italic (⌘I)')}
+      {btn('U', 'underline', { textDecoration: 'underline' }, 'Underline (⌘U)')}
+      {btn('H', { highlight: '#fde68a' }, { background: '#fde68a' }, 'Highlight')}
+    </span>
+  );
+}
+
 // Anchored "Display" popover: the Show toggles + confidence sub-controls, lifted
 // off the toolbar to keep it on one line. Self-contained (open state + click-outside).
 function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setDisplay, setConf }) {
@@ -291,6 +326,12 @@ function DisplayPopover({ display, conf, cutoffOptions, canShowAnnotations, setD
               onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
             />
             <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
+            <FlatToggle
+              label="Styling"
+              active={display.showStyling !== false}
+              title="Show user styling (bold / italic / underline / highlight / notes)"
+              onClick={() => setDisplay('showStyling', !(display.showStyling !== false))}
+            />
           </div>
           <div style={{ ...S.popLabel, marginTop: 12, opacity: conf.overlay ? 1 : 0.4 }}>Confidence heat</div>
           <div
@@ -328,6 +369,9 @@ export default function EditorToolbar({
   editingModes,
   onEditingModeChange,
   showEditingModeSwitch,
+  canStyle,
+  styleEnabled,
+  onApplyStyle,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -366,6 +410,8 @@ export default function EditorToolbar({
       />
 
       {showEditingModeSwitch && <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />}
+
+      {canStyle && editable && <StyleGroup enabled={styleEnabled} onApply={onApplyStyle} />}
 
       <span style={S.groupGap} />
       <DisplayPopover
