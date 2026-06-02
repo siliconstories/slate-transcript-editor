@@ -7,6 +7,8 @@ import GEMS_STRICT from '../src/util/rev-to-sentences/__fixtures__/GEMS-01.json'
 import buildSentenceModel from '../src/util/rev-to-sentences';
 import { detectProfile } from '../src/transcript-model/profile';
 import { isRevTranscript, revToModel } from '../src/transcript-model/rev-overlay';
+import { isWhisperxTranscript, whisperxToModel } from '../src/transcript-model/whisperx-overlay';
+import GEMS_UZH from '../src/sample-data/GEMS-01-UZH.json';
 import converSlateToDpe from '../src/util/export-adapters/slate-to-dpe';
 import RawSourceDialog from './RawSourceDialog.js';
 
@@ -26,10 +28,52 @@ const SAMPLES = {
   },
 };
 
-const revWordCount = (parsed) => parsed.monologues.reduce((n, m) => n + (m.elements || []).filter((e) => e.type === 'text').length, 0);
+// "20m:16s"-style length label (the spoken span the title used to show).
+const formatMinSec = (sec) => {
+  const s = Math.max(0, Math.round(sec || 0));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}m:${String(s % 60).padStart(2, '0')}s`;
+};
 
-const docSublabel = (transcriptData) =>
-  isRevTranscript(transcriptData) ? `rev.ai · rigid · ${revWordCount(transcriptData)} words` : 'DPE · classic';
+// Word count + spoken length (seconds), derived from the transcript itself so the
+// Files list can show stats for every document without loading each media file.
+const docStats = (data) => {
+  let wordCount = 0;
+  let minStart = Infinity;
+  let maxEnd = -Infinity;
+  const span = (start, end) => {
+    if (typeof start === 'number' && start < minStart) minStart = start;
+    if (typeof end === 'number' && end > maxEnd) maxEnd = end;
+  };
+  if (isRevTranscript(data)) {
+    data.monologues.forEach((m) =>
+      (m.elements || []).forEach((e) => {
+        if (e.type !== 'text') return;
+        wordCount += 1;
+        span(e.ts, e.end_ts);
+      })
+    );
+  } else if (isWhisperxTranscript(data)) {
+    data.segments.forEach((s) =>
+      (s.words || []).forEach((w) => {
+        wordCount += 1;
+        span(w.start, w.end);
+      })
+    );
+  } else if (data && Array.isArray(data.words)) {
+    data.words.forEach((w) => {
+      if (typeof w.text !== 'string' || w.text.length === 0) return;
+      wordCount += 1;
+      span(w.start, w.end);
+    });
+  }
+  return { wordCount, duration: minStart < maxEnd ? maxEnd - minStart : 0 };
+};
+
+const docSublabel = (data) => {
+  const tier = isRevTranscript(data) ? 'rev.ai · rigid' : isWhisperxTranscript(data) ? 'WhisperX · whisperx' : 'DPE · classic';
+  const { wordCount, duration } = docStats(data);
+  return `${tier} · ${formatMinSec(duration)} · ${wordCount} words`;
+};
 
 // Seed documents: the bundled samples + the local strict-testing pair. Session
 // uploads append to this list (see Playground state). Each carries the full payload.
@@ -61,6 +105,17 @@ const SEED_DOCUMENTS = [
     transcriptData: GEMS_STRICT,
     title: 'GEMS-01 — rev.ai strict testing',
   },
+  {
+    // Same GEMS-01 interview as the rev.ai seed, transcribed + annotated by WhisperX (UZH) —
+    // lets you compare the two STT formats (and the rigid vs whisperx tiers) on one clip.
+    id: 'gems-uzh',
+    label: 'GEMS-01 (UZH · WhisperX)',
+    sublabel: docSublabel(GEMS_UZH),
+    mediaUrl: '/strict-media/GEMS-01.mp4',
+    mediaName: 'GEMS-01.mp4',
+    transcriptData: GEMS_UZH,
+    title: 'GEMS-01 — UZH annotated (WhisperX)',
+  },
 ];
 
 const isFiniteNumber = (n) => typeof n === 'number' && isFinite(n);
@@ -83,34 +138,46 @@ const validateDpe = (data) => {
 
 const styles = {
   wrap: { fontFamily: 'Roboto, system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1em' },
-  panel: { background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 10, padding: '1.4em 1.5em', marginBottom: '1.25em' },
+  panel: { background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 10, padding: '1em 1.2em', marginBottom: '1em' },
   loadHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     cursor: 'pointer',
     userSelect: 'none',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: 700,
     color: '#37474f',
   },
-  row: { display: 'flex', flexWrap: 'wrap', gap: '2.5em', alignItems: 'flex-start', marginTop: '1em' },
-  col: { display: 'flex', flexDirection: 'column', gap: '0.6em', minWidth: 280 },
-  label: { fontSize: 14, fontWeight: 700, textTransform: 'uppercase', color: '#455a64', letterSpacing: 0.5 },
+  row: { display: 'flex', flexWrap: 'wrap', gap: '1.5em', alignItems: 'flex-start', marginTop: '0.85em' },
+  col: { display: 'flex', flexDirection: 'column', gap: '0.45em', flex: '1 1 230px', minWidth: 210 },
+  label: { fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#455a64', letterSpacing: 0.4 },
   btn: {
     cursor: 'pointer',
     border: '1px solid #1976d2',
     background: '#fff',
     color: '#1976d2',
     borderRadius: 6,
-    padding: '9px 16px',
-    fontSize: 15,
+    padding: '5px 11px',
+    fontSize: 13,
     fontWeight: 600,
   },
-  urlInput: { padding: '9px 11px', border: '1px solid #bbb', borderRadius: 6, minWidth: 340, fontSize: 15 },
+  urlInput: { padding: '6px 9px', border: '1px solid #bbb', borderRadius: 6, flex: 1, minWidth: 0, fontSize: 13 },
   error: { color: '#c62828', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 4, padding: '8px 12px', marginTop: '0.75em' },
-  ok: { color: '#2e7d32', fontSize: 14 },
-  toggles: { display: 'flex', gap: '1.4em', flexWrap: 'wrap', marginTop: '1.25em', fontSize: 15 },
+  ok: { color: '#2e7d32', fontSize: 12.5 },
+  toggles: { display: 'flex', gap: '1.4em', flexWrap: 'wrap', marginTop: '1em', fontSize: 13 },
+  docGrid: { display: 'flex', flexWrap: 'wrap', gap: 6 },
+  docBtn: {
+    cursor: 'pointer',
+    border: '1px solid #1976d2',
+    background: '#fff',
+    color: '#1976d2',
+    borderRadius: 6,
+    padding: '4px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+  },
   hint: { fontSize: 12, color: '#777' },
   tier: { display: 'flex', gap: '0.6em', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.8em' },
   badgeRigid: { background: '#1565c0', color: '#fff', borderRadius: 4, padding: '3px 8px', fontSize: 12, fontWeight: 600 },
@@ -144,6 +211,9 @@ function Playground() {
   // the Playground just detects the tier and passes the instance down.
   const [profileInst, setProfileInst] = useState(null);
   const isRigid = profileInst ? profileInst.id === 'rigid' : false;
+  const isWhisperx = profileInst ? profileInst.id === 'whisperx' : false;
+  // Both rigid and whisperx are word-level-only tiers (mute/rewrite, no free typing).
+  const isWordLevel = profileInst && profileInst.editPolicy ? profileInst.editPolicy.wordLevelOnly === true : false;
 
   // Corpus-level confidence (mean + duration-weighted) of the loaded transcript,
   // to help pick a threshold. null for non-rev (DPE) transcripts.
@@ -187,8 +257,16 @@ function Playground() {
         return `Invalid rev.ai data — ${e.message}`;
       }
     }
+    if (isWhisperxTranscript(parsed)) {
+      try {
+        whisperxToModel(parsed);
+        return null;
+      } catch (e) {
+        return `Invalid WhisperX data — ${e.message}`;
+      }
+    }
     const dpeErr = validateDpe(parsed);
-    if (dpeErr) return `Not a rev.ai ({ monologues }) or DPE ({ words, paragraphs }) document. ${dpeErr}`;
+    if (dpeErr) return `Not a rev.ai ({ monologues }), WhisperX ({ segments, word_segments }) or DPE ({ words, paragraphs }) document. ${dpeErr}`;
     return null;
   };
 
@@ -196,9 +274,11 @@ function Playground() {
   // classic -> current DPE from the live Slate value, falling back to the loaded source.
   const openRaw = (locator) => {
     let obj;
-    if (isRigid && profileInst && Array.isArray(profileInst.exporters)) {
-      const exporter = profileInst.exporters.find((e) => e.id === 'json-rev');
-      obj = (exporter && exporter.run()) || transcriptData;
+    // Faithful tiers (rigid/whisperx) expose a JSON exporter that reflects mutes/rewrites;
+    // classic falls back to the current DPE from the live Slate value.
+    const faithful = profileInst && Array.isArray(profileInst.exporters) ? profileInst.exporters.find((e) => e.ext === 'json') : null;
+    if (faithful) {
+      obj = faithful.run() || transcriptData;
     } else {
       obj = liveValue ? converSlateToDpe(liveValue) : transcriptData;
     }
@@ -295,11 +375,13 @@ function Playground() {
         return;
       }
       const detected = detectProfile(parsed);
-      // DPE must validate; rev.ai (rigid) is accepted as-is.
-      if (detected.id !== 'rigid') {
+      // DPE must validate; rev.ai (rigid) and WhisperX are accepted as-is.
+      if (detected.id === 'classic') {
         const dpeError = validateDpe(parsed);
         if (dpeError) {
-          setError(`Unsupported transcript format. Expected DPE ({ words, paragraphs }) or rev.ai ({ monologues }). ${dpeError}`);
+          setError(
+            `Unsupported transcript format. Expected DPE ({ words, paragraphs }), rev.ai ({ monologues }) or WhisperX ({ segments, word_segments }). ${dpeError}`
+          );
           return;
         }
       }
@@ -311,6 +393,12 @@ function Playground() {
   };
 
   const ready = Boolean(mediaUrl) && Boolean(transcriptData);
+
+  // Collapse the Load & options panel once content is loaded. One-way (fires only
+  // when `ready` flips to true), so a manual re-open while loaded stays open.
+  useEffect(() => {
+    if (ready) setLoadOpen(false);
+  }, [ready]);
 
   return (
     <div style={styles.wrap}>
@@ -363,20 +451,22 @@ function Playground() {
               </div>
 
               <div style={styles.col}>
-                <span style={styles.label}>Or open a document (also in the Files tab)</span>
-                {documents.map((d) => (
-                  <button
-                    key={d.id}
-                    style={d.id === activeFileId ? { ...styles.btn, borderColor: '#18181b', color: '#18181b' } : styles.btn}
-                    onClick={() => selectDocument(d.id)}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+                <span style={styles.label}>Or open a document</span>
+                <div style={styles.docGrid}>
+                  {documents.map((d) => (
+                    <button
+                      key={d.id}
+                      style={d.id === activeFileId ? { ...styles.docBtn, borderColor: '#18181b', color: '#18181b' } : styles.docBtn}
+                      onClick={() => selectDocument(d.id)}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {!isRigid && (
+            {!isWordLevel && (
               <div style={styles.toggles}>
                 <label title="Read-only base; double-click a word to edit it, Ctrl/Cmd-click to mute it">
                   <input
@@ -403,7 +493,9 @@ function Playground() {
           key={mountKey}
           transcriptData={transcriptData}
           profile={profileInst}
-          defaultPreferences={{ confidence: { overlay: confidenceOverlay, level: confidenceLevel, cutoff: confidenceCutoff } }}
+          defaultPreferences={{
+            confidence: { overlay: confidenceOverlay, level: confidenceLevel, cutoff: profileInst?.confidenceDefaults?.cutoff ?? confidenceCutoff },
+          }}
           mediaUrl={mediaUrl}
           title={title}
           showTitle={showTitle}
@@ -425,8 +517,8 @@ function Playground() {
 
       {rawOpen && (
         <RawSourceDialog
-          title={isRigid ? 'Raw rev.ai source (JSON)' : 'Raw DPE source (JSON)'}
-          tier={isRigid ? 'rev' : 'dpe'}
+          title={isRigid ? 'Raw rev.ai source (JSON)' : isWhisperx ? 'Raw WhisperX source (JSON)' : 'Raw DPE source (JSON)'}
+          tier={isRigid ? 'rev' : isWhisperx ? 'whisperx' : 'dpe'}
           openTo={rawLocator}
           initialText={rawText}
           validate={validateRaw}

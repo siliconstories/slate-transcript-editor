@@ -142,8 +142,14 @@ export const AppearanceTab = () => {
       />
       <br />
       <FormControlLabel
-        control={<Switch color="primary" checked={d.showTitle} onChange={(e) => actions.setField('display', 'showTitle', e.target.checked)} />}
-        label="Show title"
+        control={
+          <Switch
+            color="primary"
+            checked={d.showAnnotations === true}
+            onChange={(e) => actions.setField('display', 'showAnnotations', e.target.checked)}
+          />
+        }
+        label="Show segment annotations (WhisperX)"
       />
     </div>
   );
@@ -182,21 +188,27 @@ export const PlaybackTab = () => {
   );
 };
 
-export const EditingTab = () => {
+const EDITING_MODE_LABELS = { word: 'Word', freestyle: 'Freestyle', paragraph: 'Paragraph' };
+
+export const EditingTab = ({ allowedModes, editingMode }) => {
   const { settings, actions } = usePreferences();
   const e = settings.editing;
+  const modes = Array.isArray(allowedModes) && allowedModes.length ? allowedModes : ['freestyle', 'word'];
+  const current = modes.includes(editingMode) ? editingMode : modes[0];
   return (
     <div>
-      <FormControlLabel
-        control={
-          <Switch
-            color="primary"
-            checked={e.wordLevelEditing}
-            onChange={(ev) => actions.setField('editing', 'wordLevelEditing', ev.target.checked)}
-          />
-        }
-        label="Word-level editing"
-      />
+      <Row
+        label="Editing mode"
+        help="Word: per-word seek, mute, and rewrite. Freestyle: free-text editing — timestamps re-align on the original words, inserted words get estimated timing."
+      >
+        <ToggleButtonGroup size="small" exclusive value={current} onChange={(ev, v) => v && actions.setField('editing', 'editingMode', v)}>
+          {modes.map((m) => (
+            <ToggleButton key={m} value={m}>
+              {EDITING_MODE_LABELS[m] || m}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Row>
       <Row label="Auto-save format">
         <Select size="small" value={e.autoSaveContentType} onChange={(ev) => actions.setField('editing', 'autoSaveContentType', ev.target.value)}>
           <MenuItem value="digitalpaperedit">Digital Paper Edit (.json)</MenuItem>
@@ -216,13 +228,20 @@ export const EditingTab = () => {
     </div>
   );
 };
+EditingTab.propTypes = { allowedModes: PropTypes.arrayOf(PropTypes.string), editingMode: PropTypes.string };
 
 export const AboutResetTab = ({ profileId }) => {
   const { actions } = usePreferences();
   return (
     <div>
       <Row label="Transcript tier">
-        <Typography variant="body2">{profileId === 'rigid' ? 'Rigid (rev.ai, faithful)' : 'Classic (free-text DPE)'}</Typography>
+        <Typography variant="body2">
+          {profileId === 'rigid'
+            ? 'Rigid (rev.ai, faithful)'
+            : profileId === 'whisperx'
+              ? 'WhisperX (faithful, annotated)'
+              : 'Classic (free-text DPE)'}
+        </Typography>
       </Row>
       <Divider style={{ margin: '12px 0' }} />
       <Typography variant="body2" color="textSecondary" gutterBottom>

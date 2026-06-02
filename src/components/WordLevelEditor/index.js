@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
 import findActiveWord from '../../util/find-active-word';
 import { confidenceToStyle } from '../../util/confidence-scale';
 import { confidenceOf, groupSlateWordsIntoSentences } from '../../util/rev-to-sentences';
@@ -31,6 +32,7 @@ function WordLevelEditor({
   isEditable,
   showSpeakers,
   showTimecodes,
+  showAnnotations,
   currentTime,
   followPlayback,
   onSeek,
@@ -309,6 +311,23 @@ function WordLevelEditor({
               className={'p-b-1'}
             >
               {words.map((word, wIdx) => renderWord(paragraph, pIdx, word, wIdx))}
+              {showAnnotations && paragraph.annotations && (
+                <div
+                  className="stw-annotations unselectable"
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}
+                >
+                  {paragraph.annotations.topicLabel && (
+                    <Chip size="small" variant="outlined" color="primary" label={paragraph.annotations.topicLabel} />
+                  )}
+                  {paragraph.annotations.mood && <Chip size="small" variant="outlined" label={`mood: ${paragraph.annotations.mood}`} />}
+                  {paragraph.annotations.sentiment && (
+                    <Chip size="small" variant="outlined" label={`sentiment: ${paragraph.annotations.sentiment}`} />
+                  )}
+                  {(paragraph.annotations.conceptTags || []).map((tag) => (
+                    <Chip key={tag} size="small" variant="outlined" label={tag} sx={{ color: '#757575', borderColor: '#e0e0e0' }} />
+                  ))}
+                </div>
+              )}
             </Grid>
           </Grid>
         );
@@ -323,6 +342,7 @@ WordLevelEditor.propTypes = {
   isEditable: PropTypes.bool,
   showSpeakers: PropTypes.bool,
   showTimecodes: PropTypes.bool,
+  showAnnotations: PropTypes.bool,
   currentTime: PropTypes.number,
   followPlayback: PropTypes.bool,
   onSeek: PropTypes.func,

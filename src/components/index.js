@@ -8,7 +8,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import debounce from 'lodash/debounce';
-import { createEditor, Editor, Transforms, Text } from 'slate';
+import { createEditor, Editor, Transforms, Text, Range, Element as SlateElement } from 'slate';
 // https://docs.slatejs.org/walkthroughs/01-installing-slate
 // Import the Slate components and React plugin.
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -35,7 +35,11 @@ import { resolveProfile } from '../transcript-model/profile';
 import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { usePreferences } from '../preferences/PreferencesContext';
 import buildConfidenceDecorations from '../util/confidence-decorations';
-import { confidenceOf, round } from '../util/rev-to-sentences';
+import buildProvenanceDecorations from '../util/provenance-decorations';
+import { alignParagraph } from '../transcript-model/align-paragraph';
+import { tokenToLeafWord } from '../transcript-model/freetext-to-slate';
+import { confidenceOf, groupSlateWordsIntoSentences } from '../util/rev-to-sentences';
+import { confidenceToStyle } from '../util/confidence-scale';
 import PreferencesDialog from './PreferencesDialog';
 import '../styles/toolbar.css';
 
@@ -81,10 +85,40 @@ const pauseWhileTypeing = (current) => {
 };
 const debouncePauseWhileTyping = debounce(pauseWhileTypeing, PAUSE_WHILTE_TYPING_TIMEOUT_MILLISECONDS);
 
-// "01m:53s"-style duration for the title stats.
-const formatMinSec = (sec) => {
-  const s = Math.max(0, Math.round(sec || 0));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}m:${String(s % 60).padStart(2, '0')}s`;
+// Shallow compare two leaf word arrays (anchor + text + timing) to skip no-op setNodes.
+const freestyleWordsEqual = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i];
+    const y = b[i];
+    if ((x._key == null ? null : x._key) !== (y._key == null ? null : y._key) || x.text !== y.text || x.start !== y.start || x.end !== y.end)
+      return false;
+  }
+  return true;
+};
+
+// Freestyle invariant: every `timedText` paragraph must keep EXACTLY ONE text leaf
+// carrying `text` + `words[]`. Paste/IME can split the leaf into several text nodes
+// (with diverging `words`), which would break the words↔text mapping the overlay
+// derivation relies on. This normalizer collapses any such split back into a single
+// leaf (keeping the first leaf's `words`; the next commit re-aligns them).
+const withSingleLeafParagraphs = (editor) => {
+  const { normalizeNode } = editor;
+  editor.normalizeNode = (entry) => {
+    const [node, path] = entry;
+    if (SlateElement.isElement(node) && node.type === 'timedText' && Array.isArray(node.children) && node.children.length > 1) {
+      const allText = node.children.every((c) => typeof c.text === 'string');
+      if (allText) {
+        const text = node.children.map((c) => c.text).join('');
+        const firstWords = node.children[0] && node.children[0].words;
+        Transforms.insertNodes(editor, { text, ...(firstWords ? { words: firstWords } : {}) }, { at: [...path, 0] });
+        for (let i = node.children.length; i >= 1; i -= 1) Transforms.removeNodes(editor, { at: [...path, i] });
+        return;
+      }
+    }
+    normalizeNode(entry);
+  };
+  return editor;
 };
 
 // React 19 ignores `Component.defaultProps` on function components, so the defaults
@@ -99,6 +133,7 @@ const DEFAULT_PROPS = {
   isEditable: true,
   followPlayback: true,
   wordLevelEditing: false,
+  editingMode: 'auto',
 };
 
 function SlateTranscriptEditorInner(props) {
@@ -135,6 +170,7 @@ function SlateTranscriptEditorInner(props) {
     'display.showTitle': typeof props.showTitle === 'boolean' ? props.showTitle : undefined,
     'playback.followPlayback': typeof props.followPlayback === 'boolean' ? props.followPlayback : undefined,
     'editing.wordLevelEditing': typeof props.wordLevelEditing === 'boolean' ? props.wordLevelEditing : undefined,
+    'editing.editingMode': typeof props.editingMode === 'string' && props.editingMode !== 'auto' ? props.editingMode : undefined,
     'editing.autoSaveContentType': typeof props.autoSaveContentType === 'string' ? props.autoSaveContentType : undefined,
     'confidence.overlay': dp.confidence && typeof dp.confidence.overlay === 'boolean' ? dp.confidence.overlay : undefined,
     'confidence.level': dp.confidence && (dp.confidence.level === 'word' || dp.confidence.level === 'sentence') ? dp.confidence.level : undefined,
@@ -156,7 +192,7 @@ function SlateTranscriptEditorInner(props) {
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(settings.playback.playbackSpeed);
-  const editor = useMemo(() => withReact(withHistory(createEditor())), []);
+  const editor = useMemo(() => withSingleLeafParagraphs(withReact(withHistory(createEditor()))), []);
   // Per-instance media element ref (was a module-scope React.createRef(), which is
   // shared across every mounted editor — a latent multi-instance bug).
   const mediaRef = useRef(null);
@@ -205,6 +241,10 @@ function SlateTranscriptEditorInner(props) {
   // a remount — which matters for the rigid tier (a remount would wipe overlay edits).
   const showSpeakers = settings.display.showSpeakers;
   const showTimecodes = settings.display.showTimecodes;
+  // Read-only per-segment annotation chips, rendered by WordLevelEditor (the
+  // surface every word-level-only tier uses). No-op for paragraphs that carry no
+  // `annotations` (classic/rigid), so the toggle is effectively WhisperX-only.
+  const showAnnotations = settings.display.showAnnotations;
   const [speakerOptions, setSpeakerOptions] = useState([]);
   const [saveTimer, setSaveTimer] = useState(null);
   const [isPauseWhiletyping, setIsPauseWhiletyping] = useState(settings.editing.pauseWhileTyping);
@@ -441,7 +481,20 @@ function SlateTranscriptEditorInner(props) {
   };
 
   const followPlayback = settings.playback.followPlayback;
-  const wordLevelEditing = editPolicy.wordLevelOnly === true ? true : settings.editing.wordLevelEditing;
+  // Editing mode: the profile declares the modes it allows (rev.ai/whisperx ->
+  // ['word','freestyle'] default 'word'; classic -> ['freestyle','word'] default
+  // 'freestyle'). 'auto' (and any out-of-range request) defers to the profile default.
+  const editingModes =
+    Array.isArray(editPolicy.modes) && editPolicy.modes.length ? editPolicy.modes : editPolicy.wordLevelOnly ? ['word'] : ['freestyle'];
+  const requestedMode = settings.editing.editingMode;
+  const editingMode =
+    requestedMode && requestedMode !== 'auto' && editingModes.includes(requestedMode) ? requestedMode : editPolicy.defaultMode || editingModes[0];
+  const wordLevelEditing = editingMode === 'word';
+  // Freestyle is the diff-anchored free-text editor — only on a versioned strict tier.
+  const isFreestyle = editingMode === 'freestyle' && !!(profile.versioning && typeof profile.versioning.snapshotFreeText === 'function');
+  // The toolbar Word|Freestyle switch is strict-only (a versioned profile with >1 mode).
+  const showEditingModeSwitch = editingModes.length > 1 && !!profile.versioning;
+  const onEditingModeChange = (m) => actions.setField('editing', 'editingMode', m);
 
   // seek + play for the word-level editor (single click on a word)
   // single-click: move the playhead to the word but do NOT change play state
@@ -495,9 +548,20 @@ function SlateTranscriptEditorInner(props) {
   const handleWordLevelContentChange = (newValue) => {
     setIsContentIsModified(true);
     setIsContentSaved(false);
-    // a versioned profile (rigid) records each word-level edit as a snapshot
+    // a versioned profile (rigid/whisperx) records each word-level edit as a snapshot.
+    // Once Freestyle has inserted/deleted words (a paragraph carries an anchorless
+    // word), the strict word-count invariant no longer holds, so route through the
+    // freetext snapshot instead — keeping both modes on one shared overlay/history.
     if (profile.versioning) {
-      profile.versioning.snapshot(newValue);
+      const hasInserted =
+        typeof profile.versioning.snapshotFreeText === 'function' &&
+        (newValue || []).some((p) =>
+          (p.children && p.children[0] && p.children[0].words ? p.children[0].words : []).some(
+            (w) => w._key == null && typeof w.text === 'string' && w.text.length > 0
+          )
+        );
+      if (hasInserted) profile.versioning.snapshotFreeText(newValue);
+      else profile.versioning.snapshot(newValue);
     }
     // forward word-level edits to the host (same prop classic free-text uses),
     // so a host can observe mutes/rewrites — e.g. for a faithful rev.ai round-trip
@@ -510,6 +574,57 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
+  // ── Freestyle commit cycle ──────────────────────────────────────────────────
+  // Debounced (fires after typing settles). For each anchored paragraph whose text
+  // changed, diff-align it against its original model words and write the aligned
+  // tokens onto the leaf's `words[]` IN PLACE (the text node is untouched, so the
+  // caret survives), then snapshot the freetext overlay + autosave. A full remount
+  // (replaceSlateValue) is reserved for undo/redo/revert/mode-switch.
+  const lastAlignedRef = useRef(new Map()); // anchorKey -> last leaf.text we aligned
+  const commitFreestyleEdit = useMemo(
+    () =>
+      debounce(() => {
+        if (!(profile.versioning && typeof profile.versioning.snapshotFreeText === 'function')) return;
+        const children = editor.children || [];
+        children.forEach((para, pIdx) => {
+          if (!para || para.type !== 'timedText' || !para.anchorKey) return;
+          const leaf = para.children && para.children[0];
+          if (!leaf || typeof leaf.text !== 'string') return;
+          if (lastAlignedRef.current.get(para.anchorKey) === leaf.text) return; // unchanged since last align
+          const originalWords = profile.originalWordsBetween
+            ? profile.originalWordsBetween(para.anchorKey, para.span && para.span.lastWordKey)
+            : null;
+          if (!originalWords) return;
+          const aligned = alignParagraph(originalWords, leaf.text);
+          const newWords = aligned.map((t) => tokenToLeafWord(t, para.speaker));
+          lastAlignedRef.current.set(para.anchorKey, leaf.text);
+          if (!freestyleWordsEqual(leaf.words, newWords)) {
+            Transforms.setNodes(editor, { words: newWords }, { at: [pIdx, 0] });
+          }
+        });
+        const committed = profile.versioning.snapshotFreeText(editor.children);
+        if (committed) {
+          if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+          if (emitSentenceModel) emitSentenceModel();
+        }
+      }, 300),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor, profile, emitSentenceModel]
+  );
+  useEffect(() => () => commitFreestyleEdit && commitFreestyleEdit.cancel(), [commitFreestyleEdit]);
+
+  // Switching Word ↔ Freestyle re-projects from the shared overlay so both surfaces
+  // show the same committed state (flush any pending freestyle commit first).
+  const prevEditingModeRef = useRef(editingMode);
+  useEffect(() => {
+    if (prevEditingModeRef.current === editingMode) return;
+    prevEditingModeRef.current = editingMode;
+    if (commitFreestyleEdit) commitFreestyleEdit.flush();
+    lastAlignedRef.current = new Map();
+    if (profile.versioning && profile.reproject) replaceSlateValue(profile.reproject());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingMode]);
+
   // word-level "follow the speech" highlight (karaoke)
   const wordMap = useMemo(() => buildWordMap(value), [value]);
   const activeWordIndex = useMemo(() => (followPlayback ? findActiveWord(wordMap, currentTime) : -1), [followPlayback, wordMap, currentTime]);
@@ -521,26 +636,8 @@ function SlateTranscriptEditorInner(props) {
     [settings.confidence, settings.appearance.highlightOpacity]
   );
   const confidenceDecos = useMemo(() => buildConfidenceDecorations(value, confidenceSettings), [value, confidenceSettings]);
-
-  // Corpus stats shown below the title (word count, length, mean/dur-weighted confidence).
-  const transcriptStats = useMemo(() => {
-    const words = [];
-    let minStart = Infinity;
-    let maxEnd = -Infinity;
-    (value || []).forEach((p) => {
-      const ws = p && p.children && p.children[0] && p.children[0].words;
-      if (!Array.isArray(ws)) return;
-      ws.forEach((w) => {
-        if (typeof w.text !== 'string' || w.text.length === 0) return;
-        words.push(w);
-        if (typeof w.start === 'number' && w.start < minStart) minStart = w.start;
-        if (typeof w.end === 'number' && w.end > maxEnd) maxEnd = w.end;
-      });
-    });
-    if (words.length === 0) return null;
-    const [mean, weighted] = confidenceOf(words);
-    return { wordCount: words.length, duration: minStart < maxEnd ? round(maxEnd - minStart, 2) : 0, mean, weighted };
-  }, [value]);
+  // Estimated-timing (inserted) words in Freestyle mode — value-only (no playback recompute).
+  const provenanceDecos = useMemo(() => (isFreestyle ? buildProvenanceDecorations(value) : { enabled: false, byPara: [] }), [isFreestyle, value]);
 
   const decorate = useCallback(
     ([node, path]) => {
@@ -572,9 +669,18 @@ function SlateTranscriptEditorInner(props) {
           });
         }
       }
+      // (C) provenance — estimated-timing (inserted) words get a dotted underline
+      if (provenanceDecos.enabled) {
+        const paraDecos = provenanceDecos.byPara[pIdx];
+        if (paraDecos) {
+          paraDecos.forEach((d) => {
+            ranges.push({ anchor: { path, offset: d.charStart }, focus: { path, offset: d.charEnd }, provenance: d.provenance });
+          });
+        }
+      }
       return ranges;
     },
-    [followPlayback, activeWordIndex, wordMap, confidenceDecos]
+    [followPlayback, activeWordIndex, wordMap, confidenceDecos, provenanceDecos]
   );
 
   // keep the spoken word in view; keyed on word index so it only fires on change
@@ -598,7 +704,9 @@ function SlateTranscriptEditorInner(props) {
     },
     // showSpeakers/showTimecodes are closed over by TimedTextElement; without them
     // here Slate keeps the stale closure and the classic editor ignores the toggles.
-    [showSpeakers, showTimecodes]
+    // isFreestyle/editable drive the per-sentence gutter rendered inside the element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showSpeakers, showTimecodes, isFreestyle, editable, value]
   );
 
   // NOTE: activeWordIndex is intentionally in the dependency list even though it
@@ -608,7 +716,8 @@ function SlateTranscriptEditorInner(props) {
   // leaves re-render and pick up the `currentWord` decoration produced above.
   const renderLeaf = useCallback(
     ({ attributes, children, leaf }) => {
-      const className = leaf.currentWord ? 'timecode text current-word' : 'timecode text';
+      let className = leaf.currentWord ? 'timecode text current-word' : 'timecode text';
+      if (leaf.provenance === 'estimated') className += ' stw-prov-estimated';
       // active (karaoke) word keeps its yellow bg; otherwise paint the confidence wash
       const style = !leaf.currentWord && leaf.confidenceStyle ? { backgroundColor: leaf.confidenceStyle, borderRadius: '2px' } : undefined;
       return (
@@ -616,6 +725,7 @@ function SlateTranscriptEditorInner(props) {
           onDoubleClick={handleTimedTextClick}
           className={className}
           style={style}
+          title={leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined}
           data-start={children.props.parent.start}
           data-previous-timings={children.props.parent.previousTimings}
           data-confidence-band={leaf.confidenceBand || undefined}
@@ -625,7 +735,7 @@ function SlateTranscriptEditorInner(props) {
         </span>
       );
     },
-    [activeWordIndex, confidenceDecos]
+    [activeWordIndex, confidenceDecos, provenanceDecos]
   );
 
   //
@@ -679,6 +789,92 @@ function SlateTranscriptEditorInner(props) {
     }
   };
 
+  // Freestyle per-sentence revert: restore one sentence's words to the original
+  // model words, then re-commit. `firstKey`/`lastKey` bound the sentence's model span.
+  const handleRevertSentence = (paragraphAnchorKey, wIdxStart, wIdxEnd, firstKey, lastKey) => {
+    if (!isFreestyle || !profile.originalWordsBetween) return;
+    const pIdx = editor.children.findIndex((p) => p && p.anchorKey === paragraphAnchorKey);
+    if (pIdx < 0) return;
+    const para = editor.children[pIdx];
+    const leaf = para.children && para.children[0];
+    const words = (leaf && leaf.words) || [];
+    if (firstKey == null) return; // a sentence with no surviving anchor can't be reverted to original
+    const originals = profile.originalWordsBetween(firstKey, lastKey);
+    const restored = originals.map((o) =>
+      tokenToLeafWord({ ref: o.key, value: o.value, start: o.start, end: o.end, confidence: o.confidence, estimated: false }, para.speaker)
+    );
+    const newWords = [...words.slice(0, wIdxStart), ...restored, ...words.slice(wIdxEnd + 1)];
+    const newText = newWords.map((w) => w.text).join(' ');
+    const leafPath = [pIdx, 0];
+    const oldText = (leaf && leaf.text) || '';
+    Transforms.delete(editor, { at: { anchor: { path: leafPath, offset: 0 }, focus: { path: leafPath, offset: oldText.length } } });
+    Transforms.insertText(editor, newText, { at: { path: leafPath, offset: 0 } });
+    Transforms.setNodes(editor, { words: newWords }, { at: leafPath });
+    lastAlignedRef.current.set(paragraphAnchorKey, newText);
+    setValue(editor.children);
+    const committed = profile.versioning.snapshotFreeText(editor.children);
+    if (committed) {
+      if (props.handleAutoSaveChanges) props.handleAutoSaveChanges(editor.children);
+      if (emitSentenceModel) emitSentenceModel();
+    }
+    setIsContentIsModified(true);
+    setIsContentSaved(false);
+  };
+
+  const sentenceMetricIdx = settings.confidence.sentenceMetric === 'duration_weighted' ? 1 : 0;
+  const confStyleOpts = {
+    cutoff: settings.confidence.cutoff,
+    floor: settings.confidence.floor,
+    highlightOpacity: settings.appearance.highlightOpacity,
+  };
+
+  // contentEditable=false gutter rendered under a Freestyle paragraph: one chip per
+  // sentence (confidence badge, estimated-timing dot, revert-sentence button).
+  const SentenceGutter = ({ element }) => {
+    const words = (element.children && element.children[0] && element.children[0].words) || [];
+    if (!words.length) return null;
+    const sentences = groupSlateWordsIntoSentences(words);
+    return (
+      <div contentEditable={false} className="unselectable" style={{ marginTop: 2, marginBottom: 4, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {sentences.map(({ wIdxStart, wIdxEnd, words: sWords }, si) => {
+          const conf = confidenceOf(sWords)[sentenceMetricIdx];
+          const lowStyle = confidenceToStyle(conf, confStyleOpts);
+          const badgeColor = lowStyle || '#d1fae5';
+          const hasEstimated = sWords.some((w) => w._key == null || (typeof w.timingSource === 'string' && w.timingSource !== 'original'));
+          const survivors = sWords.filter((w) => w._key != null);
+          const firstKey = survivors.length ? survivors[0]._key : null;
+          const lastKey = survivors.length ? survivors[survivors.length - 1]._key : null;
+          return (
+            <span key={si} className="stw-sentence-gutter">
+              <span
+                className="stw-conf-badge"
+                style={{ background: badgeColor }}
+                title={typeof conf === 'number' ? `Sentence confidence ${conf.toFixed(2)}` : 'Sentence confidence n/a'}
+                aria-label={typeof conf === 'number' ? `confidence ${conf.toFixed(2)}` : 'confidence not available'}
+              />
+              {hasEstimated && (
+                <span className="stw-est-dot" title="Contains estimated (interpolated) timing">
+                  ●
+                </span>
+              )}
+              {editable && firstKey != null && (
+                <button
+                  type="button"
+                  className="stw-revert-sentence"
+                  title="Revert this sentence to the original words"
+                  aria-label="Revert this sentence"
+                  onClick={() => handleRevertSentence(element.anchorKey, wIdxStart, wIdxEnd, firstKey, lastKey)}
+                >
+                  ↩
+                </button>
+              )}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   const TimedTextElement = (props) => {
     // Reflow: text fills whatever width the hidden speaker/timecode columns free up.
     const textLg = 12 - (showTimecodes ? 2 : 0) - (showSpeakers ? 3 : 0);
@@ -722,6 +918,7 @@ function SlateTranscriptEditorInner(props) {
         )}
         <Grid size={{ xs: 12, sm: 12, md: 12, lg: textLg, xl: textXl }} className={'p-b-1 mx-auto'}>
           {props.children}
+          {isFreestyle && <SentenceGutter element={props.element} />}
         </Grid>
       </Grid>
     );
@@ -978,8 +1175,30 @@ function SlateTranscriptEditorInner(props) {
   const handleOnKeyDown = async (event) => {
     setIsContentIsModified(true);
     setIsContentSaved(false);
-    // profiles that forbid structural edits (rigid) block paragraph split/merge
+    // profiles that forbid structural edits (rigid/whisperx) block paragraph split/merge
     if (editPolicy.allowsStructuralEdits === false) {
+      if (isFreestyle) {
+        // Freestyle: allow free in-paragraph typing/insert/delete; block only the
+        // CROSS-paragraph structural keys (Enter splits; Backspace/Delete at a
+        // paragraph edge would merge speaker turns). Everything else falls through
+        // to Slate; the debounced onChange commit re-aligns the edited paragraph.
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          return;
+        }
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+          const sel = editor.selection;
+          if (sel && Range.isCollapsed(sel)) {
+            const paraPath = [sel.anchor.path[0]];
+            const atEdge = event.key === 'Backspace' ? Editor.isStart(editor, sel.anchor, paraPath) : Editor.isEnd(editor, sel.anchor, paraPath);
+            if (atEdge) {
+              event.preventDefault();
+              return;
+            }
+          }
+        }
+        return; // let Slate handle the keystroke natively
+      }
       if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete') {
         event.preventDefault();
       }
@@ -1060,6 +1279,49 @@ function SlateTranscriptEditorInner(props) {
                 background-color: #fff59d;
                 border-radius: 2px;
                 box-shadow: 0 0 0 1px #fff59d;
+              }
+
+              /* Freestyle: inserted word whose timing is estimated (interpolated) */
+              .stw-prov-estimated {
+                text-decoration: underline dotted;
+                text-decoration-color: #c4b5fd;
+                text-underline-offset: 2px;
+                color: #6b7280;
+              }
+
+              /* Freestyle per-sentence gutter (confidence badge + revert) */
+              .stw-sentence-gutter {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-left: 8px;
+                vertical-align: middle;
+              }
+              .stw-conf-badge {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                border: 1px solid rgba(0, 0, 0, 0.15);
+              }
+              .stw-est-dot {
+                font-size: 10px;
+                color: #8b5cf6;
+              }
+              .stw-revert-sentence {
+                font: inherit;
+                font-size: 11px;
+                line-height: 1.4;
+                border: 1px solid #d4d4d8;
+                border-radius: 3px;
+                background: #fff;
+                color: #71717a;
+                cursor: pointer;
+                padding: 0 4px;
+              }
+              .stw-revert-sentence:hover {
+                border-color: #18181b;
+                color: #18181b;
               }
 
               /* word-level editing view */
@@ -1167,20 +1429,9 @@ function SlateTranscriptEditorInner(props) {
               }
           `}
         </style>
-        {settings.display.showTitle && (
+        {props.title && (
           <div style={{ marginBottom: '0.6em' }}>
             <Typography variant="h5">{props.title}</Typography>
-            {transcriptStats && (
-              <div style={{ lineHeight: 1.25 }}>
-                <Typography variant="subtitle1" color="textSecondary" component="div">
-                  {formatMinSec(duration > 0 ? duration : transcriptStats.duration)}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" component="div">
-                  {transcriptStats.wordCount} words
-                  {transcriptStats.mean != null ? ` · confidence ${transcriptStats.mean} mean / ${transcriptStats.weighted} dur-weighted` : ''}
-                </Typography>
-              </div>
-            )}
           </div>
         )}
         <div style={{ marginBottom: '0.75em' }}>
@@ -1192,6 +1443,12 @@ function SlateTranscriptEditorInner(props) {
             presets={presets}
             activePresetId={activePresetId}
             canStructuralEdit={editPolicy.allowsStructuralEdits}
+            canShowAnnotations={profile.id === 'whisperx'}
+            cutoffOptions={(profile.confidenceDefaults && profile.confidenceDefaults.cutoffOptions) || [0.75, 0.8, 0.85]}
+            editingMode={editingMode}
+            editingModes={editingModes}
+            onEditingModeChange={onEditingModeChange}
+            showEditingModeSwitch={showEditingModeSwitch}
             isProcessing={isProcessing}
             isContentSaved={isContentSaved}
             handleSave={handleSave}
@@ -1358,6 +1615,7 @@ function SlateTranscriptEditorInner(props) {
                           isEditable={editable}
                           showSpeakers={showSpeakers}
                           showTimecodes={showTimecodes}
+                          showAnnotations={showAnnotations}
                           currentTime={currentTime}
                           followPlayback={followPlayback}
                           onSeek={seekWord}
@@ -1372,12 +1630,22 @@ function SlateTranscriptEditorInner(props) {
                           key={slateKey}
                           editor={editor}
                           initialValue={value}
-                          onChange={(value) => {
+                          onChange={(newVal) => {
+                            setValue(newVal);
+                            if (isFreestyle) {
+                              // ignore caret-only changes; on a real edit, re-align (debounced)
+                              const astChange = editor.operations.some((op) => op.type !== 'set_selection');
+                              if (astChange) {
+                                setIsContentIsModified(true);
+                                setIsContentSaved(false);
+                                commitFreestyleEdit();
+                              }
+                              return;
+                            }
                             if (props.handleAutoSaveChanges) {
-                              props.handleAutoSaveChanges(value);
+                              props.handleAutoSaveChanges(newVal);
                               setIsContentSaved(true);
                             }
-                            return setValue(value);
                           }}
                         >
                           <Editable
@@ -1400,16 +1668,25 @@ function SlateTranscriptEditorInner(props) {
             </Grid>
           </Grid>
         </div>
-        <PreferencesDialog open={prefsOpen} onClose={() => setPrefsOpen(false)} profileId={profile.id} />
+        <PreferencesDialog
+          open={prefsOpen}
+          onClose={() => setPrefsOpen(false)}
+          profileId={profile.id}
+          allowedModes={editingModes}
+          editingMode={editingMode}
+        />
       </Container>
     </div>
   );
 }
 
-const transcriptHasConfidence = (data) => {
+export const transcriptHasConfidence = (data) => {
   if (!data || typeof data !== 'object') return false;
   if (Array.isArray(data.monologues)) {
     return data.monologues.some((m) => (m.elements || []).some((el) => el && el.type === 'text' && typeof el.confidence === 'number'));
+  }
+  if (Array.isArray(data.segments)) {
+    return data.segments.some((s) => (s.words || []).some((w) => typeof w.score === 'number'));
   }
   if (Array.isArray(data.words)) {
     return data.words.some((w) => typeof w.confidence === 'number' || typeof w.score === 'number');
@@ -1423,10 +1700,21 @@ const transcriptHasConfidence = (data) => {
 function SlateTranscriptEditor(props) {
   const merged = { ...DEFAULT_PROPS, ...props };
   const hasConfidence = useMemo(() => transcriptHasConfidence(merged.transcriptData), [merged.transcriptData]);
+  // A profile may declare format-specific confidence defaults (WhisperX scores run
+  // far lower than rev.ai, so it lowers the cutoff/floor). Fold them into the
+  // PreferencesProvider SEED only — host-provided confidence keys still win, and the
+  // inner component keeps the original defaultPreferences so the values are a
+  // freely-adjustable default rather than a host-controlled lock.
+  const seededDefaultPreferences = useMemo(() => {
+    const cd = resolveProfile(merged.profile).confidenceDefaults;
+    if (!cd) return merged.defaultPreferences;
+    const hostConf = (merged.defaultPreferences && merged.defaultPreferences.confidence) || {};
+    return { ...merged.defaultPreferences, confidence: { cutoff: cd.cutoff, floor: cd.floor, ...hostConf } };
+  }, [merged.profile, merged.defaultPreferences]);
   return (
     <PreferencesProvider
       seedProps={merged}
-      defaultPreferences={merged.defaultPreferences}
+      defaultPreferences={seededDefaultPreferences}
       onPreferencesChange={merged.onPreferencesChange}
       hasConfidence={hasConfidence}
     >
@@ -1451,6 +1739,7 @@ SlateTranscriptEditor.propTypes = {
   transcriptDataLive: PropTypes.object,
   followPlayback: PropTypes.bool,
   wordLevelEditing: PropTypes.bool,
+  editingMode: PropTypes.oneOf(['auto', 'word', 'freestyle']),
   profile: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
   onShowRawSource: PropTypes.func,
   onSentenceModel: PropTypes.func,

@@ -1,17 +1,17 @@
 /**
- * Rigid ("scientific" / rev.ai) profile — the originally-imported transcript is
+ * WhisperX ("expert") profile — the same overlay-on-immutable-original tier as
+ * rev.ai/rigid, applied to the richer WhisperX schema. The imported transcript is
  * kept immutable; words may only be muted or rewritten (never added, deleted, or
- * reordered); export reconstructs the rev.ai schema byte-faithfully. Versioning
- * snapshots the sparse overlay (not the whole value) and is owned here, in a
- * closure, so each editor mount gets its own isolated history. The editor drives
- * import / edit-capture / versioning / faithful export through this object.
+ * reordered); export reconstructs the full WhisperX file faithfully, preserving the
+ * per-segment annotations (topics, moods, sentiment, concept tags, pre-made
+ * sentences), chunk groupings, per-word diarization, and `annotation_metadata`.
+ * Versioning snapshots the sparse overlay and is owned here in a closure, so each
+ * editor mount gets its own isolated history.
  */
-import convertDpeToSlate from '../util/dpe-to-slate';
-import buildSentenceModel from '../util/rev-to-sentences';
 import {
-  isRevTranscript,
-  revToModel,
-  projectRev,
+  isWhisperxTranscript,
+  whisperxToModel,
+  projectWhisperx,
   newHistory,
   commit,
   undo as historyUndo,
@@ -20,28 +20,27 @@ import {
   canRedo as historyCanRedo,
   currentOverlay,
   overlayFromSlate,
-} from './rev-overlay';
-import { revModelToDpe } from './rev-to-slate';
+} from './whisperx-overlay';
+import { whisperxModelToSlate } from './whisperx-to-slate';
 import { freeTextOverlayFromSlate } from './freetext-overlay';
 import { applyFreetextOverlay } from './freetext-to-slate';
 import { originalWordsBetween } from './freetext-profile-helpers';
 
-export const createRigidProfile = () => {
+export const createWhisperxProfile = () => {
   let model = null;
   let history = newHistory();
 
-  // The editor speaks Slate; rigid stores rev.ai. We project the immutable model
-  // (at the current history cursor) to a DPE object and reuse the classic
-  // convertDpeToSlate so `_key` / `confidence` / `muted` / `punctAfter` survive
-  // by-reference onto the Slate leaves (see getWordsForParagraph), then stamp the
-  // Freestyle anchor span + apply any paragraph-level freetext entries.
-  const projectValue = () => applyFreetextOverlay(convertDpeToSlate(revModelToDpe(model, history)), model, currentOverlay(history));
+  // The editor speaks Slate; whisperx stores its native JSON. We project the
+  // immutable model (at the current history cursor) DIRECTLY to a Slate value
+  // (one paragraph per segment) — not via DPE — so wordless segments survive, then
+  // stamp the Freestyle anchor span + apply any paragraph-level freetext entries.
+  const projectValue = () => applyFreetextOverlay(whisperxModelToSlate(model, history), model, currentOverlay(history));
 
   return {
-    id: 'rigid',
+    id: 'whisperx',
 
     import(parsed) {
-      model = revToModel(parsed);
+      model = whisperxToModel(parsed);
       history = newHistory();
       return { value: projectValue(), model };
     },
@@ -52,20 +51,18 @@ export const createRigidProfile = () => {
     // blocks cross-paragraph (Enter/merge) edits in freestyle.
     editPolicy: { allowsStructuralEdits: false, allowsFreeText: false, wordLevelOnly: true, modes: ['word', 'freestyle'], defaultMode: 'word' },
 
+    // WhisperX `score` is a forced-ALIGNMENT score, not ASR confidence — it runs far
+    // lower than rev.ai (corpus median ≈ 0.46), so the global 0.85 cutoff flags ~93%
+    // of words. These format-specific defaults seed the confidence overlay (and the
+    // toolbar threshold dropdown) so it highlights ~the lowest third instead.
+    confidenceDefaults: { cutoff: 0.3, floor: 0.08, cutoffOptions: [0.2, 0.3, 0.45, 0.5, 0.55] },
+
     exporters: [
       {
-        id: 'json-rev',
-        label: 'rev.ai (faithful)',
+        id: 'json-whisperx',
+        label: 'WhisperX (faithful)',
         ext: 'json',
-        run: () => (model ? projectRev(model.original, currentOverlay(history)) : null),
-      },
-      {
-        // Sentence-level "shadow" of the current word-level state — the same
-        // adapter backs the export menu and the live onSentenceModel emit.
-        id: 'json-rev-sentences',
-        label: 'rev.ai (sentences)',
-        ext: 'sentences.json',
-        run: () => (model ? buildSentenceModel(projectRev(model.original, currentOverlay(history))) : null),
+        run: () => (model ? projectWhisperx(model.original, currentOverlay(history)) : null),
       },
     ],
 
@@ -120,10 +117,10 @@ export const createRigidProfile = () => {
   };
 };
 
-export const rigidDescriptor = {
-  id: 'rigid',
-  detect: (parsed) => isRevTranscript(parsed),
-  create: createRigidProfile,
+export const whisperxDescriptor = {
+  id: 'whisperx',
+  detect: (parsed) => isWhisperxTranscript(parsed),
+  create: createWhisperxProfile,
 };
 
-export default rigidDescriptor;
+export default whisperxDescriptor;

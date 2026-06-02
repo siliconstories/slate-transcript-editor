@@ -19,6 +19,7 @@
  */
 import { classicDescriptor } from './classic-profile';
 import { rigidDescriptor } from './rigid-profile';
+import { whisperxDescriptor } from './whisperx-profile';
 
 const registry = new Map();
 
@@ -71,5 +72,6 @@ export const resolveProfile = (profileProp) => {
 
 registerProfile(classicDescriptor);
 registerProfile(rigidDescriptor);
+registerProfile(whisperxDescriptor);
 
 export default { registerProfile, getProfile, detectProfile, resolveProfile };

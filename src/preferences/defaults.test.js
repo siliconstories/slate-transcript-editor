@@ -72,4 +72,13 @@ describe('migrate', () => {
     expect(migrate({ schemaVersion: 999, settings: {} })).toBeNull();
     expect(migrate({ schemaVersion: SCHEMA_VERSION })).toBeNull(); // no settings
   });
+
+  it('upgrades v1 -> v2: wordLevelEditing boolean becomes an editingMode string', () => {
+    const onWord = migrate({ schemaVersion: 1, settings: { editing: { wordLevelEditing: true } } });
+    expect(onWord.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(onWord.settings.editing.editingMode).toBe('word');
+
+    const offWord = migrate({ schemaVersion: 1, settings: { editing: { wordLevelEditing: false } } });
+    expect(offWord.settings.editing.editingMode).toBe('auto'); // defer to the profile default
+  });
 });

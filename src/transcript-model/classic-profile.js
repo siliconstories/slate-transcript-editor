@@ -10,7 +10,10 @@ import convertDpeToSlate from '../util/dpe-to-slate';
 export const createClassicProfile = () => ({
   id: 'classic',
   import: (parsed) => ({ value: convertDpeToSlate(parsed), model: null }),
-  editPolicy: { allowsStructuralEdits: true, allowsFreeText: true, wordLevelOnly: false },
+  // Classic is free-text by default ('freestyle' == the Slate paragraph editor) and
+  // still offers the word-level grid via Preferences. The toolbar Word|Freestyle
+  // switch is strict-only (gated on a versioned profile), so it stays hidden here.
+  editPolicy: { allowsStructuralEdits: true, allowsFreeText: true, wordLevelOnly: false, modes: ['freestyle', 'word'], defaultMode: 'freestyle' },
   exporters: null,
   versioning: null,
   reproject: null,

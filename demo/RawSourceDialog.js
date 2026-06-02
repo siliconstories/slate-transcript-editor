@@ -57,6 +57,19 @@ const buildIndex = (state, tier) => {
       }
       m += 1;
     }
+  } else if (tier === 'whisperx') {
+    // WhisperX text stream walks the flat `word_segments` list ({ word, start, ... }).
+    const wordsArr = propValue(objProp(root, 'word_segments', doc));
+    if (!wordsArr || wordsArr.name !== 'Array') return [];
+    let i = 0;
+    for (const w of wordsArr.getChildren('Object')) {
+      const textNode = propValue(objProp(w, 'word', doc));
+      const startNode = propValue(objProp(w, 'start', doc));
+      const text = strOf(textNode);
+      const start = startNode && startNode.name === 'Number' ? Number(doc.sliceString(startNode.from, startNode.to)) : undefined;
+      if (typeof text === 'string') out.push({ from: textNode.from, to: textNode.to, text, index: i, start });
+      i += 1;
+    }
   } else {
     const wordsArr = propValue(objProp(root, 'words', doc));
     if (!wordsArr || wordsArr.name !== 'Array') return [];

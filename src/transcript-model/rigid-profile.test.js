@@ -36,9 +36,15 @@ describe('rigid profile', () => {
     expect(words[2].punctAfter).toBe('.'); // display-only punctuation
   });
 
-  it('word-level-only, no structural edits', () => {
+  it('word-level-only, no structural edits, with word + freestyle modes', () => {
     const p = createRigidProfile();
-    expect(p.editPolicy).toEqual({ allowsStructuralEdits: false, allowsFreeText: false, wordLevelOnly: true });
+    expect(p.editPolicy).toEqual({
+      allowsStructuralEdits: false,
+      allowsFreeText: false,
+      wordLevelOnly: true,
+      modes: ['word', 'freestyle'],
+      defaultMode: 'word',
+    });
   });
 
   it('faithful export with no edits round-trips byte-identical to the original', () => {

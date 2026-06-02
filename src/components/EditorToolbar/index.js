@@ -125,9 +125,16 @@ const S = {
   },
 };
 
-function FlatToggle({ label, active, onClick }) {
+function FlatToggle({ label, active, onClick, disabled, title }) {
   return (
-    <button type="button" className="stte-hover-text" onClick={onClick} style={S.toggle(active)}>
+    <button
+      type="button"
+      className="stte-hover-text"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={title}
+      style={{ ...S.toggle(active && !disabled), ...(disabled ? { opacity: 0.4, cursor: 'default' } : null) }}
+    >
       {label}
     </button>
   );
@@ -194,6 +201,28 @@ function WordSentenceSwitch({ value, onChange }) {
   );
 }
 
+// Word | Freestyle — the editing-mode switch (strict tiers only). Segmented pills.
+const EDITING_MODE_LABELS = { word: 'Word', freestyle: 'Freestyle', paragraph: 'Paragraph' };
+function EditingModeSwitch({ value, modes, onChange }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: '0 0 auto' }} role="group" aria-label="Editing mode">
+      {(modes || ['word', 'freestyle']).map((m) => (
+        <button
+          key={m}
+          type="button"
+          className="stte-hover-text"
+          onClick={() => onChange && onChange(m)}
+          aria-pressed={value === m}
+          title={m === 'freestyle' ? 'Free-text editing — timestamps re-align on the original words' : 'Per-word seek, mute, and rewrite'}
+          style={S.toggle(value === m)}
+        >
+          {EDITING_MODE_LABELS[m] || m}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 export default function EditorToolbar({
   editable,
   setEditable,
@@ -202,6 +231,12 @@ export default function EditorToolbar({
   presets,
   activePresetId,
   canStructuralEdit,
+  canShowAnnotations,
+  cutoffOptions,
+  editingMode,
+  editingModes,
+  onEditingModeChange,
+  showEditingModeSwitch,
   isProcessing,
   isContentSaved,
   handleSave,
@@ -238,11 +273,26 @@ export default function EditorToolbar({
         onClick={() => setEditable(!editable)}
       />
 
+      {showEditingModeSwitch && (
+        <>
+          <span style={S.divider} />
+          <EditingModeSwitch value={editingMode} modes={editingModes} onChange={onEditingModeChange} />
+        </>
+      )}
+
       <span style={S.divider} />
       <span style={S.showLabel}>Show</span>
-      <FlatToggle label="Title" active={display.showTitle} onClick={() => setDisplay('showTitle', !display.showTitle)} />
       <FlatToggle label="Speakers" active={display.showSpeakers} onClick={() => setDisplay('showSpeakers', !display.showSpeakers)} />
       <FlatToggle label="TC" active={display.showTimecodes} onClick={() => setDisplay('showTimecodes', !display.showTimecodes)} />
+      <FlatToggle
+        label="Annotations"
+        active={display.showAnnotations}
+        disabled={!canShowAnnotations}
+        title={
+          canShowAnnotations ? 'Show per-segment topic / mood / sentiment chips' : 'Segment annotations are only available for WhisperX transcripts'
+        }
+        onClick={() => setDisplay('showAnnotations', !display.showAnnotations)}
+      />
       <FlatToggle label="Confidence" active={conf.overlay} onClick={() => setConf('overlay', !conf.overlay)} />
 
       {/* confidence sub-controls — always present (stable layout), dimmed when off */}
@@ -257,9 +307,9 @@ export default function EditorToolbar({
         }}
       >
         <select value={String(conf.cutoff)} onChange={(e) => setConf('cutoff', Number(e.target.value))} title="Confidence threshold" style={S.select}>
-          <option value="0.75">≤ 0.75</option>
-          <option value="0.8">≤ 0.80</option>
-          <option value="0.85">≤ 0.85</option>
+          {(cutoffOptions || [0.75, 0.8, 0.85]).map((v) => (
+            <option key={v} value={String(v)}>{`≤ ${v.toFixed(2)}`}</option>
+          ))}
         </select>
         <WordSentenceSwitch value={conf.level} onChange={(v) => setConf('level', v)} />
       </span>
