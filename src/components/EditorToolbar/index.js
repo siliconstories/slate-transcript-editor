@@ -50,8 +50,8 @@ const S = {
     alignItems: 'center',
     gap: 8,
     padding: '7px 10px',
-    // loose hairline below the toolbar — a single faint rule separating it from the content
-    borderBottom: '1px solid #efefef',
+    // loose hairline below the toolbar — a single light rule separating it from the content
+    borderBottom: '1px solid #e0e0e0',
     background: C.bg,
     fontFamily: 'Inter, Roboto, system-ui, sans-serif',
     color: C.text,
@@ -284,6 +284,8 @@ function StyleGroup({ enabled, onApply }) {
         { display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
         'Highlight'
       )}
+      {/* Entity: marks the selected word(s) with a Link property (matched to imdb/wikipedia later). */}
+      {btn('E', { link: '' }, { fontWeight: 700, color: '#6d28d9' }, 'Entity — mark as a linkable entity')}
     </span>
   );
 }

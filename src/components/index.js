@@ -810,6 +810,8 @@ function SlateTranscriptEditorInner(props) {
             else if (m && typeof m.note === 'string') {
               range.styleNote = m.note;
               range.styleUnderline = true;
+            } else if (m && typeof m.link === 'string') {
+              range.styleLink = m.link; // entity marker (URL filled in later)
             }
             ranges.push(range);
           });
@@ -875,6 +877,16 @@ function SlateTranscriptEditorInner(props) {
         style.backgroundColor = leaf.styleHighlight;
         style.borderRadius = '2px';
       }
+      // Entity marker — a linkable word/phrase (matched to imdb/wikipedia later). Dashed
+      // underline in the entity colour; carries the (future) link in its title.
+      let entityTitle;
+      if (leaf.styleLink != null) {
+        style.color = '#6d28d9';
+        style.textDecoration = style.textDecoration ? `${style.textDecoration} underline` : 'underline';
+        style.textDecorationStyle = 'dashed';
+        style.cursor = 'pointer';
+        entityTitle = leaf.styleLink ? `Entity → ${leaf.styleLink}` : 'Entity (not yet linked)';
+      }
       // (E) track changes — revised words: amber=rewritten, green=inserted, strike=muted
       let revisedTitle;
       if (leaf.revised === 'rewritten') {
@@ -892,7 +904,10 @@ function SlateTranscriptEditorInner(props) {
       }
       const hasStyle = Object.keys(style).length > 0;
       const title =
-        leaf.styleNote || revisedTitle || (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
+        leaf.styleNote ||
+        entityTitle ||
+        revisedTitle ||
+        (leaf.provenance === 'estimated' ? 'Estimated timing — not from the original audio' : undefined);
       return (
         <span
           onDoubleClick={handleLeafDoubleClick}
